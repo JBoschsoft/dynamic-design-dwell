@@ -15,8 +15,8 @@ serve(async (req) => {
   }
 
   try {
-    const { paymentType, tokenAmount, priceId } = await req.json();
-    console.log('Received request with:', { paymentType, tokenAmount, priceId });
+    const { paymentType, tokenAmount } = await req.json();
+    console.log('Received request with:', { paymentType, tokenAmount });
 
     // Initialize Stripe with the secret key
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -26,6 +26,10 @@ serve(async (req) => {
     let sessionConfig;
 
     if (paymentType === 'one-time') {
+      // Calculate price per token based on quantity
+      const pricePerToken = calculatePricePerToken(tokenAmount);
+      const totalAmount = pricePerToken * tokenAmount * 100; // Convert to cents
+      
       // One-time purchase config
       sessionConfig = {
         line_items: [
@@ -33,10 +37,11 @@ serve(async (req) => {
             price_data: {
               currency: 'pln',
               product_data: {
-                name: `${tokenAmount} tokens`,
-                description: 'Tokens for ProstyScreening.ai platform',
+                name: `${tokenAmount} tokenów`,
+                description: 'Tokeny dla ProstyScreening.ai platform',
+                images: ['https://your-site.com/token-image.png'], // Optional
               },
-              unit_amount: calculatePricePerToken(tokenAmount) * 100, // Price in cents
+              unit_amount: pricePerToken * 100, // Price in cents
               tax_behavior: 'exclusive',
             },
             quantity: tokenAmount,
@@ -45,8 +50,14 @@ serve(async (req) => {
         mode: 'payment',
         success_url: `${req.headers.get('origin')}/dashboard?success=true`,
         cancel_url: `${req.headers.get('origin')}/onboarding?step=2&canceled=true`,
+        payment_method_types: ['card'],
+        billing_address_collection: 'auto',
+        allow_promotion_codes: true,
       };
     } else {
+      // Calculate price per token based on quantity
+      const pricePerToken = calculatePricePerToken(tokenAmount);
+      
       // Subscription config
       sessionConfig = {
         line_items: [
@@ -54,22 +65,28 @@ serve(async (req) => {
             price_data: {
               currency: 'pln',
               product_data: {
-                name: 'Automatic Token Subscription',
-                description: 'Automatic token refill when balance falls below 10 tokens',
+                name: 'Automatyczne doładowanie tokenów',
+                description: `Automatyczne doładowanie ${tokenAmount} tokenów gdy stan konta spada poniżej 10`,
+                images: ['https://your-site.com/subscription-image.png'], // Optional
               },
-              unit_amount: 7 * 100, // Price per token in cents (7 PLN)
+              unit_amount: pricePerToken * 100, // Price per token in cents
               recurring: {
                 interval: 'month',
                 interval_count: 1,
+                usage_type: 'licensed',
               },
               tax_behavior: 'exclusive',
             },
-            quantity: 50, // Default subscription amount of 50 tokens
+            quantity: tokenAmount,
           },
         ],
         mode: 'subscription',
         success_url: `${req.headers.get('origin')}/dashboard?success=true`,
         cancel_url: `${req.headers.get('origin')}/onboarding?step=2&canceled=true`,
+        payment_method_types: ['card'],
+        billing_address_collection: 'auto',
+        allow_promotion_codes: true,
+        customer_email: null, // Can be set based on authenticated user
       };
     }
 

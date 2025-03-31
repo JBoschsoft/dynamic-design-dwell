@@ -1,17 +1,24 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Button,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Input,
+  Label,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
+  RadioGroup, RadioGroupItem,
+  Slider,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Progress
+} from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign, Gauge, Repeat, TrendingDown, Loader2 } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Progress } from "@/components/ui/progress";
+import { 
+  Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, 
+  DollarSign, Gauge, Repeat, TrendingDown, Loader2, CreditCard as CreditCardIcon,
+  Calendar, Lock, RefreshCcw
+} from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 
 const industries = [
@@ -47,22 +54,24 @@ const OnboardingPage = () => {
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [msaAgreed, setMsaAgreed] = useState(false);
   
-  // Payment options state
+  // Payment options state - Set subscription as default
   const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('subscription');
-  const [tokenAmount, setTokenAmount] = useState([25]);
+  const [tokenAmount, setTokenAmount] = useState([50]); // Default to 50 tokens instead of 25
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   
-  // Payment form state for subscription
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
-  const [nameOnCard, setNameOnCard] = useState('');
+  // Subscription slider state
+  const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
   
-  const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
-  
-  // Check for canceled parameter from Stripe
+  // Check for query parameters
   useEffect(() => {
+    // Check for step parameter
+    const stepParam = searchParams.get('step');
+    if (stepParam) {
+      setCurrentStep(parseInt(stepParam));
+    }
+    
+    // Check for canceled parameter from Stripe
     const canceled = searchParams.get('canceled');
     if (canceled === 'true') {
       toast({
@@ -71,7 +80,23 @@ const OnboardingPage = () => {
         description: "Płatność została anulowana. Możesz spróbować ponownie."
       });
     }
-  }, [searchParams]);
+    
+    // Check for success parameter from Stripe
+    const success = searchParams.get('success');
+    if (success === 'true') {
+      toast({
+        title: "Płatność zakończona sukcesem",
+        description: "Twoje konto zostało pomyślnie doładowane."
+      });
+      setPaymentSuccess(true);
+      // Navigate to dashboard after successful payment
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    }
+  }, [searchParams, navigate]);
+  
+  const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
   
   // Calculate token price based on quantity with the new tiered pricing
   const calculateTokenPrice = (quantity: number) => {
@@ -89,13 +114,20 @@ const OnboardingPage = () => {
   };
   
   // Calculate total price for tokens
-  const calculateTotalPrice = () => {
-    const tokenPrice = calculateTokenPrice(tokenAmount[0]);
-    return tokenAmount[0] * tokenPrice;
+  const calculateTotalPrice = (amount: number) => {
+    const tokenPrice = calculateTokenPrice(amount);
+    return amount * tokenPrice;
   };
   
   // Format token amount and price for slider
   const formatTokenValue = (value: number[]) => {
+    const amount = value[0];
+    const price = calculateTokenPrice(amount);
+    return `${amount} tokenów (${price} PLN/token)`;
+  };
+  
+  // Format subscription token amount and price
+  const formatSubscriptionValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
@@ -146,11 +178,14 @@ const OnboardingPage = () => {
       setPaymentLoading(true);
       
       try {
+        // Determine which amount to use based on payment type
+        const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
+        
         // Create Stripe checkout session
         const { data, error } = await supabase.functions.invoke('create-checkout-session', {
           body: JSON.stringify({
             paymentType,
-            tokenAmount: tokenAmount[0],
+            tokenAmount: amount,
           }),
         });
         
@@ -229,6 +264,19 @@ const OnboardingPage = () => {
       case 'tos': return "Przeczytaj uważnie poniższe warunki korzystania z usługi przed kontynuowaniem.";
       case 'privacy': return "Zapoznaj się z polityką prywatności opisującą przetwarzanie danych osobowych.";
       case 'msa': return "Przeczytaj umowę ramową określającą szczegóły świadczenia usług.";
+    }
+  };
+  
+  // Get the price tier description based on quantity
+  const getPriceTierDescription = (amount: number) => {
+    if (amount < 50) {
+      return "Standardowa cena";
+    } else if (amount < 100) {
+      return "Oszczędzasz 12.5%";
+    } else if (amount < 150) {
+      return "Oszczędzasz 25%";
+    } else {
+      return "Oszczędzasz 37.5% - Najlepsza oferta!";
     }
   };
   
@@ -589,22 +637,39 @@ const OnboardingPage = () => {
                         <div className="mt-6 space-y-6 animate-fade-in">
                           <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
                             <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (350 PLN).</p>
+                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>.</p>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="flex justify-between text-sm text-gray-500">
+                              <span>10 tokenów</span>
+                              <span>200 tokenów</span>
+                            </div>
+                            <Slider 
+                              value={subscriptionAmount} 
+                              onValueChange={setSubscriptionAmount}
+                              min={10}
+                              max={200}
+                              step={5}
+                              showValue={true}
+                              formatValue={formatSubscriptionValue}
+                              className="py-4"
+                            />
                           </div>
 
                           <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
                             <div className="flex items-center mb-2">
                               <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
-                              <span className="text-sm font-medium">Oszczędzasz 12.5%</span>
+                              <span className="text-sm font-medium">{getPriceTierDescription(subscriptionAmount[0])}</span>
                               <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
-                                Zniżka 12.5%
+                                Zniżka {getDiscountPercentage(subscriptionAmount[0])}%
                               </div>
                             </div>
                             
                             <div className="w-full bg-gray-200 rounded-full h-2.5">
                               <div 
                                 className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
-                                style={{ width: '25%' }}
+                                style={{ width: `${Math.min((subscriptionAmount[0] / 200) * 100, 100)}%` }}
                               ></div>
                             </div>
                             
@@ -636,17 +701,33 @@ const OnboardingPage = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span>Ilość tokenów:</span>
-                                <span className="font-medium">50 tokenów</span>
+                                <span className="font-medium">{subscriptionAmount[0]} tokenów</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Cena za token:</span>
-                                <span className="font-medium">7 PLN</span>
+                                <span className="font-medium">{calculateTokenPrice(subscriptionAmount[0])} PLN</span>
                               </div>
                               <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
                                 <span>Kwota doładowania:</span>
-                                <span className="text-primary">350 PLN</span>
+                                <span className="text-primary">{calculateTotalPrice(subscriptionAmount[0])} PLN</span>
                               </div>
                             </CardContent>
+                            
+                            <CardFooter className="flex flex-col gap-3 pt-0">
+                              <div className="bg-gray-50 p-3 rounded-md border border-gray-100 w-full">
+                                <h4 className="text-sm font-medium mb-2 flex items-center">
+                                  <CreditCardIcon className="h-4 w-4 mr-1 text-gray-500" />
+                                  Informacje o metodzie płatności
+                                </h4>
+                                <p className="text-xs text-gray-500 mb-3">
+                                  Po kliknięciu przycisku "Zapłać i kontynuuj" zostaniesz przekierowany do bezpiecznej strony płatności Stripe.
+                                </p>
+                                <div className="flex items-center space-x-1 text-xs text-gray-600">
+                                  <Lock className="h-3 w-3" />
+                                  <span>Bezpieczna płatność przez Stripe</span>
+                                </div>
+                              </div>
+                            </CardFooter>
                           </Card>
                         </div>
                       )}
@@ -732,9 +813,25 @@ const OnboardingPage = () => {
                               </div>
                               <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
                                 <span>Razem do zapłaty:</span>
-                                <span className="text-primary">{calculateTotalPrice()} PLN</span>
+                                <span className="text-primary">{calculateTotalPrice(tokenAmount[0])} PLN</span>
                               </div>
                             </CardContent>
+                            
+                            <CardFooter className="flex flex-col gap-3 pt-0">
+                              <div className="bg-gray-50 p-3 rounded-md border border-gray-100 w-full">
+                                <h4 className="text-sm font-medium mb-2 flex items-center">
+                                  <CreditCardIcon className="h-4 w-4 mr-1 text-gray-500" />
+                                  Informacje o płatności
+                                </h4>
+                                <p className="text-xs text-gray-500 mb-3">
+                                  Po kliknięciu przycisku "Zapłać i kontynuuj" zostaniesz przekierowany do bezpiecznej strony płatności Stripe.
+                                </p>
+                                <div className="flex items-center space-x-1 text-xs text-gray-600">
+                                  <Lock className="h-3 w-3" />
+                                  <span>Bezpieczna płatność przez Stripe</span>
+                                </div>
+                              </div>
+                            </CardFooter>
                           </Card>
                         </div>
                       )}
@@ -745,8 +842,8 @@ const OnboardingPage = () => {
               
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-600 mt-8">
                 <p className="flex items-center">
-                  <DollarSign size={18} className="mr-2 text-gray-400" />
-                  Płatność zostanie przetworzona bezpiecznie przez Stripe. Wybrany plan można zmienić w dowolnym momencie w ustawieniach konta.
+                  <RefreshCcw size={18} className="mr-2 text-gray-400" />
+                  Możesz w każdej chwili zmienić rodzaj płatności w ustawieniach swojego konta.
                 </p>
               </div>
             </div>
