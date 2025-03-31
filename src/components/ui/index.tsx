@@ -22,3 +22,4 @@ export { RadioGroup, RadioGroupItem } from "./radio-group";
 export { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger } from "./sheet";
 export { Slider } from "./slider";
 export { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "./form";
+export { Progress } from "./progress";

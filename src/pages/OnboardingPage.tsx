@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
@@ -436,19 +435,6 @@ const OnboardingPage = () => {
     }
     
     return value;
-  };
-
-  // Get the price tier description based on quantity
-  const getPriceTierDescription = (amount: number) => {
-    if (amount < 50) {
-      return "Standardowa cena";
-    } else if (amount < 100) {
-      return "Oszczędzasz 12.5%";
-    } else if (amount < 150) {
-      return "Oszczędzasz 25%";
-    } else {
-      return "Oszczędzasz 37.5% - Najlepsza oferta!";
-    }
   };
   
   return (
