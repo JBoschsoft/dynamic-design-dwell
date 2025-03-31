@@ -95,7 +95,6 @@ serve(async (req) => {
               recurring: {
                 interval: 'month',
                 interval_count: 1,
-                usage_type: 'licensed',
               },
               tax_behavior: 'exclusive',
             },
