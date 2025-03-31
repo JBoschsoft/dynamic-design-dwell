@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -549,123 +550,201 @@ const OnboardingPage = () => {
                 onValueChange={(value) => setPaymentType(value as 'one-time' | 'subscription')}
                 className="space-y-4"
               >
-                <div className={`flex items-start space-x-3 transition-all duration-300 ${paymentType === 'one-time' ? 'scale-100' : 'scale-95 opacity-70'}`}>
-                  <RadioGroupItem value="one-time" id="one-time" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="one-time" className="text-base font-medium flex items-center">
-                      <DollarSign className="mr-2 h-5 w-5" />
-                      Kup tokeny jednorazowo
-                    </Label>
-                    
-                    {paymentType === 'one-time' && (
-                      <div className="mt-6 space-y-6 animate-fade-in">
-                        <div className="space-y-4">
-                          <div className="flex justify-between text-sm text-gray-500">
-                            <span>1 token</span>
-                            <span>100 tokenów</span>
-                          </div>
-                          <Slider 
-                            value={tokenAmount} 
-                            onValueChange={setTokenAmount}
-                            min={1}
-                            max={100}
-                            step={1}
-                            showValue={true}
-                            formatValue={formatTokenValue}
-                            className="py-4"
-                          />
-                        </div>
-                        
-                        <Card className="border border-primary/20">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-lg flex items-center">
-                              <Gauge className="mr-2 h-5 w-5 text-primary" />
-                              Podsumowanie zakupu
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-2">
-                            <div className="flex justify-between">
-                              <span>Ilość tokenów:</span>
-                              <span className="font-medium">{tokenAmount[0]}</span>
+                <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'one-time' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                  <div className="flex items-start space-x-3">
+                    <RadioGroupItem value="one-time" id="one-time" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="one-time" className="text-base font-medium flex items-center">
+                        <DollarSign className="mr-2 h-5 w-5" />
+                        Kup tokeny jednorazowo
+                      </Label>
+                      
+                      {paymentType === 'one-time' && (
+                        <div className="mt-6 space-y-6 animate-fade-in">
+                          <div className="space-y-4">
+                            <div className="flex justify-between text-sm text-gray-500">
+                              <span>1 token</span>
+                              <span>1000 tokenów</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span>Cena za token:</span>
-                              <span className="font-medium">{calculateTokenPrice(tokenAmount[0])} PLN</span>
-                            </div>
-                            <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
-                              <span>Razem do zapłaty:</span>
-                              <span className="text-primary">{calculateTotalPrice()} PLN</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className={`flex items-start space-x-3 transition-all duration-300 ${paymentType === 'subscription' ? 'scale-100' : 'scale-95 opacity-70'}`}>
-                  <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="subscription" className="text-base font-medium flex items-center">
-                      <Repeat className="mr-2 h-5 w-5" />
-                      Włącz automatyczne płatności
-                    </Label>
-                    
-                    {paymentType === 'subscription' && (
-                      <div className="mt-6 space-y-4 animate-fade-in">
-                        <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
-                          <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                          <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (250 PLN).</p>
-                        </div>
-                        
-                        <div className="space-y-4 pt-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="name-on-card">Imię i nazwisko na karcie</Label>
-                            <Input
-                              id="name-on-card"
-                              placeholder="Jan Kowalski"
-                              value={nameOnCard}
-                              onChange={(e) => setNameOnCard(e.target.value)}
+                            <Slider 
+                              value={tokenAmount} 
+                              onValueChange={setTokenAmount}
+                              min={1}
+                              max={1000}
+                              step={1}
+                              showValue={true}
+                              formatValue={formatTokenValue}
+                              className="py-4"
                             />
                           </div>
                           
-                          <div className="space-y-2">
-                            <Label htmlFor="card-number">Numer karty</Label>
-                            <Input
-                              id="card-number"
-                              placeholder="1234 5678 9012 3456"
-                              value={cardNumber}
-                              onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                              maxLength={19}
-                            />
-                          </div>
+                          <Card className="border border-primary/20">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-lg flex items-center">
+                                <Gauge className="mr-2 h-5 w-5 text-primary" />
+                                Podsumowanie zakupu
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Ilość tokenów:</span>
+                                <span className="font-medium">{tokenAmount[0]}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Cena za token:</span>
+                                <span className="font-medium">{calculateTokenPrice(tokenAmount[0])} PLN</span>
+                              </div>
+                              <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
+                                <span>Razem do zapłaty:</span>
+                                <span className="text-primary">{calculateTotalPrice()} PLN</span>
+                              </div>
+                            </CardContent>
+                          </Card>
                           
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-4 pt-2">
                             <div className="space-y-2">
-                              <Label htmlFor="card-expiry">Data ważności</Label>
+                              <Label htmlFor="one-time-name">Imię i nazwisko na karcie</Label>
                               <Input
-                                id="card-expiry"
-                                placeholder="MM/YY"
-                                value={cardExpiry}
-                                onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                                maxLength={5}
+                                id="one-time-name"
+                                placeholder="Jan Kowalski"
+                                value={nameOnCard}
+                                onChange={(e) => setNameOnCard(e.target.value)}
                               />
                             </div>
                             
                             <div className="space-y-2">
-                              <Label htmlFor="card-cvc">Kod CVC</Label>
+                              <Label htmlFor="one-time-card-number">Numer karty</Label>
                               <Input
-                                id="card-cvc"
-                                placeholder="123"
-                                value={cardCvc}
-                                onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 3))}
-                                maxLength={3}
+                                id="one-time-card-number"
+                                placeholder="1234 5678 9012 3456"
+                                value={cardNumber}
+                                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                                maxLength={19}
                               />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="one-time-card-expiry">Data ważności</Label>
+                                <Input
+                                  id="one-time-card-expiry"
+                                  placeholder="MM/YY"
+                                  value={cardExpiry}
+                                  onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                                  maxLength={5}
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="one-time-card-cvc">Kod CVC</Label>
+                                <Input
+                                  id="one-time-card-cvc"
+                                  placeholder="123"
+                                  value={cardCvc}
+                                  onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 3))}
+                                  maxLength={3}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'subscription' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                  <div className="flex items-start space-x-3">
+                    <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="subscription" className="text-base font-medium flex items-center">
+                        <Repeat className="mr-2 h-5 w-5" />
+                        Włącz automatyczne płatności
+                      </Label>
+                      
+                      {paymentType === 'subscription' && (
+                        <div className="mt-6 space-y-4 animate-fade-in">
+                          <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
+                            <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (250 PLN).</p>
+                          </div>
+                          
+                          <Card className="border border-primary/20">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-lg flex items-center">
+                                <Gauge className="mr-2 h-5 w-5 text-primary" />
+                                Automatyczne płatności
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Próg doładowania:</span>
+                                <span className="font-medium">poniżej 10 tokenów</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Ilość tokenów:</span>
+                                <span className="font-medium">50 tokenów</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Cena za token:</span>
+                                <span className="font-medium">5 PLN</span>
+                              </div>
+                              <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
+                                <span>Kwota doładowania:</span>
+                                <span className="text-primary">250 PLN</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          
+                          <div className="space-y-4 pt-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="name-on-card">Imię i nazwisko na karcie</Label>
+                              <Input
+                                id="name-on-card"
+                                placeholder="Jan Kowalski"
+                                value={nameOnCard}
+                                onChange={(e) => setNameOnCard(e.target.value)}
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label htmlFor="card-number">Numer karty</Label>
+                              <Input
+                                id="card-number"
+                                placeholder="1234 5678 9012 3456"
+                                value={cardNumber}
+                                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                                maxLength={19}
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="card-expiry">Data ważności</Label>
+                                <Input
+                                  id="card-expiry"
+                                  placeholder="MM/YY"
+                                  value={cardExpiry}
+                                  onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
+                                  maxLength={5}
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="card-cvc">Kod CVC</Label>
+                                <Input
+                                  id="card-cvc"
+                                  placeholder="123"
+                                  value={cardCvc}
+                                  onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 3))}
+                                  maxLength={3}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </RadioGroup>
