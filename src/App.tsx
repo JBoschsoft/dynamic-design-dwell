@@ -18,6 +18,9 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import CareerPage from "./pages/CareerPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfUsePage from "./pages/TermsOfUsePage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +44,9 @@ const App = () => (
           <Route path="/kariera" element={<CareerPage />} />
           <Route path="/polityka-prywatnosci" element={<PrivacyPolicyPage />} />
           <Route path="/warunki-uzytkowania" element={<TermsOfUsePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
