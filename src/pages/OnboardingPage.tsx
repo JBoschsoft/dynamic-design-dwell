@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign, Gauge, Repeat } from 'lucide-react';
+import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign, Gauge, Repeat, TrendingDown } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Progress } from "@/components/ui/progress";
 
 const industries = [
   "IT & Software",
@@ -59,9 +60,19 @@ const OnboardingPage = () => {
   
   const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
   
-  // Calculate token price based on quantity
+  // Calculate token price based on quantity with the new tiered pricing
   const calculateTokenPrice = (quantity: number) => {
-    return quantity >= 50 ? 5 : 8;
+    if (quantity >= 150) return 5;
+    if (quantity >= 100) return 6;
+    if (quantity >= 50) return 7;
+    return 8;
+  };
+  
+  // Get a discount percentage based on the current price
+  const getDiscountPercentage = (quantity: number) => {
+    const basePrice = 8;
+    const currentPrice = calculateTokenPrice(quantity);
+    return Math.round(((basePrice - currentPrice) / basePrice) * 100);
   };
   
   // Calculate total price for tokens
@@ -376,6 +387,19 @@ const OnboardingPage = () => {
     
     return value;
   };
+
+  // Get the price tier description based on quantity
+  const getPriceTierDescription = (amount: number) => {
+    if (amount < 50) {
+      return "Standardowa cena";
+    } else if (amount < 100) {
+      return "Oszczędzasz 12.5%";
+    } else if (amount < 150) {
+      return "Oszczędzasz 25%";
+    } else {
+      return "Oszczędzasz 37.5% - Najlepsza oferta!";
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -576,6 +600,38 @@ const OnboardingPage = () => {
                               formatValue={formatTokenValue}
                               className="py-4"
                             />
+                            
+                            <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                              <div className="flex items-center mb-2">
+                                <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
+                                <span className="text-sm font-medium">{getPriceTierDescription(tokenAmount[0])}</span>
+                                {tokenAmount[0] >= 50 && (
+                                  <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                                    Zniżka {getDiscountPercentage(tokenAmount[0])}%
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div 
+                                  className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full transition-all duration-300 ease-out"
+                                  style={{ width: `${Math.min((tokenAmount[0] / 200) * 100, 100)}%` }}
+                                ></div>
+                              </div>
+                              
+                              <div className="flex justify-between mt-2 text-xs text-gray-500">
+                                <span>8 PLN/token</span>
+                                <span>7 PLN/token</span>
+                                <span>6 PLN/token</span>
+                                <span>5 PLN/token</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-gray-400">
+                                <span>1-49</span>
+                                <span>50-99</span>
+                                <span>100-149</span>
+                                <span>150+</span>
+                              </div>
+                            </div>
                           </div>
                           
                           <Card className="border border-primary/20">
@@ -663,10 +719,40 @@ const OnboardingPage = () => {
                       </Label>
                       
                       {paymentType === 'subscription' && (
-                        <div className="mt-6 space-y-4 animate-fade-in">
+                        <div className="mt-6 space-y-6 animate-fade-in">
                           <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
                             <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (250 PLN).</p>
+                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (350 PLN).</p>
+                          </div>
+
+                          <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                            <div className="flex items-center mb-2">
+                              <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
+                              <span className="text-sm font-medium">Oszczędzasz 12.5%</span>
+                              <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                                Zniżka 12.5%
+                              </div>
+                            </div>
+                            
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
+                                style={{ width: '25%' }}
+                              ></div>
+                            </div>
+                            
+                            <div className="flex justify-between mt-2 text-xs text-gray-500">
+                              <span>8 PLN/token</span>
+                              <span>7 PLN/token</span>
+                              <span>6 PLN/token</span>
+                              <span>5 PLN/token</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>1-49</span>
+                              <span>50-99</span>
+                              <span>100-149</span>
+                              <span>150+</span>
+                            </div>
                           </div>
                           
                           <Card className="border border-primary/20">
@@ -687,11 +773,11 @@ const OnboardingPage = () => {
                               </div>
                               <div className="flex justify-between">
                                 <span>Cena za token:</span>
-                                <span className="font-medium">5 PLN</span>
+                                <span className="font-medium">7 PLN</span>
                               </div>
                               <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
                                 <span>Kwota doładowania:</span>
-                                <span className="text-primary">250 PLN</span>
+                                <span className="text-primary">350 PLN</span>
                               </div>
                             </CardContent>
                           </Card>
