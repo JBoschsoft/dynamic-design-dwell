@@ -23,12 +23,34 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     });
 
+    // Get the user's email from the auth token if available
+    let customerEmail = undefined;
+    try {
+      const authHeader = req.headers.get('Authorization');
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        const supabaseClient = createClient(
+          Deno.env.get('SUPABASE_URL') || '',
+          Deno.env.get('SUPABASE_ANON_KEY') || '',
+        );
+        
+        const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+        
+        if (!userError && userData?.user?.email) {
+          customerEmail = userData.user.email;
+          console.log('Found user email:', customerEmail);
+        }
+      }
+    } catch (error) {
+      console.warn('Error getting user email:', error);
+      // Continue without email if there's an error
+    }
+
     let sessionConfig;
 
     if (paymentType === 'one-time') {
       // Calculate price per token based on quantity
       const pricePerToken = calculatePricePerToken(tokenAmount);
-      const totalAmount = pricePerToken * tokenAmount * 100; // Convert to cents
       
       // One-time purchase config
       sessionConfig = {
@@ -87,6 +109,11 @@ serve(async (req) => {
         billing_address_collection: 'auto',
         allow_promotion_codes: true,
       };
+    }
+
+    // If we have a customer email, add it to the session config
+    if (customerEmail) {
+      sessionConfig.customer_email = customerEmail;
     }
 
     console.log('Creating checkout session with config:', sessionConfig);

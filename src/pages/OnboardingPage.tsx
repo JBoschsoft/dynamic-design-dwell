@@ -44,39 +44,31 @@ const OnboardingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
-  // Company setup form state
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState('');
   
-  // Legal agreement states
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [currentAgreement, setCurrentAgreement] = useState<'tos' | 'privacy' | 'msa'>('tos');
   const [tosAgreed, setTosAgreed] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [msaAgreed, setMsaAgreed] = useState(false);
   
-  // Payment options state - Set subscription as default
   const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('subscription');
-  const [tokenAmount, setTokenAmount] = useState([50]); // Default to 50 tokens instead of 25
+  const [tokenAmount, setTokenAmount] = useState([50]);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   
-  // Confirmation dialog for one-time payment
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   
-  // Subscription slider state
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
   
-  // Check for query parameters
   useEffect(() => {
-    // Check for step parameter
     const stepParam = searchParams.get('step');
     if (stepParam) {
       setCurrentStep(parseInt(stepParam));
     }
     
-    // Check for canceled parameter from Stripe
     const canceled = searchParams.get('canceled');
     if (canceled === 'true') {
       toast({
@@ -86,7 +78,6 @@ const OnboardingPage = () => {
       });
     }
     
-    // Check for success parameter from Stripe
     const success = searchParams.get('success');
     if (success === 'true') {
       const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0]);
@@ -95,7 +86,6 @@ const OnboardingPage = () => {
         description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
       });
       setPaymentSuccess(true);
-      // Navigate to step 3 after successful payment
       setTimeout(() => {
         setCurrentStep(3);
       }, 2000);
@@ -104,7 +94,6 @@ const OnboardingPage = () => {
   
   const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
   
-  // Calculate token price based on quantity with the new tiered pricing
   const calculateTokenPrice = (quantity: number) => {
     if (quantity >= 150) return 5;
     if (quantity >= 100) return 6;
@@ -112,27 +101,23 @@ const OnboardingPage = () => {
     return 8;
   };
   
-  // Get a discount percentage based on the current price
   const getDiscountPercentage = (quantity: number) => {
     const basePrice = 8;
     const currentPrice = calculateTokenPrice(quantity);
     return Math.round(((basePrice - currentPrice) / basePrice) * 100);
   };
   
-  // Calculate total price for tokens
   const calculateTotalPrice = (amount: number) => {
     const tokenPrice = calculateTokenPrice(amount);
     return amount * tokenPrice;
   };
   
-  // Format token amount and price for slider
   const formatTokenValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
   };
   
-  // Format subscription token amount and price
   const formatSubscriptionValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
@@ -140,14 +125,11 @@ const OnboardingPage = () => {
   };
   
   const proceedToPayment = async () => {
-    // Handle payment processing through Stripe
     setPaymentLoading(true);
     
     try {
-      // Determine which amount to use based on payment type
       const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
       
-      // Create Stripe checkout session
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: JSON.stringify({
           paymentType,
@@ -158,7 +140,6 @@ const OnboardingPage = () => {
       if (error) throw new Error(error.message);
       
       if (data?.url) {
-        // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
         throw new Error('No checkout URL returned from the server');
@@ -195,8 +176,6 @@ const OnboardingPage = () => {
       setLoading(true);
       
       try {
-        // Here you would typically save the company information to Supabase
-        // For now, we'll just simulate a delay and proceed to the next step
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         toast({
@@ -216,15 +195,12 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     } else if (currentStep === 2) {
-      // For one-time payments, show confirmation dialog first
       if (paymentType === 'one-time') {
         setConfirmDialogOpen(true);
       } else {
-        // For subscription, proceed directly to payment
         proceedToPayment();
       }
     } else if (currentStep === 3) {
-      // Handle step 3 logic here
       setCurrentStep(4);
     }
   };
@@ -286,7 +262,6 @@ const OnboardingPage = () => {
     }
   };
   
-  // Get the price tier description based on quantity
   const getPriceTierDescription = (amount: number) => {
     if (amount < 50) {
       return "Standardowa cena";
@@ -422,7 +397,6 @@ const OnboardingPage = () => {
     }
   };
   
-  // Format card number with spaces
   const formatCardNumber = (value: string) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     const matches = v.match(/\d{4,16}/g);
@@ -438,7 +412,6 @@ const OnboardingPage = () => {
     }
   };
   
-  // Format card expiry date
   const formatExpiry = (value: string) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     if (v.length > 2) {
@@ -447,7 +420,6 @@ const OnboardingPage = () => {
     return value;
   };
   
-  // Render step 3 content
   const renderStep3 = () => {
     return (
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
@@ -512,7 +484,6 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Progress indicator */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
@@ -538,7 +509,6 @@ const OnboardingPage = () => {
         </div>
       </div>
       
-      {/* Main content area */}
       <div className="flex-1 flex items-center justify-center p-4">
         {currentStep === 1 && (
           <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
@@ -913,7 +883,6 @@ const OnboardingPage = () => {
         {currentStep === 3 && renderStep3()}
       </div>
       
-      {/* Legal agreements modal */}
       <Dialog open={legalModalOpen} onOpenChange={setLegalModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -934,7 +903,6 @@ const OnboardingPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Confirmation dialog for one-time purchase */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
