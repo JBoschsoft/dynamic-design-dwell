@@ -27,6 +27,7 @@ export { Popover, PopoverContent, PopoverTrigger } from "./popover";
 export { Alert, AlertTitle, AlertDescription } from "./alert";
 export { Progress } from "./progress";
 export { Drawer, DrawerPortal, DrawerOverlay, DrawerTrigger, DrawerClose, DrawerContent, DrawerHeader, DrawerFooter, DrawerTitle, DrawerDescription } from "./drawer";
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion";
 
 // Re-export icons directly
 export { 

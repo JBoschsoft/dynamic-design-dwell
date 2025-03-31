@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Button,
@@ -7,8 +6,16 @@ import {
   Card, CardHeader, CardContent, CardFooter, CardTitle,
   Slider,
   CreditCard as CreditCardIcon, Repeat, DollarSign, TrendingDown, 
-  Gauge, Lock, RefreshCcw, ArrowLeft, ArrowRight, Loader2
+  Gauge, Lock, RefreshCcw, ArrowLeft, ArrowRight, Loader2, CheckCircle2
 } from "@/components/ui";
+
+import { 
+  calculateTokenPrice, 
+  getDiscountPercentage, 
+  calculateTotalPrice, 
+  formatTokenValue, 
+  getPriceTierDescription 
+} from './utils';
 
 interface PaymentStepProps {
   paymentType: 'one-time' | 'subscription';
@@ -36,46 +43,10 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
   paymentSuccess
 }) => {
   
-  const calculateTokenPrice = (quantity: number) => {
-    if (quantity >= 150) return 5;
-    if (quantity >= 100) return 6;
-    if (quantity >= 50) return 7;
-    return 8;
-  };
-  
-  const getDiscountPercentage = (quantity: number) => {
-    const basePrice = 8;
-    const currentPrice = calculateTokenPrice(quantity);
-    return Math.round(((basePrice - currentPrice) / basePrice) * 100);
-  };
-  
-  const calculateTotalPrice = (amount: number) => {
-    const tokenPrice = calculateTokenPrice(amount);
-    return amount * tokenPrice;
-  };
-  
-  const formatTokenValue = (value: number[]) => {
-    const amount = value[0];
-    const price = calculateTokenPrice(amount);
-    return `${amount} tokenów (${price} PLN/token)`;
-  };
-  
   const formatSubscriptionValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
-  };
-  
-  const getPriceTierDescription = (amount: number) => {
-    if (amount < 50) {
-      return "Standardowa cena";
-    } else if (amount < 100) {
-      return "Oszczędzasz 12.5%";
-    } else if (amount < 150) {
-      return "Oszczędzasz 25%";
-    } else {
-      return "Oszczędzasz 37.5% - Najlepsza oferta!";
-    }
   };
   
   return (
