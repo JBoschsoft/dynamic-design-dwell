@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+
 const BenefitItem = ({
   text
 }: {
@@ -13,6 +15,7 @@ const BenefitItem = ({
       <p className="text-gray-700">{text}</p>
     </div>;
 };
+
 const BenefitsSection = () => {
   return <section className="py-20">
       <div className="container mx-auto px-4 md:px-6">
@@ -32,7 +35,7 @@ const BenefitsSection = () => {
               <BenefitItem text="Popraw doświadczenie kandydatów w procesie rekrutacji" />
             </div>
             
-            <Button className="mt-6 bg-primary hover:bg-primary-700">
+            <Button className="mt-6 bg-primary hover:bg-primary-700 transition-colors duration-300 px-6 font-semibold">
               Dowiedz się więcej <span className="ml-2">→</span>
             </Button>
           </div>
@@ -40,4 +43,5 @@ const BenefitsSection = () => {
       </div>
     </section>;
 };
+
 export default BenefitsSection;

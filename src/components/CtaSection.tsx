@@ -13,7 +13,7 @@ const CtaSection = () => {
         </p>
         
         <div className="flex flex-wrap justify-center gap-4">
-          <Button className="bg-white text-primary hover:bg-gray-100 px-6">
+          <Button className="bg-white text-primary hover:bg-gray-100 transition-colors duration-300 px-6 font-semibold">
             Rozpocznij za darmo
           </Button>
           <Button 

@@ -12,17 +12,17 @@ const Navbar = () => {
         </div>
         
         <div className="hidden md:flex space-x-8 text-sm text-gray-600">
-          <Link to="/" className="hover:text-gray-900">O nas</Link>
-          <Link to="/" className="hover:text-gray-900">Przykłady</Link>
-          <Link to="/" className="hover:text-gray-900">Oprogramowanie</Link>
-          <Link to="/" className="hover:text-gray-900">Kontakt</Link>
+          <Link to="/o-nas" className="hover:text-gray-900 transition-colors duration-200">O nas</Link>
+          <Link to="/przyklady" className="hover:text-gray-900 transition-colors duration-200">Przykłady</Link>
+          <Link to="/oprogramowanie" className="hover:text-gray-900 transition-colors duration-200">Oprogramowanie</Link>
+          <Link to="/kontakt" className="hover:text-gray-900 transition-colors duration-200">Kontakt</Link>
         </div>
         
         <div className="flex space-x-3">
-          <Button variant="outline" className="text-primary border-primary hover:bg-primary-50">
+          <Button variant="outline" className="text-primary border-primary hover:bg-primary-50 transition-colors duration-300 font-semibold">
             Zaloguj się
           </Button>
-          <Button className="bg-primary hover:bg-primary-700">
+          <Button className="bg-primary hover:bg-primary-700 transition-colors duration-300 font-semibold">
             Zarejestruj się
           </Button>
         </div>

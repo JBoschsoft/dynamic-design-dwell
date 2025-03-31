@@ -15,7 +15,7 @@ const FooterColumn = ({
       <ul className="space-y-2">
         {links.map((link, index) => (
           <li key={index}>
-            <Link to={link.href} className="text-gray-500 hover:text-gray-700 text-sm">
+            <Link to={link.href} className="text-gray-500 hover:text-gray-700 text-sm transition-colors duration-200">
               {link.label}
             </Link>
           </li>
@@ -41,28 +41,28 @@ const Footer = () => {
             <FooterColumn 
               title="Produkt" 
               links={[
-                { label: "Funkcje", href: "/" },
-                { label: "Cennik", href: "/" },
-                { label: "Webinary", href: "/" },
-                { label: "Integracje", href: "/" },
+                { label: "Funkcje", href: "/oprogramowanie" },
+                { label: "Cennik", href: "/cennik" },
+                { label: "Webinary", href: "/webinary" },
+                { label: "Integracje", href: "/integracje" },
               ]} 
             />
             
             <FooterColumn 
               title="Zasoby" 
               links={[
-                { label: "Blog", href: "/" },
-                { label: "Webinary", href: "/" },
-                { label: "Dokumentacja", href: "/" },
+                { label: "Blog", href: "/blog" },
+                { label: "Webinary", href: "/webinary" },
+                { label: "Dokumentacja", href: "/dokumentacja" },
               ]} 
             />
             
             <FooterColumn 
               title="Firma" 
               links={[
-                { label: "O nas", href: "/" },
-                { label: "Kontakt", href: "/" },
-                { label: "Kariera", href: "/" },
+                { label: "O nas", href: "/o-nas" },
+                { label: "Kontakt", href: "/kontakt" },
+                { label: "Kariera", href: "/kariera" },
               ]} 
             />
           </div>
@@ -71,8 +71,8 @@ const Footer = () => {
         <div className="border-t border-gray-200 pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
           <p>© 2023 ProstyScreening.ai. Wszelkie prawa zastrzeżone.</p>
           <div className="flex space-x-6 mt-4 sm:mt-0">
-            <Link to="/" className="hover:text-gray-700">Polityka prywatności</Link>
-            <Link to="/" className="hover:text-gray-700">Warunki użytkowania</Link>
+            <Link to="/polityka-prywatnosci" className="hover:text-gray-700 transition-colors duration-200">Polityka prywatności</Link>
+            <Link to="/warunki-uzytkowania" className="hover:text-gray-700 transition-colors duration-200">Warunki użytkowania</Link>
           </div>
         </div>
       </div>

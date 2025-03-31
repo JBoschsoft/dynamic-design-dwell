@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
+
 const HeroSection = () => {
   return <section className="py-16 md:py-24">
       <div className="container mx-auto px-4 md:px-6">
@@ -19,10 +21,10 @@ const HeroSection = () => {
             </div>
             
             <div className="flex flex-wrap gap-4">
-              <Button className="bg-primary hover:bg-primary-700 px-6 py-6 h-auto">
+              <Button className="bg-primary hover:bg-primary-700 transition-colors duration-300 px-6 font-semibold h-12">
                 Rozpocznij za darmo
               </Button>
-              <Button variant="outline" className="text-gray-800 border-gray-300 hover:bg-gray-50 px-6 py-6 h-auto">
+              <Button variant="outline" className="text-gray-800 border-gray-300 hover:bg-gray-50 transition-colors duration-300 px-6 font-semibold h-12">
                 Umów prezentację
               </Button>
             </div>
@@ -35,4 +37,5 @@ const HeroSection = () => {
       </div>
     </section>;
 };
+
 export default HeroSection;
