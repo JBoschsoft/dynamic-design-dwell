@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -8,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign, Gauge, Repeat, TrendingDown } from 'lucide-react';
+import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign, Gauge, Repeat, TrendingDown, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 
 const industries = [
   "IT & Software",
@@ -31,6 +31,7 @@ const industries = [
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -59,6 +60,18 @@ const OnboardingPage = () => {
   const [nameOnCard, setNameOnCard] = useState('');
   
   const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
+  
+  // Check for canceled parameter from Stripe
+  useEffect(() => {
+    const canceled = searchParams.get('canceled');
+    if (canceled === 'true') {
+      toast({
+        variant: "destructive",
+        title: "Płatność anulowana",
+        description: "Płatność została anulowana. Możesz spróbować ponownie."
+      });
+    }
+  }, [searchParams]);
   
   // Calculate token price based on quantity with the new tiered pricing
   const calculateTokenPrice = (quantity: number) => {
@@ -129,45 +142,34 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     } else if (currentStep === 2) {
-      // Form validation for subscription payment
-      if (paymentType === 'subscription') {
-        if (!cardNumber || !cardExpiry || !cardCvc || !nameOnCard) {
-          toast({
-            variant: "destructive",
-            title: "Uzupełnij dane płatności",
-            description: "Wypełnij wszystkie wymagane informacje płatności."
-          });
-          return;
-        }
-      }
-      
-      // Handle payment processing
+      // Handle payment processing through Stripe
       setPaymentLoading(true);
       
       try {
-        // Simulate payment processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        setPaymentSuccess(true);
-        
-        toast({
-          title: "Płatność zakończona sukcesem",
-          description: paymentType === 'one-time' 
-            ? `Pomyślnie zakupiono ${tokenAmount[0]} tokenów za ${calculateTotalPrice()} PLN.` 
-            : "Pomyślnie aktywowano automatyczne płatności. Karta zostanie obciążona, gdy liczba tokenów spadnie poniżej 10."
+        // Create Stripe checkout session
+        const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+          body: JSON.stringify({
+            paymentType,
+            tokenAmount: tokenAmount[0],
+          }),
         });
         
-        // Wait a bit before proceeding to next step
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setCurrentStep(3);
+        if (error) throw new Error(error.message);
+        
+        if (data?.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned from the server');
+        }
         
       } catch (error: any) {
+        console.error('Stripe checkout error:', error);
         toast({
           variant: "destructive",
           title: "Błąd płatności",
           description: error.message || "Wystąpił błąd podczas przetwarzania płatności."
         });
-      } finally {
         setPaymentLoading(false);
       }
     }
@@ -574,6 +576,84 @@ const OnboardingPage = () => {
                 onValueChange={(value) => setPaymentType(value as 'one-time' | 'subscription')}
                 className="space-y-4"
               >
+                <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'subscription' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+                  <div className="flex items-start space-x-3">
+                    <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
+                    <div className="flex-1">
+                      <Label htmlFor="subscription" className="text-base font-medium flex items-center">
+                        <Repeat className="mr-2 h-5 w-5" />
+                        Włącz automatyczne płatności
+                      </Label>
+                      
+                      {paymentType === 'subscription' && (
+                        <div className="mt-6 space-y-6 animate-fade-in">
+                          <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
+                            <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (350 PLN).</p>
+                          </div>
+
+                          <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                            <div className="flex items-center mb-2">
+                              <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
+                              <span className="text-sm font-medium">Oszczędzasz 12.5%</span>
+                              <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                                Zniżka 12.5%
+                              </div>
+                            </div>
+                            
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
+                                style={{ width: '25%' }}
+                              ></div>
+                            </div>
+                            
+                            <div className="flex justify-between mt-2 text-xs text-gray-500">
+                              <span>8 PLN/token</span>
+                              <span>7 PLN/token</span>
+                              <span>6 PLN/token</span>
+                              <span>5 PLN/token</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>1-49</span>
+                              <span>50-99</span>
+                              <span>100-149</span>
+                              <span>150+</span>
+                            </div>
+                          </div>
+                          
+                          <Card className="border border-primary/20">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-lg flex items-center">
+                                <Gauge className="mr-2 h-5 w-5 text-primary" />
+                                Automatyczne płatności
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                              <div className="flex justify-between">
+                                <span>Próg doładowania:</span>
+                                <span className="font-medium">poniżej 10 tokenów</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Ilość tokenów:</span>
+                                <span className="font-medium">50 tokenów</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Cena za token:</span>
+                                <span className="font-medium">7 PLN</span>
+                              </div>
+                              <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
+                                <span>Kwota doładowania:</span>
+                                <span className="text-primary">350 PLN</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
                 <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'one-time' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
                   <div className="flex items-start space-x-3">
                     <RadioGroupItem value="one-time" id="one-time" className="mt-1" />
@@ -656,178 +736,6 @@ const OnboardingPage = () => {
                               </div>
                             </CardContent>
                           </Card>
-                          
-                          <div className="space-y-4 pt-2">
-                            <div className="space-y-2">
-                              <Label htmlFor="one-time-name">Imię i nazwisko na karcie</Label>
-                              <Input
-                                id="one-time-name"
-                                placeholder="Jan Kowalski"
-                                value={nameOnCard}
-                                onChange={(e) => setNameOnCard(e.target.value)}
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="one-time-card-number">Numer karty</Label>
-                              <Input
-                                id="one-time-card-number"
-                                placeholder="1234 5678 9012 3456"
-                                value={cardNumber}
-                                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                                maxLength={19}
-                              />
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="one-time-card-expiry">Data ważności</Label>
-                                <Input
-                                  id="one-time-card-expiry"
-                                  placeholder="MM/YY"
-                                  value={cardExpiry}
-                                  onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                                  maxLength={5}
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label htmlFor="one-time-card-cvc">Kod CVC</Label>
-                                <Input
-                                  id="one-time-card-cvc"
-                                  placeholder="123"
-                                  value={cardCvc}
-                                  onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 3))}
-                                  maxLength={3}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'subscription' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
-                  <div className="flex items-start space-x-3">
-                    <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
-                    <div className="flex-1">
-                      <Label htmlFor="subscription" className="text-base font-medium flex items-center">
-                        <Repeat className="mr-2 h-5 w-5" />
-                        Włącz automatyczne płatności
-                      </Label>
-                      
-                      {paymentType === 'subscription' && (
-                        <div className="mt-6 space-y-6 animate-fade-in">
-                          <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
-                            <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>. Zostanie wtedy doładowanych <strong>50 tokenów</strong> (350 PLN).</p>
-                          </div>
-
-                          <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
-                            <div className="flex items-center mb-2">
-                              <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
-                              <span className="text-sm font-medium">Oszczędzasz 12.5%</span>
-                              <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
-                                Zniżka 12.5%
-                              </div>
-                            </div>
-                            
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div 
-                                className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
-                                style={{ width: '25%' }}
-                              ></div>
-                            </div>
-                            
-                            <div className="flex justify-between mt-2 text-xs text-gray-500">
-                              <span>8 PLN/token</span>
-                              <span>7 PLN/token</span>
-                              <span>6 PLN/token</span>
-                              <span>5 PLN/token</span>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-400">
-                              <span>1-49</span>
-                              <span>50-99</span>
-                              <span>100-149</span>
-                              <span>150+</span>
-                            </div>
-                          </div>
-                          
-                          <Card className="border border-primary/20">
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-lg flex items-center">
-                                <Gauge className="mr-2 h-5 w-5 text-primary" />
-                                Automatyczne płatności
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Próg doładowania:</span>
-                                <span className="font-medium">poniżej 10 tokenów</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Ilość tokenów:</span>
-                                <span className="font-medium">50 tokenów</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Cena za token:</span>
-                                <span className="font-medium">7 PLN</span>
-                              </div>
-                              <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
-                                <span>Kwota doładowania:</span>
-                                <span className="text-primary">350 PLN</span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                          
-                          <div className="space-y-4 pt-2">
-                            <div className="space-y-2">
-                              <Label htmlFor="name-on-card">Imię i nazwisko na karcie</Label>
-                              <Input
-                                id="name-on-card"
-                                placeholder="Jan Kowalski"
-                                value={nameOnCard}
-                                onChange={(e) => setNameOnCard(e.target.value)}
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <Label htmlFor="card-number">Numer karty</Label>
-                              <Input
-                                id="card-number"
-                                placeholder="1234 5678 9012 3456"
-                                value={cardNumber}
-                                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                                maxLength={19}
-                              />
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="card-expiry">Data ważności</Label>
-                                <Input
-                                  id="card-expiry"
-                                  placeholder="MM/YY"
-                                  value={cardExpiry}
-                                  onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                                  maxLength={5}
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label htmlFor="card-cvc">Kod CVC</Label>
-                                <Input
-                                  id="card-cvc"
-                                  placeholder="123"
-                                  value={cardCvc}
-                                  onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 3))}
-                                  maxLength={3}
-                                />
-                              </div>
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -838,7 +746,7 @@ const OnboardingPage = () => {
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-600 mt-8">
                 <p className="flex items-center">
                   <DollarSign size={18} className="mr-2 text-gray-400" />
-                  Płatność zostanie przetworzona bezpiecznie. Wybrany plan można zmienić w dowolnym momencie w ustawieniach konta.
+                  Płatność zostanie przetworzona bezpiecznie przez Stripe. Wybrany plan można zmienić w dowolnym momencie w ustawieniach konta.
                 </p>
               </div>
             </div>
@@ -859,11 +767,10 @@ const OnboardingPage = () => {
                 disabled={paymentLoading || paymentSuccess}
               >
                 {paymentLoading ? (
-                  "Przetwarzanie płatności..."
-                ) : paymentSuccess ? (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" /> Płatność zakończona sukcesem
-                  </>
+                  <span className="flex items-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                    Przetwarzanie płatności...
+                  </span>
                 ) : (
                   <>
                     Zapłać i kontynuuj <ArrowRight className="ml-2 h-4 w-4" />
