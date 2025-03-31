@@ -1,67 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Button,
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Input,
-  Label,
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
-  RadioGroup, RadioGroupItem,
-  Slider,
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
-  Progress
-} from "@/components/ui";
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, RadioGroup, RadioGroupItem, Slider, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Progress } from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
-import { 
-  Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, 
-  DollarSign, Gauge, Repeat, TrendingDown, Loader2, CreditCard as CreditCardIcon,
-  Calendar, Lock, RefreshCcw
-} from 'lucide-react';
+import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign, Gauge, Repeat, TrendingDown, Loader2, CreditCard as CreditCardIcon, Calendar, Lock, RefreshCcw } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
-
-const industries = [
-  "IT & Software",
-  "Healthcare",
-  "Finance & Banking",
-  "Retail",
-  "Manufacturing",
-  "Education",
-  "Government",
-  "Media & Entertainment",
-  "Transportation & Logistics",
-  "Energy & Utilities",
-  "Telecommunications",
-  "Other"
-];
-
+const industries = ["IT & Software", "Healthcare", "Finance & Banking", "Retail", "Manufacturing", "Education", "Government", "Media & Entertainment", "Transportation & Logistics", "Energy & Utilities", "Telecommunications", "Other"];
 const OnboardingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  
+
   // Company setup form state
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState('');
-  
+
   // Legal agreement states
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [currentAgreement, setCurrentAgreement] = useState<'tos' | 'privacy' | 'msa'>('tos');
   const [tosAgreed, setTosAgreed] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [msaAgreed, setMsaAgreed] = useState(false);
-  
+
   // Payment options state - Set subscription as default
   const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('subscription');
   const [tokenAmount, setTokenAmount] = useState([50]); // Default to 50 tokens instead of 25
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  
+
   // Subscription slider state
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
-  
+
   // Check for query parameters
   useEffect(() => {
     // Check for step parameter
@@ -69,7 +39,7 @@ const OnboardingPage = () => {
     if (stepParam) {
       setCurrentStep(parseInt(stepParam));
     }
-    
+
     // Check for canceled parameter from Stripe
     const canceled = searchParams.get('canceled');
     if (canceled === 'true') {
@@ -79,7 +49,7 @@ const OnboardingPage = () => {
         description: "Płatność została anulowana. Możesz spróbować ponownie."
       });
     }
-    
+
     // Check for success parameter from Stripe
     const success = searchParams.get('success');
     if (success === 'true') {
@@ -94,9 +64,8 @@ const OnboardingPage = () => {
       }, 2000);
     }
   }, [searchParams, navigate]);
-  
   const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
-  
+
   // Calculate token price based on quantity with the new tiered pricing
   const calculateTokenPrice = (quantity: number) => {
     if (quantity >= 150) return 5;
@@ -104,34 +73,33 @@ const OnboardingPage = () => {
     if (quantity >= 50) return 7;
     return 8;
   };
-  
+
   // Get a discount percentage based on the current price
   const getDiscountPercentage = (quantity: number) => {
     const basePrice = 8;
     const currentPrice = calculateTokenPrice(quantity);
-    return Math.round(((basePrice - currentPrice) / basePrice) * 100);
+    return Math.round((basePrice - currentPrice) / basePrice * 100);
   };
-  
+
   // Calculate total price for tokens
   const calculateTotalPrice = (amount: number) => {
     const tokenPrice = calculateTokenPrice(amount);
     return amount * tokenPrice;
   };
-  
+
   // Format token amount and price for slider
   const formatTokenValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
   };
-  
+
   // Format subscription token amount and price
   const formatSubscriptionValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
   };
-  
   const handleNextStep = async () => {
     if (currentStep === 1) {
       if (!companyName || !industry || !companySize) {
@@ -142,27 +110,21 @@ const OnboardingPage = () => {
         });
         return;
       }
-      
       if (!allAgreementsAccepted) {
         setCurrentAgreement('tos');
         setLegalModalOpen(true);
         return;
       }
-      
       setLoading(true);
-      
       try {
         // Here you would typically save the company information to Supabase
         // For now, we'll just simulate a delay and proceed to the next step
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
         toast({
           title: "Dane firmy zapisane",
           description: "Pomyślnie zapisano informacje o firmie."
         });
-        
         setCurrentStep(2);
-        
       } catch (error: any) {
         toast({
           variant: "destructive",
@@ -175,28 +137,27 @@ const OnboardingPage = () => {
     } else if (currentStep === 2) {
       // Handle payment processing through Stripe
       setPaymentLoading(true);
-      
       try {
         // Determine which amount to use based on payment type
         const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
-        
+
         // Create Stripe checkout session
-        const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        const {
+          data,
+          error
+        } = await supabase.functions.invoke('create-checkout-session', {
           body: JSON.stringify({
             paymentType,
-            tokenAmount: amount,
-          }),
+            tokenAmount: amount
+          })
         });
-        
         if (error) throw new Error(error.message);
-        
         if (data?.url) {
           // Redirect to Stripe Checkout
           window.location.href = data.url;
         } else {
           throw new Error('No checkout URL returned from the server');
         }
-        
       } catch (error: any) {
         console.error('Stripe checkout error:', error);
         toast({
@@ -208,18 +169,15 @@ const OnboardingPage = () => {
       }
     }
   };
-  
   const handlePreviousStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
-  
   const openAgreement = (type: 'tos' | 'privacy' | 'msa') => {
     setCurrentAgreement(type);
     setLegalModalOpen(true);
   };
-  
   const handleAgreeToCurrentAgreement = () => {
     if (currentAgreement === 'tos') {
       setTosAgreed(true);
@@ -239,9 +197,7 @@ const OnboardingPage = () => {
     } else if (currentAgreement === 'msa') {
       setMsaAgreed(true);
     }
-    
     setLegalModalOpen(false);
-    
     if (tosAgreed && privacyAgreed && msaAgreed) {
       toast({
         title: "Warunki zaakceptowane",
@@ -249,23 +205,27 @@ const OnboardingPage = () => {
       });
     }
   };
-  
   const getAgreementTitle = () => {
     switch (currentAgreement) {
-      case 'tos': return "Warunki korzystania z usługi";
-      case 'privacy': return "Polityka prywatności";
-      case 'msa': return "Umowa ramowa o świadczenie usług";
+      case 'tos':
+        return "Warunki korzystania z usługi";
+      case 'privacy':
+        return "Polityka prywatności";
+      case 'msa':
+        return "Umowa ramowa o świadczenie usług";
     }
   };
-  
   const getAgreementDescription = () => {
     switch (currentAgreement) {
-      case 'tos': return "Przeczytaj uważnie poniższe warunki korzystania z usługi przed kontynuowaniem.";
-      case 'privacy': return "Zapoznaj się z polityką prywatności opisującą przetwarzanie danych osobowych.";
-      case 'msa': return "Przeczytaj umowę ramową określającą szczegóły świadczenia usług.";
+      case 'tos':
+        return "Przeczytaj uważnie poniższe warunki korzystania z usługi przed kontynuowaniem.";
+      case 'privacy':
+        return "Zapoznaj się z polityką prywatności opisującą przetwarzanie danych osobowych.";
+      case 'msa':
+        return "Przeczytaj umowę ramową określającą szczegóły świadczenia usług.";
     }
   };
-  
+
   // Get the price tier description based on quantity
   const getPriceTierDescription = (amount: number) => {
     if (amount < 50) {
@@ -278,12 +238,10 @@ const OnboardingPage = () => {
       return "Oszczędzasz 37.5% - Najlepsza oferta!";
     }
   };
-  
   const renderAgreementContent = () => {
     switch (currentAgreement) {
       case 'tos':
-        return (
-          <div className="space-y-4 my-6 text-sm">
+        return <div className="space-y-4 my-6 text-sm">
             <h3 className="font-semibold">1. Wprowadzenie</h3>
             <p>
               Niniejsze Warunki Korzystania z Usługi („Warunki") regulują dostęp i korzystanie z platformy ProstyScreening.ai („Usługa"). 
@@ -316,11 +274,9 @@ const OnboardingPage = () => {
                 <li>Szkody wynikające z nieprawidłowego korzystania z Usługi</li>
               </ul>
             </p>
-          </div>
-        );
+          </div>;
       case 'privacy':
-        return (
-          <div className="space-y-4 my-6 text-sm">
+        return <div className="space-y-4 my-6 text-sm">
             <h3 className="font-semibold">1. Administrator Danych</h3>
             <p>
               Administratorem danych osobowych jest ProstyScreening.ai. Dane przetwarzane są zgodnie z obowiązującym prawem, 
@@ -360,11 +316,9 @@ const OnboardingPage = () => {
                 <li>Sprzeciwu wobec przetwarzania</li>
               </ul>
             </p>
-          </div>
-        );
+          </div>;
       case 'msa':
-        return (
-          <div className="space-y-4 my-6 text-sm">
+        return <div className="space-y-4 my-6 text-sm">
             <h3 className="font-semibold">1. Przedmiot Umowy</h3>
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam hendrerit nisi sed sollicitudin pellentesque. 
@@ -403,42 +357,35 @@ const OnboardingPage = () => {
               optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, 
               omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis.
             </p>
-          </div>
-        );
+          </div>;
     }
   };
-  
+
   // Format card number with spaces
   const formatCardNumber = (value: string) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     const matches = v.match(/\d{4,16}/g);
     const match = matches && matches[0] || '';
     const parts = [];
-    
     for (let i = 0, len = match.length; i < len; i += 4) {
       parts.push(match.substring(i, i + 4));
     }
-    
     if (parts.length) {
       return parts.join(' ');
     } else {
       return value;
     }
   };
-  
+
   // Format card expiry date
   const formatExpiry = (value: string) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    
     if (v.length > 2) {
       return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
     }
-    
     return value;
   };
-  
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+  return <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Progress indicator */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
@@ -446,18 +393,7 @@ const OnboardingPage = () => {
             <h1 className="text-xl font-semibold text-gray-900">Konfiguracja konta</h1>
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-1">
-                {[1, 2, 3, 4, 5].map((step) => (
-                  <div
-                    key={step}
-                    className={`h-2 w-12 rounded-full ${
-                      step === currentStep
-                        ? 'bg-primary'
-                        : step < currentStep
-                        ? 'bg-green-500'
-                        : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
+                {[1, 2, 3, 4, 5].map(step => <div key={step} className={`h-2 w-12 rounded-full ${step === currentStep ? 'bg-primary' : step < currentStep ? 'bg-green-500' : 'bg-gray-200'}`} />)}
               </div>
               <span className="text-sm text-gray-500">Krok {currentStep} z 5</span>
             </div>
@@ -467,8 +403,7 @@ const OnboardingPage = () => {
       
       {/* Main content area */}
       <div className="flex-1 flex items-center justify-center p-4">
-        {currentStep === 1 && (
-          <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+        {currentStep === 1 && <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
             <div className="flex items-center justify-center mb-6">
               <div className="rounded-full bg-primary/10 p-3">
                 <Building2 className="h-8 w-8 text-primary" />
@@ -486,12 +421,7 @@ const OnboardingPage = () => {
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="company-name">Nazwa firmy</Label>
-                <Input
-                  id="company-name"
-                  placeholder="Wprowadź nazwę firmy"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                />
+                <Input id="company-name" placeholder="Wprowadź nazwę firmy" value={companyName} onChange={e => setCompanyName(e.target.value)} />
               </div>
               
               <div className="space-y-2">
@@ -501,11 +431,9 @@ const OnboardingPage = () => {
                     <SelectValue placeholder="Wybierz branżę" />
                   </SelectTrigger>
                   <SelectContent>
-                    {industries.map((ind) => (
-                      <SelectItem key={ind} value={ind}>
+                    {industries.map(ind => <SelectItem key={ind} value={ind}>
                         {ind}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -533,11 +461,7 @@ const OnboardingPage = () => {
                   <div className={`mr-2 ${tosAgreed ? 'text-green-500' : 'text-gray-400'}`}>
                     {tosAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => openAgreement('tos')}
-                    className="text-primary hover:text-primary/80 text-sm font-medium"
-                  >
+                  <button type="button" onClick={() => openAgreement('tos')} className="text-primary hover:text-primary/80 text-sm font-medium">
                     {tosAgreed ? 'Warunki korzystania z usługi zaakceptowane' : 'Zapoznaj się z warunkami korzystania z usługi'}
                   </button>
                 </div>
@@ -546,11 +470,7 @@ const OnboardingPage = () => {
                   <div className={`mr-2 ${privacyAgreed ? 'text-green-500' : 'text-gray-400'}`}>
                     {privacyAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => openAgreement('privacy')}
-                    className="text-primary hover:text-primary/80 text-sm font-medium"
-                  >
+                  <button type="button" onClick={() => openAgreement('privacy')} className="text-primary hover:text-primary/80 text-sm font-medium">
                     {privacyAgreed ? 'Polityka prywatności zaakceptowana' : 'Zapoznaj się z polityką prywatności'}
                   </button>
                 </div>
@@ -559,11 +479,7 @@ const OnboardingPage = () => {
                   <div className={`mr-2 ${msaAgreed ? 'text-green-500' : 'text-gray-400'}`}>
                     {msaAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => openAgreement('msa')}
-                    className="text-primary hover:text-primary/80 text-sm font-medium"
-                  >
+                  <button type="button" onClick={() => openAgreement('msa')} className="text-primary hover:text-primary/80 text-sm font-medium">
                     {msaAgreed ? 'Umowa ramowa zaakceptowana' : 'Zapoznaj się z umową ramową'}
                   </button>
                 </div>
@@ -571,25 +487,15 @@ const OnboardingPage = () => {
             </div>
             
             <div className="mt-8">
-              <Button 
-                onClick={handleNextStep}
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? (
-                  "Zapisywanie danych..."
-                ) : (
-                  <>
+              <Button onClick={handleNextStep} className="w-full" disabled={loading}>
+                {loading ? "Zapisywanie danych..." : <>
                     Dalej <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+                  </>}
               </Button>
             </div>
-          </div>
-        )}
+          </div>}
 
-        {currentStep === 2 && (
-          <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+        {currentStep === 2 && <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
             <div className="flex items-center justify-center mb-6">
               <div className="rounded-full bg-primary/10 p-3">
                 <CreditCard className="h-8 w-8 text-primary" />
@@ -605,11 +511,7 @@ const OnboardingPage = () => {
             </p>
             
             <div className="space-y-6">
-              <RadioGroup 
-                value={paymentType} 
-                onValueChange={(value) => setPaymentType(value as 'one-time' | 'subscription')}
-                className="space-y-4"
-              >
+              <RadioGroup value={paymentType} onValueChange={value => setPaymentType(value as 'one-time' | 'subscription')} className="space-y-4">
                 <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'subscription' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
                   <div className="flex items-start space-x-3">
                     <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
@@ -619,8 +521,7 @@ const OnboardingPage = () => {
                         Włącz automatyczne płatności
                       </Label>
                       
-                      {paymentType === 'subscription' && (
-                        <div className="mt-6 space-y-6 animate-fade-in">
+                      {paymentType === 'subscription' && <div className="mt-6 space-y-6 animate-fade-in">
                           <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
                             <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
                             <p>Twoja karta zostanie automatycznie obciążona, gdy liczba dostępnych tokenów spadnie poniżej <strong>10</strong>.</p>
@@ -629,18 +530,9 @@ const OnboardingPage = () => {
                           <div className="space-y-4">
                             <div className="flex justify-between text-sm text-gray-500">
                               <span>10 tokenów</span>
-                              <span>200 tokenów</span>
+                              <span>1000 tokenów</span>
                             </div>
-                            <Slider 
-                              value={subscriptionAmount} 
-                              onValueChange={setSubscriptionAmount}
-                              min={10}
-                              max={1000}
-                              step={5}
-                              showValue={true}
-                              formatValue={formatSubscriptionValue}
-                              className="py-4"
-                            />
+                            <Slider value={subscriptionAmount} onValueChange={setSubscriptionAmount} min={10} max={1000} step={5} showValue={true} formatValue={formatSubscriptionValue} className="py-4" />
                           </div>
 
                           <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
@@ -653,10 +545,9 @@ const OnboardingPage = () => {
                             </div>
                             
                             <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div 
-                                className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
-                                style={{ width: `${Math.min((subscriptionAmount[0] / 200) * 100, 100)}%` }}
-                              ></div>
+                              <div className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full" style={{
+                          width: `${Math.min(subscriptionAmount[0] / 200 * 100, 100)}%`
+                        }}></div>
                             </div>
                             
                             <div className="flex justify-between mt-2 text-xs text-gray-500">
@@ -715,8 +606,7 @@ const OnboardingPage = () => {
                               </div>
                             </CardFooter>
                           </Card>
-                        </div>
-                      )}
+                        </div>}
                     </div>
                   </div>
                 </div>
@@ -730,40 +620,27 @@ const OnboardingPage = () => {
                         Kup tokeny jednorazowo
                       </Label>
                       
-                      {paymentType === 'one-time' && (
-                        <div className="mt-6 space-y-6 animate-fade-in">
+                      {paymentType === 'one-time' && <div className="mt-6 space-y-6 animate-fade-in">
                           <div className="space-y-4">
                             <div className="flex justify-between text-sm text-gray-500">
                               <span>1 token</span>
                               <span>1000 tokenów</span>
                             </div>
-                            <Slider 
-                              value={tokenAmount} 
-                              onValueChange={setTokenAmount}
-                              min={1}
-                              max={1000}
-                              step={1}
-                              showValue={true}
-                              formatValue={formatTokenValue}
-                              className="py-4"
-                            />
+                            <Slider value={tokenAmount} onValueChange={setTokenAmount} min={1} max={1000} step={1} showValue={true} formatValue={formatTokenValue} className="py-4" />
                             
                             <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
                               <div className="flex items-center mb-2">
                                 <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
                                 <span className="text-sm font-medium">{getPriceTierDescription(tokenAmount[0])}</span>
-                                {tokenAmount[0] >= 50 && (
-                                  <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                                {tokenAmount[0] >= 50 && <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
                                     Zniżka {getDiscountPercentage(tokenAmount[0])}%
-                                  </div>
-                                )}
+                                  </div>}
                               </div>
                               
                               <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                <div 
-                                  className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full transition-all duration-300 ease-out"
-                                  style={{ width: `${Math.min((tokenAmount[0] / 200) * 100, 100)}%` }}
-                                ></div>
+                                <div className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full transition-all duration-300 ease-out" style={{
+                            width: `${Math.min(tokenAmount[0] / 200 * 100, 100)}%`
+                          }}></div>
                               </div>
                               
                               <div className="flex justify-between mt-2 text-xs text-gray-500">
@@ -819,8 +696,7 @@ const OnboardingPage = () => {
                               </div>
                             </CardFooter>
                           </Card>
-                        </div>
-                      )}
+                        </div>}
                     </div>
                   </div>
                 </div>
@@ -835,34 +711,20 @@ const OnboardingPage = () => {
             </div>
             
             <div className="mt-8 flex space-x-3">
-              <Button 
-                variant="outline"
-                onClick={handlePreviousStep}
-                className="w-1/3"
-                disabled={paymentLoading || paymentSuccess}
-              >
+              <Button variant="outline" onClick={handlePreviousStep} className="w-1/3" disabled={paymentLoading || paymentSuccess}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
               </Button>
               
-              <Button 
-                onClick={handleNextStep}
-                className="w-2/3"
-                disabled={paymentLoading || paymentSuccess}
-              >
-                {paymentLoading ? (
-                  <span className="flex items-center">
+              <Button onClick={handleNextStep} className="w-2/3" disabled={paymentLoading || paymentSuccess}>
+                {paymentLoading ? <span className="flex items-center">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
                     Przetwarzanie płatności...
-                  </span>
-                ) : (
-                  <>
+                  </span> : <>
                     Zapłać i kontynuuj <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+                  </>}
               </Button>
             </div>
-          </div>
-        )}
+          </div>}
       </div>
       
       {/* Legal agreements modal */}
@@ -885,8 +747,6 @@ const OnboardingPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default OnboardingPage;
