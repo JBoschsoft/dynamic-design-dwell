@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Building2, ArrowRight, FileText, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, DollarSign } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const industries = [
   "IT & Software",
@@ -41,48 +43,89 @@ const OnboardingPage = () => {
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [msaAgreed, setMsaAgreed] = useState(false);
   
+  // Payment options state
+  const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('one-time');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  
   const allAgreementsAccepted = tosAgreed && privacyAgreed && msaAgreed;
   
   const handleNextStep = async () => {
-    if (!companyName || !industry || !companySize) {
-      toast({
-        variant: "destructive",
-        title: "Uzupełnij wszystkie pola",
-        description: "Wypełnij wszystkie wymagane informacje o firmie."
-      });
-      return;
+    if (currentStep === 1) {
+      if (!companyName || !industry || !companySize) {
+        toast({
+          variant: "destructive",
+          title: "Uzupełnij wszystkie pola",
+          description: "Wypełnij wszystkie wymagane informacje o firmie."
+        });
+        return;
+      }
+      
+      if (!allAgreementsAccepted) {
+        setCurrentAgreement('tos');
+        setLegalModalOpen(true);
+        return;
+      }
+      
+      setLoading(true);
+      
+      try {
+        // Here you would typically save the company information to Supabase
+        // For now, we'll just simulate a delay and proceed to the next step
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        toast({
+          title: "Dane firmy zapisane",
+          description: "Pomyślnie zapisano informacje o firmie."
+        });
+        
+        setCurrentStep(2);
+        
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Błąd zapisu",
+          description: error.message || "Wystąpił błąd podczas zapisywania informacji o firmie."
+        });
+      } finally {
+        setLoading(false);
+      }
+    } else if (currentStep === 2) {
+      // Handle payment processing
+      setPaymentLoading(true);
+      
+      try {
+        // Simulate payment processing
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setPaymentSuccess(true);
+        
+        toast({
+          title: "Płatność zakończona sukcesem",
+          description: paymentType === 'one-time' 
+            ? "Pomyślnie zakupiono tokeny jednorazowo." 
+            : "Pomyślnie aktywowano subskrypcję."
+        });
+        
+        // Wait a bit before proceeding to next step
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setCurrentStep(3);
+        
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Błąd płatności",
+          description: error.message || "Wystąpił błąd podczas przetwarzania płatności."
+        });
+      } finally {
+        setPaymentLoading(false);
+      }
     }
-    
-    if (!allAgreementsAccepted) {
-      setCurrentAgreement('tos');
-      setLegalModalOpen(true);
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // Here you would typically save the company information to Supabase
-      // For now, we'll just simulate a delay and proceed to the next step
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For now just show a toast, in a real implementation you'd proceed to step 2
-      toast({
-        title: "Dane firmy zapisane",
-        description: "Pomyślnie zapisano informacje o firmie."
-      });
-      
-      // In a full implementation you would set the current step to 2
-      // setCurrentStep(2);
-      
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Błąd zapisu",
-        description: error.message || "Wystąpił błąd podczas zapisywania informacji o firmie."
-      });
-    } finally {
-      setLoading(false);
+  };
+  
+  const handlePreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
   
@@ -113,7 +156,7 @@ const OnboardingPage = () => {
     
     setLegalModalOpen(false);
     
-    if (allAgreementsAccepted || (currentAgreement === 'msa' && !msaAgreed)) {
+    if (tosAgreed && privacyAgreed && msaAgreed) {
       toast({
         title: "Warunki zaakceptowane",
         description: "Dziękujemy za zapoznanie się i akceptację wszystkich warunków."
@@ -296,124 +339,266 @@ const OnboardingPage = () => {
       
       {/* Main content area */}
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
-          <div className="flex items-center justify-center mb-6">
-            <div className="rounded-full bg-primary/10 p-3">
-              <Building2 className="h-8 w-8 text-primary" />
-            </div>
-          </div>
-          
-          <h2 className="text-2xl font-bold text-center mb-6">
-            Konfiguracja firmy
-          </h2>
-          
-          <p className="text-gray-600 text-center mb-8">
-            Wprowadź podstawowe informacje o swojej firmie, aby dostosować platformę do Twoich potrzeb.
-          </p>
-          
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="company-name">Nazwa firmy</Label>
-              <Input
-                id="company-name"
-                placeholder="Wprowadź nazwę firmy"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="industry">Branża</Label>
-              <Select value={industry} onValueChange={setIndustry}>
-                <SelectTrigger id="industry">
-                  <SelectValue placeholder="Wybierz branżę" />
-                </SelectTrigger>
-                <SelectContent>
-                  {industries.map((ind) => (
-                    <SelectItem key={ind} value={ind}>
-                      {ind}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="company-size">Wielkość firmy</Label>
-              <Select value={companySize} onValueChange={setCompanySize}>
-                <SelectTrigger id="company-size">
-                  <SelectValue placeholder="Wybierz wielkość firmy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1-10">1-10 pracowników</SelectItem>
-                  <SelectItem value="11-50">11-50 pracowników</SelectItem>
-                  <SelectItem value="51-200">51-200 pracowników</SelectItem>
-                  <SelectItem value="201-500">201-500 pracowników</SelectItem>
-                  <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="pt-4 space-y-3">
-              <div className="text-sm font-medium mb-2">Akceptacja warunków:</div>
-              
-              <div className="flex items-center">
-                <div className={`mr-2 ${tosAgreed ? 'text-green-500' : 'text-gray-400'}`}>
-                  {tosAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openAgreement('tos')}
-                  className="text-primary hover:text-primary/80 text-sm font-medium"
-                >
-                  {tosAgreed ? 'Warunki korzystania z usługi zaakceptowane' : 'Zapoznaj się z warunkami korzystania z usługi'}
-                </button>
-              </div>
-              
-              <div className="flex items-center">
-                <div className={`mr-2 ${privacyAgreed ? 'text-green-500' : 'text-gray-400'}`}>
-                  {privacyAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openAgreement('privacy')}
-                  className="text-primary hover:text-primary/80 text-sm font-medium"
-                >
-                  {privacyAgreed ? 'Polityka prywatności zaakceptowana' : 'Zapoznaj się z polityką prywatności'}
-                </button>
-              </div>
-              
-              <div className="flex items-center">
-                <div className={`mr-2 ${msaAgreed ? 'text-green-500' : 'text-gray-400'}`}>
-                  {msaAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openAgreement('msa')}
-                  className="text-primary hover:text-primary/80 text-sm font-medium"
-                >
-                  {msaAgreed ? 'Umowa ramowa zaakceptowana' : 'Zapoznaj się z umową ramową'}
-                </button>
+        {currentStep === 1 && (
+          <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+            <div className="flex items-center justify-center mb-6">
+              <div className="rounded-full bg-primary/10 p-3">
+                <Building2 className="h-8 w-8 text-primary" />
               </div>
             </div>
+            
+            <h2 className="text-2xl font-bold text-center mb-6">
+              Konfiguracja firmy
+            </h2>
+            
+            <p className="text-gray-600 text-center mb-8">
+              Wprowadź podstawowe informacje o swojej firmie, aby dostosować platformę do Twoich potrzeb.
+            </p>
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="company-name">Nazwa firmy</Label>
+                <Input
+                  id="company-name"
+                  placeholder="Wprowadź nazwę firmy"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="industry">Branża</Label>
+                <Select value={industry} onValueChange={setIndustry}>
+                  <SelectTrigger id="industry">
+                    <SelectValue placeholder="Wybierz branżę" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {industries.map((ind) => (
+                      <SelectItem key={ind} value={ind}>
+                        {ind}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="company-size">Wielkość firmy</Label>
+                <Select value={companySize} onValueChange={setCompanySize}>
+                  <SelectTrigger id="company-size">
+                    <SelectValue placeholder="Wybierz wielkość firmy" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1-10">1-10 pracowników</SelectItem>
+                    <SelectItem value="11-50">11-50 pracowników</SelectItem>
+                    <SelectItem value="51-200">51-200 pracowników</SelectItem>
+                    <SelectItem value="201-500">201-500 pracowników</SelectItem>
+                    <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="pt-4 space-y-3">
+                <div className="text-sm font-medium mb-2">Akceptacja warunków:</div>
+                
+                <div className="flex items-center">
+                  <div className={`mr-2 ${tosAgreed ? 'text-green-500' : 'text-gray-400'}`}>
+                    {tosAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAgreement('tos')}
+                    className="text-primary hover:text-primary/80 text-sm font-medium"
+                  >
+                    {tosAgreed ? 'Warunki korzystania z usługi zaakceptowane' : 'Zapoznaj się z warunkami korzystania z usługi'}
+                  </button>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className={`mr-2 ${privacyAgreed ? 'text-green-500' : 'text-gray-400'}`}>
+                    {privacyAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAgreement('privacy')}
+                    className="text-primary hover:text-primary/80 text-sm font-medium"
+                  >
+                    {privacyAgreed ? 'Polityka prywatności zaakceptowana' : 'Zapoznaj się z polityką prywatności'}
+                  </button>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className={`mr-2 ${msaAgreed ? 'text-green-500' : 'text-gray-400'}`}>
+                    {msaAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAgreement('msa')}
+                    className="text-primary hover:text-primary/80 text-sm font-medium"
+                  >
+                    {msaAgreed ? 'Umowa ramowa zaakceptowana' : 'Zapoznaj się z umową ramową'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8">
+              <Button 
+                onClick={handleNextStep}
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? (
+                  "Zapisywanie danych..."
+                ) : (
+                  <>
+                    Dalej <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-          
-          <div className="mt-8">
-            <Button 
-              onClick={handleNextStep}
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? (
-                "Zapisywanie danych..."
-              ) : (
-                <>
-                  Dalej <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
+        )}
+
+        {currentStep === 2 && (
+          <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+            <div className="flex items-center justify-center mb-6">
+              <div className="rounded-full bg-primary/10 p-3">
+                <CreditCard className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-center mb-6">
+              Wybierz plan płatności
+            </h2>
+            
+            <p className="text-gray-600 text-center mb-8">
+              Aby aktywować funkcje platformy, wybierz preferowany wariant płatności.
+            </p>
+            
+            <div className="space-y-6">
+              <RadioGroup 
+                value={paymentType} 
+                onValueChange={(value) => setPaymentType(value as 'one-time' | 'subscription')}
+                className="space-y-4"
+              >
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value="one-time" id="one-time" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="one-time" className="text-base font-medium">
+                      Kup tokeny jednorazowo
+                    </Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Jednorazowa opłata bez automatycznego odnawiania
+                    </p>
+                    
+                    <Card className="mt-3 border-primary/20">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-lg flex items-center justify-between">
+                          <span>500 tokenów</span>
+                          <span className="font-bold">199 PLN</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="py-2 px-4 pb-3 pt-0">
+                        <ul className="space-y-1 text-sm">
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Dostęp przez 30 dni
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Możliwość wykorzystania w dowolnym momencie
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Bez automatycznego odnawiania
+                          </li>
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="subscription" className="text-base font-medium">
+                      Włącz przyszłe opłaty
+                    </Label>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Miesięczna subskrypcja z automatycznym odnawianiem
+                    </p>
+                    
+                    <Card className="mt-3 border-primary/20">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-lg flex items-center justify-between">
+                          <span>Pakiet PRO</span>
+                          <span className="font-bold">149 PLN / mies.</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="py-2 px-4 pb-3 pt-0">
+                        <ul className="space-y-1 text-sm">
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Nielimitowana liczba tokenów
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Priorytetowa obsługa klienta
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Zaawansowane funkcje analityczne
+                          </li>
+                          <li className="flex items-center">
+                            <CheckCircle2 size={16} className="text-primary mr-2" />
+                            Odnawianie co miesiąc
+                          </li>
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </RadioGroup>
+              
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-600">
+                <p className="flex items-center">
+                  <DollarSign size={18} className="mr-2 text-gray-400" />
+                  Płatność zostanie przetworzona bezpiecznie przez Stripe. Wybrany plan można zmienić w dowolnym momencie w ustawieniach konta.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex space-x-3">
+              <Button 
+                variant="outline"
+                onClick={handlePreviousStep}
+                className="w-1/3"
+                disabled={paymentLoading || paymentSuccess}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+              </Button>
+              
+              <Button 
+                onClick={handleNextStep}
+                className="w-2/3"
+                disabled={paymentLoading || paymentSuccess}
+              >
+                {paymentLoading ? (
+                  "Przetwarzanie płatności..."
+                ) : paymentSuccess ? (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Płatność zakończona sukcesem
+                  </>
+                ) : (
+                  <>
+                    Zapłać i kontynuuj <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
       {/* Legal agreements modal */}

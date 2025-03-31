@@ -18,4 +18,5 @@ export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableC
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from "./card";
 export { Checkbox } from "./checkbox";
 export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./collapsible";
+export { RadioGroup, RadioGroupItem } from "./radio-group";
 export { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger } from "./sheet";
