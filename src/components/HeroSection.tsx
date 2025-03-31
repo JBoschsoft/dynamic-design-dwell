@@ -1,10 +1,7 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
-
 const HeroSection = () => {
-  return (
-    <section className="py-16 md:py-24">
+  return <section className="py-16 md:py-24">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1 space-y-6">
@@ -32,16 +29,10 @@ const HeroSection = () => {
           </div>
           
           <div className="flex-1">
-            <img 
-              src="public/lovable-uploads/d4f5f39a-f466-4040-8be8-19b1d9776ea6.png" 
-              alt="Dashboard Preview" 
-              className="w-full max-w-lg mx-auto rounded-lg shadow-lg"
-            />
+            <img alt="Dashboard Preview" className="w-full max-w-lg mx-auto rounded-lg shadow-lg" src="https://picsum.photos/536/354" />
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HeroSection;
