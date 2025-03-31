@@ -21,15 +21,15 @@ const VerificationPage = () => {
     
     try {
       // In a real implementation, we would verify the OTP with Supabase here
-      // For now, we'll just show a success message and redirect to login
+      // For now, we'll just show a success message and redirect to onboarding
       
       toast({
         title: "Weryfikacja udana",
-        description: "Twoje konto zostało zweryfikowane. Możesz się teraz zalogować."
+        description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
       });
       
-      // Redirect to login page after successful verification
-      setTimeout(() => navigate('/login'), 2000);
+      // Redirect to onboarding page after successful verification
+      setTimeout(() => navigate('/onboarding'), 2000);
     } catch (error: any) {
       toast({
         variant: "destructive",
