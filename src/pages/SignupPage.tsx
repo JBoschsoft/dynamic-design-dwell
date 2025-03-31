@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -17,7 +16,6 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
   // Password strength calculation
@@ -85,15 +83,6 @@ const SignupPage = () => {
         variant: "destructive",
         title: "Zbyt słabe hasło",
         description: "Twoje hasło jest zbyt słabe. Użyj kombinacji dużych i małych liter, cyfr oraz znaków specjalnych."
-      });
-      return;
-    }
-    
-    if (!termsAccepted) {
-      toast({
-        variant: "destructive",
-        title: "Akceptacja warunków",
-        description: "Musisz zaakceptować warunki korzystania z serwisu, aby kontynuować."
       });
       return;
     }
@@ -258,19 +247,7 @@ const SignupPage = () => {
               )}
             </div>
 
-            <div className="flex items-center">
-              <Checkbox 
-                id="terms-and-privacy" 
-                checked={termsAccepted}
-                onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-              />
-              <Label 
-                htmlFor="terms-and-privacy" 
-                className="ml-2 block text-sm text-gray-600"
-              >
-                Akceptuję <Link to="/warunki-uzytkowania" className="text-primary hover:text-primary/80">Warunki użytkowania</Link> oraz <Link to="/polityka-prywatnosci" className="text-primary hover:text-primary/80">Politykę prywatności</Link>
-              </Label>
-            </div>
+            {/* Removed the terms and privacy policy checkbox div here */}
           </div>
 
           <Button
