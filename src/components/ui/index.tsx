@@ -26,3 +26,11 @@ export { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export { Popover, PopoverContent, PopoverTrigger } from "./popover";
 export { Alert, AlertTitle, AlertDescription } from "./alert";
 export { Progress } from "./progress";
+export { Drawer, DrawerPortal, DrawerOverlay, DrawerTrigger, DrawerClose, DrawerContent, DrawerHeader, DrawerFooter, DrawerTitle, DrawerDescription } from "./drawer";
+
+// Re-export icons directly
+export { 
+  Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, 
+  DollarSign, Gauge, Repeat, TrendingDown, Loader2, 
+  Calendar, Lock, RefreshCcw, AlertCircle, Info 
+} from 'lucide-react';
