@@ -18,7 +18,7 @@ const CtaSection = () => {
           </Button>
           <Button 
             variant="outline" 
-            className="border-2 border-white text-white hover:bg-white/20 transition-colors duration-300 px-6 font-semibold"
+            className="border-2 border-white/70 text-white hover:bg-white/20 transition-colors duration-300 px-6 font-semibold bg-white/10 backdrop-blur-sm hover:border-white"
           >
             Umów prezentację
           </Button>
@@ -29,4 +29,3 @@ const CtaSection = () => {
 };
 
 export default CtaSection;
-
