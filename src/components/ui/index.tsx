@@ -1,4 +1,3 @@
-
 // This file re-exports all UI components for easier imports
 // You can use either individual imports from each component file
 // or import multiple components from this file
@@ -22,4 +21,7 @@ export { RadioGroup, RadioGroupItem } from "./radio-group";
 export { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger } from "./sheet";
 export { Slider } from "./slider";
 export { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "./form";
+export { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./alert-dialog";
+export { Popover, PopoverContent, PopoverTrigger } from "./popover";
+export { Alert, AlertTitle, AlertDescription } from "./alert";
 export { Progress } from "./progress";

@@ -48,7 +48,7 @@ serve(async (req) => {
           },
         ],
         mode: 'payment',
-        success_url: `${req.headers.get('origin')}/dashboard?success=true`,
+        success_url: `${req.headers.get('origin')}/onboarding?step=3&success=true&tokens=${tokenAmount}`,
         cancel_url: `${req.headers.get('origin')}/onboarding?step=2&canceled=true`,
         payment_method_types: ['card'],
         billing_address_collection: 'auto',
@@ -81,12 +81,11 @@ serve(async (req) => {
           },
         ],
         mode: 'subscription',
-        success_url: `${req.headers.get('origin')}/dashboard?success=true`,
+        success_url: `${req.headers.get('origin')}/onboarding?step=3&success=true&tokens=${tokenAmount}`,
         cancel_url: `${req.headers.get('origin')}/onboarding?step=2&canceled=true`,
         payment_method_types: ['card'],
         billing_address_collection: 'auto',
         allow_promotion_codes: true,
-        customer_email: null, // Can be set based on authenticated user
       };
     }
 
