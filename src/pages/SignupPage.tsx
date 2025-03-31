@@ -118,8 +118,8 @@ const SignupPage = () => {
         description: "Wysłaliśmy link potwierdzający na Twój adres email. Sprawdź swoją skrzynkę, aby dokończyć rejestrację."
       });
       
-      // Redirect to confirmation page or login page
-      navigate('/login');
+      // Redirect to verification page
+      navigate('/verification');
     } catch (error: any) {
       toast({
         variant: "destructive",
