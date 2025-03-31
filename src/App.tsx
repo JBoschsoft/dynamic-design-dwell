@@ -10,6 +10,14 @@ import ExamplesPage from "./pages/ExamplesPage";
 import SoftwarePage from "./pages/SoftwarePage";
 import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
+import BlogPage from "./pages/BlogPage";
+import WebinarsPage from "./pages/WebinarsPage";
+import DocumentationPage from "./pages/DocumentationPage";
+import PricingPage from "./pages/PricingPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import CareerPage from "./pages/CareerPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfUsePage from "./pages/TermsOfUsePage";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +33,14 @@ const App = () => (
           <Route path="/przyklady" element={<ExamplesPage />} />
           <Route path="/oprogramowanie" element={<SoftwarePage />} />
           <Route path="/kontakt" element={<ContactPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/webinary" element={<WebinarsPage />} />
+          <Route path="/dokumentacja" element={<DocumentationPage />} />
+          <Route path="/cennik" element={<PricingPage />} />
+          <Route path="/integracje" element={<IntegrationsPage />} />
+          <Route path="/kariera" element={<CareerPage />} />
+          <Route path="/polityka-prywatnosci" element={<PrivacyPolicyPage />} />
+          <Route path="/warunki-uzytkowania" element={<TermsOfUsePage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
