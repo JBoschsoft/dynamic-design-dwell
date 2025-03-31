@@ -635,7 +635,7 @@ const OnboardingPage = () => {
                               value={subscriptionAmount} 
                               onValueChange={setSubscriptionAmount}
                               min={10}
-                              max={200}
+                              max={1000}
                               step={5}
                               showValue={true}
                               formatValue={formatSubscriptionValue}
