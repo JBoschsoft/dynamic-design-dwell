@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -34,6 +35,7 @@ import {
   Trash2,
   User,
   Clock,
+  ChevronDown,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -45,6 +47,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { mockCandidates } from '@/components/candidates/mockData';
 
 interface RecentCandidate {
@@ -63,6 +66,8 @@ const DashboardSidebar = () => {
     const saved = localStorage.getItem('recentlyViewedCandidates');
     return saved ? JSON.parse(saved) : [];
   });
+  
+  const [isRecentCandidatesOpen, setIsRecentCandidatesOpen] = useState(false);
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -95,6 +100,10 @@ const DashboardSidebar = () => {
     }
   }, [currentCandidate, id]);
 
+  const handleCandidatesClick = () => {
+    navigate('/dashboard/candidates');
+  };
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -111,10 +120,6 @@ const DashboardSidebar = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleCandidatesAccordionClick = () => {
-    navigate('/dashboard/candidates');
   };
 
   const settingsItems = [
@@ -165,25 +170,31 @@ const DashboardSidebar = () => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <Accordion 
-                  type="single" 
-                  collapsible 
-                  className="w-full border-none" 
-                  defaultValue={isCandidatePath ? "candidates" : undefined}
+                <Collapsible 
+                  open={isRecentCandidatesOpen} 
+                  onOpenChange={setIsRecentCandidatesOpen}
                 >
-                  <AccordionItem value="candidates" className="border-none">
-                    <AccordionTrigger 
-                      onClick={handleCandidatesAccordionClick}
-                      className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton 
+                      onClick={handleCandidatesClick}
+                      className={`flex items-center justify-between w-full ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground bg-sidebar-accent' : ''}`}
                     >
-                      <div className={`flex items-center gap-2 flex-1 text-left ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground' : ''}`}>
-                        <Users className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <Users />
                         <span>Kandydaci</span>
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pl-8 pr-2 pt-1 pb-0">
-                      {isSpecificCandidate && currentCandidate ? (
-                        <div className="flex flex-col space-y-1">
+                      {recentCandidates.length > 0 && (
+                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" 
+                          style={{ transform: isRecentCandidatesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        />
+                      )}
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  
+                  {recentCandidates.length > 0 && (
+                    <CollapsibleContent className="pl-8 pr-2 pt-1 pb-0">
+                      <div className="flex flex-col space-y-1">
+                        {isSpecificCandidate && currentCandidate && (
                           <Link 
                             to={`/dashboard/candidates/${id}`}
                             className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md bg-sidebar-accent/50 font-medium"
@@ -191,35 +202,31 @@ const DashboardSidebar = () => {
                             <User className="h-3 w-3" />
                             <span className="truncate">{`${currentCandidate.firstName} ${currentCandidate.lastName}`}</span>
                           </Link>
-                          
-                          {recentCandidates.length > 1 && (
-                            <>
-                              <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground mt-2">
-                                <Clock className="h-3 w-3" />
-                                <span>Ostatnio przeglądane</span>
-                              </div>
-                              
-                              {recentCandidates
-                                .filter(c => c.id !== id)
-                                .slice(0, 5)
-                                .map(candidate => (
-                                  <Link 
-                                    key={candidate.id}
-                                    to={`/dashboard/candidates/${candidate.id}`}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent/30"
-                                  >
-                                    <User className="h-3 w-3" />
-                                    <span className="truncate">{`${candidate.firstName} ${candidate.lastName}`}</span>
-                                  </Link>
-                                ))
-                              }
-                            </>
-                          )}
+                        )}
+                        
+                        <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground mt-2">
+                          <Clock className="h-3 w-3" />
+                          <span>Ostatnio przeglądane</span>
                         </div>
-                      ) : null}
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                        
+                        {recentCandidates
+                          .filter(c => !isSpecificCandidate || c.id !== id)
+                          .slice(0, 5)
+                          .map(candidate => (
+                            <Link 
+                              key={candidate.id}
+                              to={`/dashboard/candidates/${candidate.id}`}
+                              className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent/30"
+                            >
+                              <User className="h-3 w-3" />
+                              <span className="truncate">{`${candidate.firstName} ${candidate.lastName}`}</span>
+                            </Link>
+                          ))
+                        }
+                      </div>
+                    </CollapsibleContent>
+                  )}
+                </Collapsible>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
