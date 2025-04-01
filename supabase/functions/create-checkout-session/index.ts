@@ -46,7 +46,9 @@ serve(async (req) => {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
           paymentType
-        }
+        },
+        // Set longer timeout to prevent expiration issues
+        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
       });
       
       console.log("Payment intent created successfully:", paymentIntent.id);
@@ -57,7 +59,8 @@ serve(async (req) => {
           paymentType,
           amount: tokenAmount,
           unitPrice,
-          totalPrice: totalAmount
+          totalPrice: totalAmount,
+          id: paymentIntent.id  // Include the ID for reference
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -74,7 +77,9 @@ serve(async (req) => {
           paymentType
         },
         // Always creating a new setup intent, never reusing
-        usage: 'off_session'
+        usage: 'off_session',
+        // Set longer expiration through confirm parameters
+        confirm: false
       });
       
       console.log("Setup intent created successfully:", setupIntent.id);
@@ -85,7 +90,8 @@ serve(async (req) => {
           paymentType,
           amount: tokenAmount,
           unitPrice,
-          totalPrice: totalAmount
+          totalPrice: totalAmount,
+          id: setupIntent.id  // Include the ID for reference
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

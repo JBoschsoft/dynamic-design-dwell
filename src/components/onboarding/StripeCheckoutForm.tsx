@@ -32,12 +32,14 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [intentId, setIntentId] = useState<string | null>(null);
   
   // Create payment intent when the form opens
   useEffect(() => {
     // Reset client secret when dialog opens to force a new payment intent
     if (open) {
       setClientSecret(null);
+      setIntentId(null);
       fetchPaymentIntent();
     }
   }, [open]);
@@ -59,7 +61,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (data?.clientSecret) {
         console.log("Received new client secret:", data.clientSecret);
+        console.log("Intent ID:", data.id);
         setClientSecret(data.clientSecret);
+        setIntentId(data.id);
       } else {
         throw new Error("Nie otrzymano klucza klienta od serwera płatności");
       }
@@ -99,13 +103,24 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       let result;
       
       if (paymentType === 'one-time') {
-        result = await stripe.confirmCardPayment(clientSecret!, {
+        if (!clientSecret) {
+          throw new Error("Brak klucza klienta dla płatności");
+        }
+        
+        result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
           }
         });
       } else {
-        result = await stripe.confirmCardSetup(clientSecret!, {
+        if (!clientSecret) {
+          throw new Error("Brak klucza klienta dla subskrypcji");
+        }
+        
+        // Refresh the card element before confirmation
+        cardElement.update({});
+        
+        result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
           }
@@ -132,24 +147,36 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
     } catch (error: any) {
       console.error('Payment error:', error);
-      setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
       
-      toast({
-        variant: "destructive",
-        title: "Błąd płatności",
-        description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
-      });
+      // Check if it's a "No such setupintent" or "No such paymentIntent" error
+      const noIntentError = 
+        error.message?.includes("No such setupintent") || 
+        error.message?.includes("No such payment_intent");
       
-      // Reset the form and get a new client secret if there was an error
-      if (elements) {
-        const cardElement = elements.getElement(CardElement);
-        if (cardElement) {
-          cardElement.clear();
+      if (noIntentError) {
+        setError("Sesja płatności wygasła - odświeżamy dane płatności, spróbuj ponownie.");
+        // Get a new payment intent immediately
+        await fetchPaymentIntent();
+      } else {
+        setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
+        
+        toast({
+          variant: "destructive",
+          title: "Błąd płatności",
+          description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
+        });
+        
+        // Reset the form and get a new client secret if there was an error
+        if (elements) {
+          const cardElement = elements.getElement(CardElement);
+          if (cardElement) {
+            cardElement.clear();
+          }
         }
+        
+        // Get a new payment intent
+        fetchPaymentIntent();
       }
-      
-      // Get a new payment intent
-      fetchPaymentIntent();
     } finally {
       setLoading(false);
     }
