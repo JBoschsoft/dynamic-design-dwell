@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -5,7 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Button, Label, Input, Loader2
 } from "@/components/ui";
-import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
+import { CardElement } from '@stripe/react-stripe-js';
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -23,8 +24,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   onSuccess
 }) => {
   const navigate = useNavigate();
-  const stripe = useStripe();
-  const elements = useElements();
   
   const [loading, setLoading] = useState(false);
   const [cardName, setCardName] = useState('');
@@ -33,18 +32,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!stripe || !elements) {
-      return;
-    }
-    
     if (!cardName) {
       setError('Proszę podać imię i nazwisko na karcie');
-      return;
-    }
-    
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      setError('Wystąpił błąd z formularzem płatności');
       return;
     }
     
