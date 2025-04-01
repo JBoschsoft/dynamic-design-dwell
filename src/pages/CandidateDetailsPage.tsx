@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
 import { Input } from '@/components/ui/input';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
-import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye } from 'lucide-react';
+import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 interface NoteEntry {
@@ -17,6 +17,8 @@ interface NoteEntry {
 
 const CandidateDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [notes, setNotes] = useState<NoteEntry[]>([
     {
       id: '1',
@@ -32,6 +34,20 @@ const CandidateDetailsPage: React.FC = () => {
       noteText: ''
     }
   });
+  
+  // Extract return path and source from location state
+  const returnPath = location.state?.returnPath || '/dashboard/candidates';
+  const fromSource = location.state?.from || '';
+  
+  // Function to handle back navigation with state preservation
+  const handleBackNavigation = () => {
+    navigate(returnPath, {
+      state: { 
+        from: 'candidateProfile',
+        // Pass any other state that might be needed
+      }
+    });
+  };
   
   // Find the candidate from the mock data
   const candidate = mockCandidates.find(c => c.id === id);
@@ -122,7 +138,18 @@ const CandidateDetailsPage: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{fullName}</h1>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBackNavigation}
+            className="flex items-center gap-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Powrót</span>
+          </Button>
+          <h1 className="text-2xl font-bold">{fullName}</h1>
+        </div>
         
         <div className="flex items-center gap-2">
           <Popover>

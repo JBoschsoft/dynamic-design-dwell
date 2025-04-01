@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   validateSearchQuery, 
   performVectorSearch, 
@@ -7,7 +7,7 @@ import {
   createCampaignApi 
 } from '../VectorSearchService';
 import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Candidate {
   id: string;
@@ -17,13 +17,52 @@ interface Candidate {
 }
 
 export const useVectorSearch = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const saved = localStorage.getItem('vectorSearch.query');
+    return saved || '';
+  });
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Candidate[]>([]);
-  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<Candidate[]>(() => {
+    try {
+      const saved = localStorage.getItem('vectorSearch.results');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('vectorSearch.selectedCandidates');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [campaignName, setCampaignName] = useState('');
   const [campaignDescription, setCampaignDescription] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Persist state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('vectorSearch.query', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    localStorage.setItem('vectorSearch.results', JSON.stringify(searchResults));
+  }, [searchResults]);
+
+  useEffect(() => {
+    localStorage.setItem('vectorSearch.selectedCandidates', JSON.stringify(selectedCandidates));
+  }, [selectedCandidates]);
+
+  // Check if we're returning from a candidate profile
+  useEffect(() => {
+    if (location.state?.from === 'candidateProfile') {
+      // Data is already restored from localStorage, no need to do anything else
+      console.log('Returning from candidate profile, selections restored');
+    }
+  }, [location]);
 
   const handleSearch = async () => {
     if (!validateSearchQuery(searchQuery)) {
@@ -40,7 +79,8 @@ export const useVectorSearch = () => {
     try {
       const results = await performVectorSearch(searchQuery);
       setSearchResults(results);
-      setSelectedCandidates([]); // Clear selections when new search is performed
+      // Don't clear selections when performing a new search
+      // This allows users to search for different candidates and add them to the same selection
     } catch (error) {
       toast({
         title: "Błąd wyszukiwania",

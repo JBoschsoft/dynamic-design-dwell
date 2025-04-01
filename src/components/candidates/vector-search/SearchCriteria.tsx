@@ -1,18 +1,9 @@
 
-import React from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui';
+import React, { useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { ReloadIcon } from '@radix-ui/react-icons';
 
 interface SearchCriteriaProps {
   searchQuery: string;
@@ -27,56 +18,49 @@ const SearchCriteria: React.FC<SearchCriteriaProps> = ({
   handleSearch,
   isSearching
 }) => {
-  const examplePhrases = [
-    "Senior React Developer",
-    "3+ lata doświadczenia",
-    "TypeScript",
-    "biegły angielski", 
-    "zarządzanie zespołem"
-  ];
+  // Handle enter key press to submit search
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Kryteria wyszukiwania</CardTitle>
         <CardDescription>
-          Opisz szczegółowo jakiego kandydata szukasz, uwzględniając umiejętności, doświadczenie i inne wymagania.
+          Opisz szczegółowo jakiego rodzaju kandydatów poszukujesz. Im bardziej szczegółowy opis, tym lepsze wyniki.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="vector-search">Opis wymagań</Label>
-            <Textarea 
-              id="vector-search"
-              placeholder="Np. Doświadczony programista React z 3+ lat doświadczenia w TypeScript, znajomością Next.js, zarządzaniem stanem za pomocą Redux i doświadczeniem w testowaniu z Jest i Cypress..."
-              className="min-h-[150px] mt-2"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <div>
-            <Label>Przykładowe frazy</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {examplePhrases.map((phrase, index) => (
-                <Badge 
-                  key={index}
-                  variant="outline" 
-                  className="cursor-pointer" 
-                  onClick={() => setSearchQuery(prev => prev + " " + phrase)}
-                >
-                  {phrase}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          
-          <Button onClick={handleSearch} disabled={isSearching} className="w-full">
-            <Search className="mr-2 h-4 w-4" />
-            {isSearching ? 'Wyszukiwanie...' : 'Wyszukaj kandydatów'}
-          </Button>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Textarea
+            placeholder="Np. 'Szukam programisty Java z 5-letnim doświadczeniem w bankowości i znajomością Spring Boot. Kandydat powinien mieć doświadczenie w prowadzeniu zespołu i komunikować się płynnie po angielsku.'"
+            className="min-h-[120px]"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <p className="text-xs text-muted-foreground">
+            Wskazówka: Wyszukiwanie wektorowe znajdzie kandydatów najbardziej pasujących do Twojego opisu, nawet jeśli nie zawierają dokładnie tych samych słów kluczowych.
+          </p>
         </div>
+        <Button 
+          onClick={handleSearch} 
+          className="w-full" 
+          disabled={isSearching || !searchQuery.trim()}
+        >
+          {isSearching ? (
+            <>
+              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+              Wyszukiwanie...
+            </>
+          ) : (
+            'Wyszukaj kandydatów'
+          )}
+        </Button>
       </CardContent>
     </Card>
   );
