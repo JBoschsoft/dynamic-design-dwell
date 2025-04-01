@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -111,6 +110,16 @@ const VectorSearchPage = () => {
     toast({
       title: "Akcja w trakcie implementacji",
       description: "Funkcja ustawiania screeningu będzie dostępna wkrótce.",
+    });
+  };
+
+  const navigateToCandidateProfile = (candidateId: string) => {
+    // Navigate to candidate profile with state to remember the source
+    navigate(`/dashboard/candidates/${candidateId}`, {
+      state: { 
+        from: 'vectorSearch',
+        returnPath: '/dashboard/candidates/search'
+      }
     });
   };
 
@@ -256,7 +265,7 @@ const VectorSearchPage = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/candidates/${candidate.id}`)}>
+                    <Button variant="outline" size="sm" onClick={() => navigateToCandidateProfile(candidate.id)}>
                       <Eye className="h-4 w-4 mr-1" />
                       Profil
                     </Button>

@@ -34,10 +34,20 @@ const DashboardHeader = () => {
   
   const fullName = candidate ? `${candidate.firstName} ${candidate.lastName}` : '';
 
+  const handleBackClick = () => {
+    // Check if we have state information about where to return
+    if (location.state && location.state.returnPath) {
+      navigate(location.state.returnPath);
+    } else {
+      // Default fallback to the candidates list
+      navigate('/dashboard/candidates');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
       {isCandidateDetailsPage && (
-        <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center mr-4">
+        <Button variant="ghost" onClick={handleBackClick} className="flex items-center mr-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Powrót
         </Button>
