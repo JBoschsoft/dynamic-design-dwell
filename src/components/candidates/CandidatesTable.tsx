@@ -116,7 +116,7 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
   return (
     <div className="rounded-md border">
       <div className="bg-muted/80 p-2 border-b flex items-center justify-between h-14">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-grow-0">
           {selectedCandidates.length > 0 ? (
             <span className="text-sm font-medium">
               {selectedCandidates.length} zaznaczonych
