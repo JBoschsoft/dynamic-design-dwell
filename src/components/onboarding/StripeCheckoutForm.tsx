@@ -286,8 +286,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   };
 
   // Define Stripe options with appearance
-  const stripeOptions = (secret: string) => ({
-    clientSecret: secret,
+  const options = {
+    // The appearance option is optional and will use defaults if not specified
     appearance: {
       theme: 'stripe',
       variables: {
@@ -301,7 +301,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       },
     },
     locale: 'pl'
-  });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -330,7 +330,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </div>
           </div>
         ) : clientSecret && paymentDetails ? (
-          <Elements stripe={stripePromise} options={stripeOptions(clientSecret)}>
+          <Elements 
+            stripe={stripePromise} 
+            options={{
+              clientSecret,
+              ...options
+            }}
+          >
             <CheckoutForm 
               clientSecret={clientSecret}
               onSuccess={handleSuccess}
