@@ -22,9 +22,11 @@ const Navbar = () => {
           <Button variant="outline" className="text-primary border-primary hover:bg-primary-50 transition-colors duration-300 font-semibold">
             Zaloguj się
           </Button>
-          <Button className="bg-primary hover:bg-primary-700 transition-colors duration-300 font-semibold">
-            Zarejestruj się
-          </Button>
+          <Link to="/signup">
+            <Button className="bg-primary hover:bg-primary-700 transition-colors duration-300 font-semibold">
+              Zarejestruj się
+            </Button>
+          </Link>
         </div>
       </div>
     </nav>
