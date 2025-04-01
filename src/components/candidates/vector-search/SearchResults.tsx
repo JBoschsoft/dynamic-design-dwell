@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -51,6 +51,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   deselectAllCandidates,
   areAllSelected
 }) => {
+  const resultsContainerRef = useRef<HTMLDivElement>(null);
+  
   // Calculate pagination values
   const totalResults = searchResults.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
@@ -76,7 +78,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   };
 
   // Scroll into view for last viewed candidate when results load
-  React.useEffect(() => {
+  useEffect(() => {
     if (lastViewedCandidateId && searchResults.length > 0) {
       const candidateElement = document.getElementById(`candidate-${lastViewedCandidateId}`);
       if (candidateElement) {
@@ -114,75 +116,77 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        {searchResults.length === 0 && !isSearching ? (
-          <div className="text-center py-8">
-            <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              Wpisz kryteria wyszukiwania i kliknij "Wyszukaj kandydatów", aby znaleźć pasujących kandydatów.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {currentResults.map(candidate => (
-              <div 
-                key={candidate.id}
-                id={`candidate-${candidate.id}`}
-                className={`p-4 border rounded-lg flex items-start justify-between transition-colors cursor-pointer ${
-                  selectedCandidates.includes(candidate.id) ? 'bg-primary/5 border-primary/30' : ''
-                } ${lastViewedCandidateId === candidate.id ? 'ring-2 ring-primary/50' : ''}`}
-                onClick={(e) => handleRowClick(candidate.id, e)}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      checked={selectedCandidates.includes(candidate.id)}
-                      onCheckedChange={() => toggleCandidateSelection(candidate.id)}
-                      className="mr-1"
-                      onClick={(e) => e.stopPropagation()} // Prevent row click from firing
-                    />
-                    <h3 className="font-medium">{candidate.name}</h3>
-                    <Badge>{Math.round(candidate.relevance * 100)}% zgodności</Badge>
+        <div className="space-y-4" ref={resultsContainerRef}>
+          {searchResults.length === 0 && !isSearching ? (
+            <div className="text-center py-8">
+              <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                Wpisz kryteria wyszukiwania i kliknij "Wyszukaj kandydatów", aby znaleźć pasujących kandydatów.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {currentResults.map(candidate => (
+                <div 
+                  key={candidate.id}
+                  id={`candidate-${candidate.id}`}
+                  className={`p-4 border rounded-lg flex items-start justify-between transition-colors cursor-pointer ${
+                    selectedCandidates.includes(candidate.id) ? 'bg-primary/5 border-primary/30' : ''
+                  } ${lastViewedCandidateId === candidate.id ? 'ring-2 ring-primary/50' : ''}`}
+                  onClick={(e) => handleRowClick(candidate.id, e)}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox 
+                        checked={selectedCandidates.includes(candidate.id)}
+                        onCheckedChange={() => toggleCandidateSelection(candidate.id)}
+                        className="mr-1"
+                        onClick={(e) => e.stopPropagation()} // Prevent row click from firing
+                      />
+                      <h3 className="font-medium">{candidate.name}</h3>
+                      <Badge>{Math.round(candidate.relevance * 100)}% zgodności</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {candidate.skills.map((skill: string) => (
+                        <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {candidate.skills.map((skill: string) => (
-                      <Badge key={skill} variant="outline" className="text-xs">{skill}</Badge>
-                    ))}
+                  <div className="flex gap-2 profile-button">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateToCandidateProfile(candidate.id);
+                      }}
+                      className="profile-button"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Profil
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2 profile-button">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigateToCandidateProfile(candidate.id);
-                    }}
-                    className="profile-button"
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Profil
-                  </Button>
+              ))}
+              
+              {/* Pagination controls */}
+              {searchResults.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    startIndex={startIndex}
+                    endIndex={endIndex}
+                    totalCandidates={totalResults}
+                    pageSize={pageSize}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
                 </div>
-              </div>
-            ))}
-            
-            {/* Pagination controls */}
-            {searchResults.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <PaginationControls
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  startIndex={startIndex}
-                  endIndex={endIndex}
-                  totalCandidates={totalResults}
-                  pageSize={pageSize}
-                  onPageSizeChange={handlePageSizeChange}
-                />
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

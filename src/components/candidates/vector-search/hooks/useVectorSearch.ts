@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   validateSearchQuery, 
@@ -38,7 +37,6 @@ export const useVectorSearch = () => {
       return [];
     }
   });
-  // New state for pagination
   const [currentPage, setCurrentPage] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('vectorSearch.currentPage');
@@ -63,13 +61,20 @@ export const useVectorSearch = () => {
       return null;
     }
   });
-  
+  const [scrollPosition, setScrollPosition] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('vectorSearch.scrollPosition');
+      return saved ? parseInt(saved) : 0;
+    } catch (e) {
+      return 0;
+    }
+  });
+
   const [campaignName, setCampaignName] = useState('');
   const [campaignDescription, setCampaignDescription] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Persist state to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('vectorSearch.query', searchQuery);
   }, [searchQuery]);
@@ -82,7 +87,6 @@ export const useVectorSearch = () => {
     localStorage.setItem('vectorSearch.selectedCandidates', JSON.stringify(selectedCandidates));
   }, [selectedCandidates]);
 
-  // Save pagination information
   useEffect(() => {
     localStorage.setItem('vectorSearch.currentPage', currentPage.toString());
   }, [currentPage]);
@@ -97,11 +101,13 @@ export const useVectorSearch = () => {
     }
   }, [lastViewedCandidateId]);
 
-  // Check if we're returning from a candidate profile
   useEffect(() => {
     if (location.state?.from === 'candidateProfile') {
-      // Data is already restored from localStorage, no need to do anything else
-      console.log('Returning from candidate profile, selections and pagination restored');
+      setTimeout(() => {
+        const savedScrollPosition = parseInt(localStorage.getItem('vectorSearch.scrollPosition') || '0');
+        window.scrollTo(0, savedScrollPosition);
+      }, 100);
+      console.log('Returning from candidate profile, restoring scroll position');
     }
   }, [location]);
 
@@ -120,8 +126,6 @@ export const useVectorSearch = () => {
     try {
       const results = await performVectorSearch(searchQuery);
       setSearchResults(results);
-      // Don't clear selections when performing a new search
-      // This allows users to search for different candidates and add them to the same selection
     } catch (error) {
       toast({
         title: "Błąd wyszukiwania",
@@ -141,7 +145,6 @@ export const useVectorSearch = () => {
     );
   };
   
-  // New functions for select all functionality
   const selectAllCandidates = () => {
     const allIds = searchResults.map(candidate => candidate.id);
     setSelectedCandidates(allIds);
@@ -151,7 +154,6 @@ export const useVectorSearch = () => {
     setSelectedCandidates([]);
   };
   
-  // Check if all candidates are selected
   const areAllSelected = searchResults.length > 0 && 
     selectedCandidates.length === searchResults.length;
 
@@ -163,7 +165,6 @@ export const useVectorSearch = () => {
     try {
       await createCampaignApi(campaignName, campaignDescription, selectedCandidates);
       
-      // Reset form
       setCampaignName('');
       setCampaignDescription('');
       setSelectedCandidates([]);
@@ -177,10 +178,9 @@ export const useVectorSearch = () => {
   };
 
   const navigateToCandidateProfile = (candidateId: string) => {
-    // Save the last viewed candidate ID before navigating
+    setScrollPosition(window.scrollY);
     setLastViewedCandidateId(candidateId);
     
-    // Navigate to candidate profile with state to remember the source
     navigate(`/dashboard/candidates/${candidateId}`, {
       state: { 
         from: 'vectorSearch',
@@ -189,17 +189,19 @@ export const useVectorSearch = () => {
     });
   };
 
-  // Method to handle page changes
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
-  // Method to handle page size changes
   const handlePageSizeChange = (newSize: string) => {
     const size = parseInt(newSize);
     setPageSize(size);
-    setCurrentPage(1); // Reset to first page when changing page size
+    setCurrentPage(1);
   };
+
+  useEffect(() => {
+    localStorage.setItem('vectorSearch.scrollPosition', scrollPosition.toString());
+  }, [scrollPosition]);
 
   return {
     searchQuery,
@@ -223,6 +225,8 @@ export const useVectorSearch = () => {
     navigateToCandidateProfile,
     handlePageChange,
     handlePageSizeChange,
-    setLastViewedCandidateId
+    setLastViewedCandidateId,
+    scrollPosition,
+    setScrollPosition
   };
 };
