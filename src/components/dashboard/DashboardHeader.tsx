@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Button,
   CommandDialog,
@@ -42,7 +41,10 @@ import { supabase } from '@/integrations/supabase/client';
 const DashboardHeader = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  const isDashboardHome = location.pathname === '/dashboard' || location.pathname === '/dashboard/';
 
   const handleLogout = async () => {
     try {
@@ -77,15 +79,17 @@ const DashboardHeader = () => {
   return (
     <header className="flex items-center h-16 px-4 border-b shrink-0 md:px-6">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate(-1)}
-          className="rounded-full"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        {/* Sidebar trigger button removed */}
+        {!isDashboardHome && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate(-1)}
+            className="rounded-full flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Powrót</span>
+          </Button>
+        )}
       </div>
       
       <div className="flex items-center ml-auto gap-4">
