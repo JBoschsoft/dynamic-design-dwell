@@ -28,10 +28,58 @@ export { Alert, AlertTitle, AlertDescription } from "./alert";
 export { Progress } from "./progress";
 export { Drawer, DrawerPortal, DrawerOverlay, DrawerTrigger, DrawerClose, DrawerContent, DrawerHeader, DrawerFooter, DrawerTitle, DrawerDescription } from "./drawer";
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion";
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
+export { Badge } from "./badge";
+export { 
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuRadioGroup,
+} from "./dropdown-menu";
+
+export { 
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInput,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "./sidebar";
 
 // Re-export icons directly
 export { 
   Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, 
   DollarSign, Gauge, Repeat, TrendingDown, Loader2, 
-  Calendar, Lock, RefreshCcw, AlertCircle, Info, ShieldCheck
+  Calendar, Lock, RefreshCcw, AlertCircle, Info, ShieldCheck,
+  LayoutDashboard, Users, Briefcase, Search, BarChart, Settings, LogOut, HelpCircle,
+  Bell, MessageSquare, User
 } from 'lucide-react';

@@ -1,10 +1,11 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Button, 
   Alert, AlertTitle, AlertDescription,
   Card, CardHeader, CardContent, CardTitle, CardDescription,
-  CheckCircle2, ArrowRight, Info
+  CheckCircle2, ArrowRight, Info, ShieldCheck
 } from "@/components/ui";
 
 interface SuccessStepProps {
@@ -20,6 +21,8 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
   subscriptionAmount,
   onNext
 }) => {
+  const navigate = useNavigate();
+  
   const calculateTokenPrice = (quantity: number) => {
     if (quantity >= 150) return 5;
     if (quantity >= 100) return 6;
@@ -34,6 +37,10 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
   
   const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
   const totalPrice = calculateTotalPrice(amount);
+  
+  const handleGoToDashboard = () => {
+    navigate('/dashboard');
+  };
   
   return (
     <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md w-full max-w-2xl">
@@ -83,6 +90,14 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
           </CardContent>
         </Card>
         
+        <Alert className="bg-green-50 border-green-200">
+          <ShieldCheck className="h-4 w-4 text-green-500" />
+          <AlertTitle className="text-green-700 font-medium">Zostałeś dodany jako Administrator</AlertTitle>
+          <AlertDescription className="text-green-700">
+            Twoje konto zostało ustawione jako Administrator Przestrzeni Roboczej. Masz pełne uprawnienia do zarządzania zespołem i ustawieniami.
+          </AlertDescription>
+        </Alert>
+        
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
           <p className="text-center text-sm text-gray-600">
             Dziękujemy za dokonanie płatności. Teraz możesz przejść do korzystania z platformy.
@@ -91,7 +106,7 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
       </div>
       
       <div className="mt-8">
-        <Button onClick={onNext} className="w-full bg-primary hover:bg-primary/90">
+        <Button onClick={handleGoToDashboard} className="w-full bg-primary hover:bg-primary/90">
           Przejdź do panelu głównego <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

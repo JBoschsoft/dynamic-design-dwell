@@ -23,6 +23,8 @@ import SignupPage from "./pages/SignupPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VerificationPage from "./pages/VerificationPage";
 import OnboardingPage from "./pages/OnboardingPage";
+import DashboardPage from "./pages/DashboardPage";
+import DashboardHome from "./pages/DashboardHome";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,13 @@ const App = () => (
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verification" element={<VerificationPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
+          
+          {/* Dashboard Routes */}
+          <Route path="/dashboard" element={<DashboardPage />}>
+            <Route index element={<DashboardHome />} />
+            {/* Add more dashboard routes as needed */}
+          </Route>
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
