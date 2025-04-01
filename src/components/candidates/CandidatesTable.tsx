@@ -115,79 +115,81 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
 
   return (
     <div className="rounded-md border">
-      <div className="bg-muted/80 p-2 border-b flex items-center gap-2">
-        {selectedCandidates.length > 0 ? (
-          <>
+      <div className="bg-muted/80 p-2 border-b flex items-center justify-between h-14">
+        <div className="flex items-center gap-2">
+          {selectedCandidates.length > 0 ? (
             <span className="text-sm font-medium">
               {selectedCandidates.length} zaznaczonych
             </span>
+          ) : (
+            <span className="text-sm font-medium">
+              Wybierz kandydatów, aby wykonać akcje grupowe
+            </span>
+          )}
+        </div>
+        
+        {selectedCandidates.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Briefcase className="h-4 w-4" />
+                  <span>Dodaj do kampanii</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Wybierz kampanię</h4>
+                  <p className="text-xs text-muted-foreground">To be implemented</p>
+                </div>
+              </PopoverContent>
+            </Popover>
             
-            <div className="flex items-center gap-2 ml-4">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    <Briefcase className="h-4 w-4" />
-                    <span>Dodaj do kampanii</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Plus className="h-4 w-4" />
+                  <span>Utwórz nową kampanię</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72">
+                <div className="space-y-4">
+                  <h4 className="font-medium">Utwórz nową kampanię</h4>
+                  
                   <div className="space-y-2">
-                    <h4 className="font-medium">Wybierz kampanię</h4>
-                    <p className="text-xs text-muted-foreground">To be implemented</p>
+                    <label htmlFor="campaign-name" className="text-sm font-medium">
+                      Nazwa kampanii
+                    </label>
+                    <Input 
+                      id="campaign-name"
+                      value={newCampaignName}
+                      onChange={(e) => setNewCampaignName(e.target.value)}
+                      placeholder="Wprowadź nazwę kampanii"
+                    />
                   </div>
-                </PopoverContent>
-              </Popover>
-              
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    <Plus className="h-4 w-4" />
-                    <span>Utwórz nową kampanię</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72">
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Utwórz nową kampanię</h4>
-                    
-                    <div className="space-y-2">
-                      <label htmlFor="campaign-name" className="text-sm font-medium">
-                        Nazwa kampanii
-                      </label>
-                      <Input 
-                        id="campaign-name"
-                        value={newCampaignName}
-                        onChange={(e) => setNewCampaignName(e.target.value)}
-                        placeholder="Wprowadź nazwę kampanii"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label htmlFor="campaign-description" className="text-sm font-medium">
-                        Opis kampanii
-                      </label>
-                      <Textarea 
-                        id="campaign-description"
-                        value={newCampaignDescription}
-                        onChange={(e) => setNewCampaignDescription(e.target.value)}
-                        placeholder="Wprowadź opis kampanii"
-                        rows={3}
-                      />
-                    </div>
-                    
-                    <div className="pt-2">
-                      <Button onClick={handleCreateNewCampaign} className="w-full">
-                        Utwórz kampanię
-                      </Button>
-                    </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-description" className="text-sm font-medium">
+                      Opis kampanii
+                    </label>
+                    <Textarea 
+                      id="campaign-description"
+                      value={newCampaignDescription}
+                      onChange={(e) => setNewCampaignDescription(e.target.value)}
+                      placeholder="Wprowadź opis kampanii"
+                      rows={3}
+                    />
                   </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </>
-        ) : (
-          <span className="text-sm font-medium">
-            Wybierz kandydatów, aby wykonać akcje grupowe
-          </span>
+                  
+                  <div className="pt-2">
+                    <Button onClick={handleCreateNewCampaign} className="w-full">
+                      Utwórz kampanię
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         )}
       </div>
       
