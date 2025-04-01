@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -93,20 +92,6 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
           </span>
           
           <div className="flex items-center gap-2 ml-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>Przypisz właściciela</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Wybierz właściciela</h4>
-                  <p className="text-xs text-muted-foreground">To be implemented</p>
-                </div>
-              </PopoverContent>
-            </Popover>
             
             <Popover>
               <PopoverTrigger asChild>
