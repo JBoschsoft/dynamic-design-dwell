@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { 
   Bell, 
   MessageSquare, 
-  User,
+  User as UserIcon,
   Settings,
   HelpCircle,
   LogOut
@@ -16,10 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Badge,
-  Avatar,
-  AvatarFallback,
-  AvatarImage
+  Badge
 } from '@/components/ui';
 import { Link } from 'react-router-dom';
 
@@ -71,20 +67,14 @@ const DashboardHeader = () => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="border-0 rounded-full p-0 hover:bg-gray-100">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src="https://github.com/shadcn.png" alt="Profile" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
+            <Button variant="outline" className="border-0 rounded-full p-2 hover:bg-gray-100">
+              <UserIcon className="h-6 w-6 text-gray-600" />
               <span className="sr-only">Profil użytkownika</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-48">
             <div className="flex items-center gap-2 p-2">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="https://github.com/shadcn.png" alt="Profile" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
+              <UserIcon className="h-10 w-10 text-gray-600" />
               <div>
                 <p className="font-medium text-sm">Jan Kowalski</p>
                 <p className="text-xs text-muted-foreground">jan.kowalski@example.com</p>
