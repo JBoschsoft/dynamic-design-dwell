@@ -1,3 +1,4 @@
+
 import { Campaign } from './types';
 
 export const mockCampaigns: Campaign[] = [
@@ -6,7 +7,7 @@ export const mockCampaigns: Campaign[] = [
     name: 'Frontend Developer Recruitment',
     position: 'Frontend Developer',
     department: 'Engineering',
-    owner: 'Anna Kowalska', // Added owner
+    owner: 'Anna Kowalska',
     status: 'active',
     startDate: '2024-01-15T00:00:00Z',
     endDate: '2024-02-28T00:00:00Z',
@@ -23,7 +24,7 @@ export const mockCampaigns: Campaign[] = [
     name: 'Backend Engineer Hiring',
     position: 'Backend Engineer',
     department: 'Engineering',
-    owner: 'Piotr Nowak', // Added owner
+    owner: 'Piotr Nowak',
     status: 'draft',
     startDate: '2024-03-01T00:00:00Z',
     endDate: null,
@@ -40,7 +41,7 @@ export const mockCampaigns: Campaign[] = [
     name: 'Data Scientist Opportunity',
     position: 'Data Scientist',
     department: 'Data Science',
-    owner: 'Maria Lewandowska', // Added owner
+    owner: 'Maria Lewandowska',
     status: 'closed',
     startDate: '2023-11-01T00:00:00Z',
     endDate: '2023-12-15T00:00:00Z',
@@ -57,7 +58,7 @@ export const mockCampaigns: Campaign[] = [
     name: 'Project Manager Vacancy',
     position: 'Project Manager',
     department: 'Management',
-    owner: 'Katarzyna Wójcik', // Added owner
+    owner: 'Katarzyna Wójcik',
     status: 'active',
     startDate: '2024-02-01T00:00:00Z',
     endDate: '2024-03-31T00:00:00Z',
@@ -74,7 +75,7 @@ export const mockCampaigns: Campaign[] = [
     name: 'UX Designer Position',
     position: 'UX Designer',
     department: 'Design',
-    owner: 'Adam Zaleski', // Added owner
+    owner: 'Adam Zaleski',
     status: 'paused',
     startDate: '2023-09-01T00:00:00Z',
     endDate: '2023-10-31T00:00:00Z',
