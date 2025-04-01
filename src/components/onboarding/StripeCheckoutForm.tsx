@@ -171,20 +171,26 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
         }
         
-        // Handle successful payment
-        if (onSuccess) {
-          onSuccess(paymentType, tokenAmount[0]);
+        console.log("Payment result:", result);
+        
+        // Check the payment status
+        if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+          // Handle successful payment
+          if (onSuccess) {
+            onSuccess(paymentType, tokenAmount[0]);
+          }
+          
+          onOpenChange(false);
+          
+          navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+          
+          toast({
+            title: "Płatność zrealizowana",
+            description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+          });
+        } else {
+          throw new Error("Płatność nie została zakończona pomyślnie.");
         }
-        
-        onOpenChange(false);
-        
-        navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-        
-        toast({
-          title: "Płatność zrealizowana",
-          description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
-        });
-        
       } else {
         if (!clientSecret) {
           throw new Error("Brak klucza klienta dla subskrypcji");
@@ -200,6 +206,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         if (result.error) {
           throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
         }
+        
+        console.log("Setup result:", result);
         
         // For subscription, we need to now create an initial charge with the stored payment method
         const setupResult = result.setupIntent;

@@ -155,8 +155,6 @@ serve(async (req) => {
         },
         // Set to off_session to allow future off-session payments
         usage: 'off_session',
-        // Do not confirm yet - client side confirmation
-        confirm: false
       });
       
       console.log("Setup intent created successfully:", setupIntent.id);
