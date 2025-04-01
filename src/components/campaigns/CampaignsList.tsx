@@ -20,8 +20,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  useToast
 } from '@/components/ui';
+import { useToast } from '@/hooks/use-toast';
 
 const CampaignsList: React.FC<CampaignsListProps> = ({ refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');

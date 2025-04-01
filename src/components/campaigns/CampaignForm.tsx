@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui';
-import { Calendar } from '@/components/ui';
+import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -209,6 +208,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
                       selected={field.value}
                       onSelect={field.onChange}
                       initialFocus
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -247,11 +247,12 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
                       mode="single"
                       selected={field.value || undefined}
                       onSelect={field.onChange}
-                      initialFocus
                       disabled={(date) => {
                         const startDate = form.getValues("startDate");
                         return startDate ? date < startDate : false;
                       }}
+                      initialFocus
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>

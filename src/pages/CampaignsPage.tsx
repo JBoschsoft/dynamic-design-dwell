@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import CampaignsList from '@/components/campaigns/CampaignsList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Toaster } from '@/components/ui/toaster'; // Add Toaster import
 
 const CampaignsPage = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -28,6 +29,8 @@ const CampaignsPage = () => {
           <CampaignsList refreshTrigger={refreshTrigger} />
         </CardContent>
       </Card>
+      
+      <Toaster /> {/* Add the Toaster component */}
     </div>
   );
 };
