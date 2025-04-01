@@ -9,10 +9,10 @@ import {
   ArrowRight,
   Textarea,
   CheckCircle2,
-  Upload,
   AlertCircle,
   Loader2
 } from "@/components/ui";
+import { Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface BrandingStepProps {
