@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -152,6 +153,8 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     } else if (currentStep === 2) {
+      // For the "next step" button, we want to directly go to step 3
+      // For the payment button, we want to open the payment dialog
       if (paymentType === 'one-time') {
         setConfirmDialogOpen(true);
       } else {
@@ -208,7 +211,7 @@ const OnboardingPage = () => {
             setTokenAmount={setTokenAmount}
             subscriptionAmount={subscriptionAmount}
             setSubscriptionAmount={setSubscriptionAmount}
-            onNext={handleNextStep}
+            onNext={() => setCurrentStep(3)}
             onPrevious={handlePreviousStep}
             paymentLoading={paymentLoading}
             paymentSuccess={paymentSuccess}
