@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -35,7 +36,6 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -85,7 +85,7 @@ const DashboardHeader = () => {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <SidebarTrigger />
+        {/* Sidebar trigger button removed */}
       </div>
       
       <div className="flex items-center ml-auto gap-4">
