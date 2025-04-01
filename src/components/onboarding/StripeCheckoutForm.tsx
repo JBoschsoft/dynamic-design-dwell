@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Button, Label, Input, LoaderIcon
+  Button, Label, Input
 } from "@/components/ui";
+import { Loader2 } from 'lucide-react'; // Import Loader2 directly from lucide-react
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 
 interface StripeCheckoutFormProps {
@@ -174,7 +175,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Przetwarzanie...
                 </>
               ) : (
