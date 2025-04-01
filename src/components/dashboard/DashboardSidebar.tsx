@@ -32,6 +32,7 @@ import {
   User,
   Clock,
   ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -97,7 +98,6 @@ const DashboardSidebar = () => {
     }
   }, [currentCandidate, id]);
 
-  // Auto-open the accordion only when on the candidates list page
   useEffect(() => {
     if (isCandidatesListPage && !isRecentCandidatesOpen) {
       setIsRecentCandidatesOpen(true);
@@ -109,7 +109,7 @@ const DashboardSidebar = () => {
   };
 
   const handleToggleAccordion = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent navigation when clicking the toggle
+    e.stopPropagation();
     setIsRecentCandidatesOpen(prev => !prev);
   };
 
@@ -202,9 +202,10 @@ const DashboardSidebar = () => {
                           className="h-8 w-8 p-0 hover:bg-transparent"
                           onClick={handleToggleAccordion}
                         >
-                          <ChevronDown 
-                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isRecentCandidatesOpen ? 'rotate-180' : 'rotate-0'}`} 
-                          />
+                          {isRecentCandidatesOpen ? 
+                            <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" /> :
+                            <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                          }
                         </Button>
                       </CollapsibleTrigger>
                     )}
