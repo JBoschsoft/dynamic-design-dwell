@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -8,22 +8,118 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CandidateTableProps } from './types';
 import { formatDate } from './utils';
 import { useNavigate } from 'react-router-dom';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui';
+import { Users, Briefcase, CheckCircle2 } from 'lucide-react';
 
 const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
   const navigate = useNavigate();
-
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  
   const handleRowDoubleClick = (candidateId: string) => {
     navigate(`/dashboard/candidates/${candidateId}`);
   };
 
+  const handleCheckboxChange = (candidateId: string, isChecked: boolean) => {
+    if (isChecked) {
+      setSelectedCandidates(prev => [...prev, candidateId]);
+    } else {
+      setSelectedCandidates(prev => prev.filter(id => id !== candidateId));
+    }
+  };
+
+  const handleSelectAllChange = (isChecked: boolean) => {
+    if (isChecked) {
+      const allIds = candidates.map(candidate => candidate.id);
+      setSelectedCandidates(allIds);
+    } else {
+      setSelectedCandidates([]);
+    }
+  };
+
+  const isAllSelected = candidates.length > 0 && selectedCandidates.length === candidates.length;
+  const isSomeSelected = selectedCandidates.length > 0 && selectedCandidates.length < candidates.length;
+
   return (
     <div className="rounded-md border">
+      {selectedCandidates.length > 0 && (
+        <div className="bg-muted/80 p-2 border-b flex items-center gap-2">
+          <span className="text-sm font-medium">
+            {selectedCandidates.length} zaznaczonych
+          </span>
+          
+          <div className="flex items-center gap-2 ml-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <span>Przypisz właściciela</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Wybierz właściciela</h4>
+                  <p className="text-xs text-muted-foreground">To be implemented</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Briefcase className="h-4 w-4" />
+                  <span>Dodaj do kampanii</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Wybierz kampanię</h4>
+                  <p className="text-xs text-muted-foreground">To be implemented</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Rozpocznij screening</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Wybierz workflow</h4>
+                  <p className="text-xs text-muted-foreground">To be implemented</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+      )}
+      
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12">
+              <Checkbox 
+                checked={isAllSelected} 
+                indeterminate={isSomeSelected && !isAllSelected}
+                onCheckedChange={handleSelectAllChange} 
+                aria-label="Zaznacz wszystkich kandydatów"
+              />
+            </TableHead>
             <TableHead>Nazwa</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Telefon</TableHead>
@@ -39,6 +135,13 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
                 className="cursor-pointer hover:bg-muted/50"
                 onDoubleClick={() => handleRowDoubleClick(candidate.id)}
               >
+                <TableCell className="w-12">
+                  <Checkbox 
+                    checked={selectedCandidates.includes(candidate.id)}
+                    onCheckedChange={(checked) => handleCheckboxChange(candidate.id, !!checked)}
+                    aria-label={`Zaznacz kandydata ${candidate.firstName} ${candidate.lastName}`}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{`${candidate.firstName} ${candidate.lastName}`}</TableCell>
                 <TableCell>{candidate.email}</TableCell>
                 <TableCell>{candidate.phone}</TableCell>
@@ -59,7 +162,7 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={6} className="h-24 text-center">
                 Brak wyników dla podanych kryteriów wyszukiwania.
               </TableCell>
             </TableRow>
