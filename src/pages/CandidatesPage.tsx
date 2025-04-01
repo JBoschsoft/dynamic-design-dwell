@@ -4,7 +4,9 @@ import CandidatesList from '@/components/candidates/CandidatesList';
 import CandidatesImport from '@/components/candidates/CandidatesImport';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 
 const CandidatesPage = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -30,11 +32,19 @@ const CandidatesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Kandydaci</h1>
-        <p className="text-muted-foreground">
-          Zarządzaj kandydatami, importuj z różnych źródeł i analizuj aplikacje.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Kandydaci</h1>
+          <p className="text-muted-foreground">
+            Zarządzaj kandydatami, importuj z różnych źródeł i analizuj aplikacje.
+          </p>
+        </div>
+        <Link to="/dashboard/candidates/search">
+          <Button>
+            <Search className="mr-2 h-4 w-4" />
+            Wyszukiwanie wektorowe
+          </Button>
+        </Link>
       </div>
 
       <Card>

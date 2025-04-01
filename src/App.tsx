@@ -28,6 +28,7 @@ import DashboardHome from "./pages/DashboardHome";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 import CandidatesPage from "./pages/CandidatesPage";
 import CandidateDetailsPage from "./pages/CandidateDetailsPage";
+import VectorSearchPage from "./components/candidates/VectorSearchPage";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
             <Route index element={<DashboardHome />} />
             <Route path="settings" element={<WorkspaceSettingsPage />} />
             <Route path="candidates" element={<CandidatesPage />} />
+            <Route path="candidates/search" element={<VectorSearchPage />} />
             <Route path="candidates/:id" element={<CandidateDetailsPage />} />
             {/* Add more dashboard routes as needed */}
           </Route>
