@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 const CandidateDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,14 +35,30 @@ const CandidateDetailsPage: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="mr-4">
+        <Breadcrumb className="mr-auto">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard/candidates">Kandydaci</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{fullName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Powrót
         </Button>
-        <h1 className="text-2xl font-bold">{fullName}</h1>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <h1 className="text-2xl font-bold mb-6">{fullName}</h1>
+      
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Informacje podstawowe</CardTitle>
