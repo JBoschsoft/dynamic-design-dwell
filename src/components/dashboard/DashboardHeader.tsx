@@ -24,6 +24,11 @@ import {
   Settings, 
   LogOut, 
   HelpCircle,
+  User,
+  FileText,
+  PlusSquare,
+  PlusCircle,
+  UserRound
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
