@@ -76,7 +76,7 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
           <TableRow>
             <TableHead>Nazwa kampanii</TableHead>
             <TableHead>Stanowisko</TableHead>
-            <TableHead>Dział</TableHead>
+            <TableHead>Właściciel kampanii</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Data rozpoczęcia</TableHead>
             <TableHead>Data zakończenia</TableHead>
@@ -94,7 +94,7 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
             >
               <TableCell className="font-medium">{campaign.name}</TableCell>
               <TableCell>{campaign.position}</TableCell>
-              <TableCell>{campaign.department}</TableCell>
+              <TableCell>{campaign.owner || 'Nie przypisano'}</TableCell>
               <TableCell>{getStatusBadge(campaign.status)}</TableCell>
               <TableCell>{formatDate(campaign.startDate)}</TableCell>
               <TableCell>{formatDate(campaign.endDate)}</TableCell>

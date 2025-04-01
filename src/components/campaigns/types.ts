@@ -1,9 +1,8 @@
-
 export interface Campaign {
   id: string;
   name: string;
   position: string;
-  department: string;
+  owner?: string; // Make owner optional
   status: 'active' | 'draft' | 'closed' | 'paused';
   startDate: string;
   endDate: string | null;
