@@ -37,9 +37,12 @@ const DashboardHeader = () => {
   const handleBackClick = () => {
     // Check if we have state information about where to return
     if (location.state && location.state.returnPath) {
+      // Navigate back with explicit state
+      console.log('Navigating back to:', location.state.returnPath);
       navigate(location.state.returnPath, {
         state: { 
-          from: 'candidateProfile'
+          from: 'candidateProfile',
+          returnedAt: new Date().getTime() // Add timestamp to ensure state change
         }
       });
     } else {

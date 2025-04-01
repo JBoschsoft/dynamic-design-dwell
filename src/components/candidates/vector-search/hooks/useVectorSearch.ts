@@ -105,11 +105,23 @@ export const useVectorSearch = () => {
     if (location.state?.from === 'candidateProfile') {
       setTimeout(() => {
         const savedScrollPosition = parseInt(localStorage.getItem('vectorSearch.scrollPosition') || '0');
+        console.log('Restoring scroll position to:', savedScrollPosition);
         window.scrollTo(0, savedScrollPosition);
-      }, 100);
-      console.log('Returning from candidate profile, restoring scroll position');
+        
+        if (lastViewedCandidateId) {
+          const element = document.getElementById(`candidate-${lastViewedCandidateId}`);
+          if (element) {
+            console.log('Highlighting last viewed candidate:', lastViewedCandidateId);
+            element.scrollIntoView({ block: 'center', behavior: 'auto' });
+            element.classList.add('highlight-candidate');
+            setTimeout(() => {
+              element.classList.remove('highlight-candidate');
+            }, 2000);
+          }
+        }
+      }, 300);
     }
-  }, [location]);
+  }, [location, lastViewedCandidateId]);
 
   const handleSearch = async () => {
     if (!validateSearchQuery(searchQuery)) {
@@ -178,7 +190,10 @@ export const useVectorSearch = () => {
   };
 
   const navigateToCandidateProfile = (candidateId: string) => {
-    setScrollPosition(window.scrollY);
+    const currentPosition = window.scrollY;
+    console.log('Saving scroll position:', currentPosition);
+    localStorage.setItem('vectorSearch.scrollPosition', currentPosition.toString());
+    setScrollPosition(currentPosition);
     setLastViewedCandidateId(candidateId);
     
     navigate(`/dashboard/candidates/${candidateId}`, {

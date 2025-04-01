@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
@@ -37,6 +38,8 @@ const CandidateDetailsPage: React.FC = () => {
   
   useEffect(() => {
     window.scrollTo(0, 0);
+    // Console log to help debug the state
+    console.log('CandidateDetailsPage location state:', location.state);
   }, []);
   
   const returnPath = location.state?.returnPath || '/dashboard/candidates';
@@ -124,9 +127,11 @@ const CandidateDetailsPage: React.FC = () => {
 
   const handleBackClick = () => {
     if (location.state && location.state.returnPath) {
+      console.log('Returning to:', location.state.returnPath);
       navigate(location.state.returnPath, {
         state: { 
-          from: 'candidateProfile'
+          from: 'candidateProfile',
+          returnedAt: new Date().getTime() // Add timestamp to ensure state change
         }
       });
     } else {

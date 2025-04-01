@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { 
   Card, 
@@ -79,14 +80,30 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   // Scroll into view for last viewed candidate when results load
   useEffect(() => {
     if (lastViewedCandidateId && searchResults.length > 0) {
-      const candidateElement = document.getElementById(`candidate-${lastViewedCandidateId}`);
-      if (candidateElement) {
+      // Find which page the candidate is on
+      const candidateIndex = searchResults.findIndex(c => c.id === lastViewedCandidateId);
+      
+      if (candidateIndex >= 0) {
+        // Calculate the page the candidate is on
+        const candidatePage = Math.floor(candidateIndex / pageSize) + 1;
+        
+        // If the candidate is not on the current page, change to that page
+        if (candidatePage !== currentPage) {
+          console.log(`Candidate is on page ${candidatePage}, changing from current page ${currentPage}`);
+          handlePageChange(candidatePage);
+        }
+        
+        // Use setTimeout to allow the DOM to update after pagination change
         setTimeout(() => {
-          candidateElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+          const candidateElement = document.getElementById(`candidate-${lastViewedCandidateId}`);
+          if (candidateElement) {
+            console.log('Scrolling to candidate element');
+            candidateElement.scrollIntoView({ behavior: 'auto', block: 'center' });
+          }
+        }, 150);
       }
     }
-  }, [lastViewedCandidateId, searchResults, currentResults]);
+  }, [lastViewedCandidateId, searchResults, currentResults, currentPage, handlePageChange, pageSize]);
 
   return (
     <Card>
