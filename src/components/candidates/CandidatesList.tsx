@@ -10,6 +10,7 @@ const CandidatesList: React.FC<CandidatesListProps> = ({ refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [refreshList, setRefreshList] = useState(0);
   
   // Filter candidates based on search query
   const filteredCandidates = mockCandidates.filter(candidate => 
@@ -31,12 +32,18 @@ const CandidatesList: React.FC<CandidatesListProps> = ({ refreshTrigger }) => {
     // Reset to first page when changing page size
     setCurrentPage(1);
   };
+  
+  const handleCandidateAdded = () => {
+    setRefreshList(prev => prev + 1);
+    setCurrentPage(1); // Go to first page to see the new candidate
+  };
 
   return (
     <div className="space-y-4">
       <CandidatesSearch 
         searchQuery={searchQuery} 
-        onSearchChange={setSearchQuery} 
+        onSearchChange={setSearchQuery}
+        onCandidateAdded={handleCandidateAdded}
       />
       
       <CandidatesTable candidates={paginatedCandidates} />

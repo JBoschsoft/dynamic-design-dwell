@@ -3,10 +3,18 @@ export interface Candidate {
   id: string;
   name: string;
   email: string;
-  phone: string; // Added phone field
+  phone: string;
   stage: 'Nowy' | 'Screening' | 'Wywiad' | 'Oferta' | 'Zatrudniony' | 'Odrzucony';
   source: string;
   appliedAt: Date;
+  // Additional candidate fields
+  jobTitle?: string;
+  linkedin?: string;
+  experience?: string;
+  education?: string;
+  salary?: string;
+  availability?: string;
+  notes?: string;
 }
 
 export interface CandidatesListProps {
@@ -55,4 +63,26 @@ export interface ImportATSProps {
   onAtsApiKeyChange: (key: string) => void;
   atsProjectId: string;
   onAtsProjectIdChange: (id: string) => void;
+}
+
+// New types for the candidate form
+export interface CandidateFormProps {
+  onSubmit: (candidate: Omit<Candidate, 'id'>) => void;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export interface CandidateFormValues {
+  name: string;
+  email: string;
+  phone: string;
+  stage: Candidate['stage'];
+  source: string;
+  jobTitle?: string;
+  linkedin?: string;
+  experience?: string;
+  education?: string;
+  salary?: string;
+  availability?: string;
+  notes?: string;
 }
