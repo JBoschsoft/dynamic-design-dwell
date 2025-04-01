@@ -16,6 +16,7 @@ import LegalAgreementsModal from '@/components/onboarding/LegalAgreementsModal';
 import PaymentConfirmDialog from '@/components/onboarding/PaymentConfirmDialog';
 import StripeCheckoutForm from '@/components/onboarding/StripeCheckoutForm';
 import ATSIntegrationStep from '@/components/onboarding/ATSIntegrationStep';
+import BrandingStep from '@/components/onboarding/BrandingStep';
 
 // Load Stripe
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
@@ -162,9 +163,12 @@ const OnboardingPage = () => {
       // For payment step, we always want to go to step 3 (ATS Integration)
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      // ATS Integration step completed - go to final step
+      // ATS Integration step completed - go to Branding step
       setCurrentStep(4);
     } else if (currentStep === 4) {
+      // Branding step completed - go to final step
+      setCurrentStep(5);
+    } else if (currentStep === 5) {
       // Final success step - redirect to dashboard
       navigate('/dashboard');
     }
@@ -188,7 +192,7 @@ const OnboardingPage = () => {
   
   const stripeOptions = {
     appearance: {
-      theme: 'stripe' as const, // Explicitly type as 'stripe' literal
+      theme: 'stripe' as const,
       variables: {
         colorPrimary: '#6366f1',
         colorBackground: '#ffffff',
@@ -203,7 +207,7 @@ const OnboardingPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ProgressBar currentStep={currentStep} totalSteps={4} />
+      <ProgressBar currentStep={currentStep} totalSteps={5} />
       
       <div className="flex-1 flex items-center justify-center p-4">
         {currentStep === 1 && (
@@ -246,6 +250,13 @@ const OnboardingPage = () => {
         )}
         
         {currentStep === 4 && (
+          <BrandingStep 
+            onNext={handleNextStep}
+            onPrevious={handlePreviousStep}
+          />
+        )}
+        
+        {currentStep === 5 && (
           <SuccessStep 
             paymentType={paymentType}
             tokenAmount={tokenAmount}
