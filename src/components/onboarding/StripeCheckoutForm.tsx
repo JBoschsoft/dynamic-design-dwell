@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -26,7 +25,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// Initialize Stripe outside component to avoid re-initialization
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 interface CheckoutFormProps {
@@ -58,7 +56,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
     e.preventDefault();
 
     if (!stripe || !elements) {
-      // Stripe hasn't loaded yet
       return;
     }
 
@@ -66,7 +63,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
     setErrorMessage(null);
 
     try {
-      // Handle different payment types
       if (paymentType === 'one-time') {
         const { error, paymentIntent } = await stripe.confirmPayment({
           elements,
@@ -82,11 +78,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
         if (paymentIntent && paymentIntent.status === 'succeeded') {
           setIsSuccess(true);
-          // Wait a bit to show success message before calling onSuccess
           setTimeout(() => onSuccess(paymentType, amount), 1500);
         }
       } else {
-        // For subscription, just confirm the setup
         const { error, setupIntent } = await stripe.confirmSetup({
           elements,
           confirmParams: {
@@ -101,7 +95,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
         if (setupIntent && setupIntent.status === 'succeeded') {
           setIsSuccess(true);
-          // Wait a bit to show success message before calling onSuccess
           setTimeout(() => onSuccess(paymentType, amount), 1500);
         }
       }
@@ -225,12 +218,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Reset state when dialog opens
     if (open) {
       setError(null);
       setIsLoading(true);
       
-      // Fetch client secret from server
       const createIntent = async () => {
         try {
           const amount = tokenAmount[0];
@@ -273,7 +264,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
       createIntent();
     } else {
-      // Reset when closing
       setClientSecret(null);
       setPaymentDetails(null);
     }
@@ -281,13 +271,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
   const handleSuccess = (paymentType: string, amount: number) => {
     onSuccess(paymentType, amount);
-    // Close the dialog after a delay
     setTimeout(() => onOpenChange(false), 2000);
   };
 
-  // Define Stripe options with appearance
-  const options = {
-    // The appearance option is optional and will use defaults if not specified
+  const options = clientSecret ? {
+    clientSecret,
     appearance: {
       theme: 'stripe',
       variables: {
@@ -301,7 +289,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       },
     },
     locale: 'pl'
-  };
+  } : {};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -332,10 +320,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         ) : clientSecret && paymentDetails ? (
           <Elements 
             stripe={stripePromise} 
-            options={{
-              clientSecret,
-              ...options
-            }}
+            options={options}
           >
             <CheckoutForm 
               clientSecret={clientSecret}

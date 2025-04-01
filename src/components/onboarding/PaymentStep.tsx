@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Button,
@@ -47,6 +48,12 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
+  };
+  
+  // Create a direct navigation handler that bypasses payment processing
+  const handleDirectNextStep = () => {
+    // Skip payment process and go directly to the next step
+    onNext();
   };
   
   return (
@@ -326,7 +333,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
 
         <Button 
           variant="secondary"
-          onClick={onNext}
+          onClick={handleDirectNextStep}
           className="w-full"
           disabled={paymentLoading || paymentSuccess}
         >
