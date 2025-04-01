@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -34,6 +33,7 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  UserRound
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -105,36 +105,30 @@ const DashboardSidebar = () => {
     }
   }, [currentCandidate, id]);
 
-  // Auto-open the candidates list when on candidates page
   useEffect(() => {
     if (isCandidatesListPage && !isRecentCandidatesOpen) {
       setIsRecentCandidatesOpen(true);
     }
   }, [isCandidatesListPage]);
 
-  // Auto-open the settings accordion when on settings page
   useEffect(() => {
     if (isSettingsPage && !isSettingsAccordionOpen) {
       setIsSettingsAccordionOpen(true);
     }
   }, [isSettingsPage]);
 
-  // Listen for scroll events to highlight active section when on settings page
   useEffect(() => {
     if (!isSettingsPage) return;
 
     const handleScroll = () => {
-      // Get all section elements
       const sections = document.querySelectorAll('[id^="company-profile"], [id^="branding"], [id^="integrations"], [id^="billing"], [id^="team"], [id^="notifications"], [id^="security"], [id^="data-management"], [id^="danger-zone"]');
       
-      // Find the section currently in view
       let currentSection = null;
       let minDistance = Infinity;
       
       sections.forEach((section) => {
         const rect = section.getBoundingClientRect();
-        // Consider the section in view if its top is close to the viewport top
-        const distance = Math.abs(rect.top - 100); // 100px offset for header
+        const distance = Math.abs(rect.top - 100);
         
         if (distance < minDistance) {
           minDistance = distance;
@@ -148,7 +142,6 @@ const DashboardSidebar = () => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    // Trigger once to set initial state
     handleScroll();
     
     return () => window.removeEventListener('scroll', handleScroll);
@@ -197,9 +190,9 @@ const DashboardSidebar = () => {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2.5">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg" alt="Logo" />
-            <AvatarFallback>HR</AvatarFallback>
+          <Avatar className="h-8 w-8 bg-primary">
+            <AvatarImage src="" alt="Logo" />
+            <AvatarFallback className="bg-primary text-primary-foreground">HR</AvatarFallback>
           </Avatar>
           <span className="font-bold text-lg">HR Assist</span>
         </div>
@@ -381,9 +374,11 @@ const DashboardSidebar = () => {
       <SidebarFooter>
         <div className="flex justify-between items-center p-4">
           <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="/placeholder.svg" alt="Avatar" />
-              <AvatarFallback>JD</AvatarFallback>
+            <Avatar className="h-8 w-8 bg-primary">
+              <AvatarImage src="" alt="Avatar" />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                <UserRound className="h-4 w-4" />
+              </AvatarFallback>
             </Avatar>
             <div className="text-sm">
               <p className="font-medium">Jan Kowalski</p>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -99,9 +100,11 @@ const DashboardHeader = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder.svg" alt="Avatar" />
-                <AvatarFallback>JK</AvatarFallback>
+              <Avatar className="h-8 w-8 bg-primary">
+                <AvatarImage src="" alt="Profile" />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  <UserRound className="h-4 w-4" />
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
