@@ -24,8 +24,13 @@ interface SearchResultsProps {
   searchResults: Candidate[];
   isSearching: boolean;
   selectedCandidates: string[];
+  currentPage: number;
+  pageSize: number;
+  lastViewedCandidateId: string | null;
   toggleCandidateSelection: (id: string) => void;
   navigateToCandidateProfile: (candidateId: string) => void;
+  handlePageChange: (page: number) => void;
+  handlePageSizeChange: (size: string) => void;
   selectAllCandidates?: () => void;
   deselectAllCandidates?: () => void;
   areAllSelected?: boolean;
@@ -35,32 +40,23 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   searchResults,
   isSearching,
   selectedCandidates,
+  currentPage,
+  pageSize,
+  lastViewedCandidateId,
   toggleCandidateSelection,
   navigateToCandidateProfile,
+  handlePageChange,
+  handlePageSizeChange,
   selectAllCandidates,
   deselectAllCandidates,
   areAllSelected
 }) => {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
-  
   // Calculate pagination values
   const totalResults = searchResults.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalResults);
   const currentResults = searchResults.slice(startIndex, endIndex);
-  
-  // Handler for page changes
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-  
-  // Handler for page size changes
-  const handlePageSizeChange = (size: string) => {
-    setPageSize(Number(size));
-    setCurrentPage(1); // Reset to first page when changing page size
-  };
   
   // Handle select all toggle
   const handleSelectAllToggle = () => {
@@ -78,6 +74,18 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       toggleCandidateSelection(id);
     }
   };
+
+  // Scroll into view for last viewed candidate when results load
+  React.useEffect(() => {
+    if (lastViewedCandidateId && searchResults.length > 0) {
+      const candidateElement = document.getElementById(`candidate-${lastViewedCandidateId}`);
+      if (candidateElement) {
+        setTimeout(() => {
+          candidateElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  }, [lastViewedCandidateId, searchResults, currentResults]);
 
   return (
     <Card>
@@ -118,9 +126,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             {currentResults.map(candidate => (
               <div 
                 key={candidate.id}
+                id={`candidate-${candidate.id}`}
                 className={`p-4 border rounded-lg flex items-start justify-between transition-colors cursor-pointer ${
                   selectedCandidates.includes(candidate.id) ? 'bg-primary/5 border-primary/30' : ''
-                }`}
+                } ${lastViewedCandidateId === candidate.id ? 'ring-2 ring-primary/50' : ''}`}
                 onClick={(e) => handleRowClick(candidate.id, e)}
               >
                 <div className="space-y-2">

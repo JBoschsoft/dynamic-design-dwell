@@ -38,6 +38,32 @@ export const useVectorSearch = () => {
       return [];
     }
   });
+  // New state for pagination
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('vectorSearch.currentPage');
+      return saved ? parseInt(saved) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+  const [pageSize, setPageSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('vectorSearch.pageSize');
+      return saved ? parseInt(saved) : 10;
+    } catch (e) {
+      return 10;
+    }
+  });
+  const [lastViewedCandidateId, setLastViewedCandidateId] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem('vectorSearch.lastViewedCandidateId');
+      return saved || null;
+    } catch (e) {
+      return null;
+    }
+  });
+  
   const [campaignName, setCampaignName] = useState('');
   const [campaignDescription, setCampaignDescription] = useState('');
   const navigate = useNavigate();
@@ -56,11 +82,26 @@ export const useVectorSearch = () => {
     localStorage.setItem('vectorSearch.selectedCandidates', JSON.stringify(selectedCandidates));
   }, [selectedCandidates]);
 
+  // Save pagination information
+  useEffect(() => {
+    localStorage.setItem('vectorSearch.currentPage', currentPage.toString());
+  }, [currentPage]);
+
+  useEffect(() => {
+    localStorage.setItem('vectorSearch.pageSize', pageSize.toString());
+  }, [pageSize]);
+
+  useEffect(() => {
+    if (lastViewedCandidateId) {
+      localStorage.setItem('vectorSearch.lastViewedCandidateId', lastViewedCandidateId);
+    }
+  }, [lastViewedCandidateId]);
+
   // Check if we're returning from a candidate profile
   useEffect(() => {
     if (location.state?.from === 'candidateProfile') {
       // Data is already restored from localStorage, no need to do anything else
-      console.log('Returning from candidate profile, selections restored');
+      console.log('Returning from candidate profile, selections and pagination restored');
     }
   }, [location]);
 
@@ -136,6 +177,9 @@ export const useVectorSearch = () => {
   };
 
   const navigateToCandidateProfile = (candidateId: string) => {
+    // Save the last viewed candidate ID before navigating
+    setLastViewedCandidateId(candidateId);
+    
     // Navigate to candidate profile with state to remember the source
     navigate(`/dashboard/candidates/${candidateId}`, {
       state: { 
@@ -145,12 +189,27 @@ export const useVectorSearch = () => {
     });
   };
 
+  // Method to handle page changes
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  // Method to handle page size changes
+  const handlePageSizeChange = (newSize: string) => {
+    const size = parseInt(newSize);
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
   return {
     searchQuery,
     setSearchQuery,
     isSearching,
     searchResults,
     selectedCandidates,
+    currentPage,
+    pageSize,
+    lastViewedCandidateId,
     campaignName,
     setCampaignName,
     campaignDescription,
@@ -161,6 +220,9 @@ export const useVectorSearch = () => {
     deselectAllCandidates,
     areAllSelected,
     createCampaign,
-    navigateToCandidateProfile
+    navigateToCandidateProfile,
+    handlePageChange,
+    handlePageSizeChange,
+    setLastViewedCandidateId
   };
 };
