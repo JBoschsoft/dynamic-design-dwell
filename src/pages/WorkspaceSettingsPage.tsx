@@ -1,6 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React from 'react';
 import CompanyProfileSettings from '@/components/settings/CompanyProfileSettings';
 import BrandingSettings from '@/components/settings/BrandingSettings';
 import IntegrationsSettings from '@/components/settings/IntegrationsSettings';
@@ -10,45 +9,28 @@ import NotificationsSettings from '@/components/settings/NotificationsSettings';
 import SecuritySettings from '@/components/settings/SecuritySettings';
 import DataManagementSettings from '@/components/settings/DataManagementSettings';
 import DangerZoneSettings from '@/components/settings/DangerZoneSettings';
+import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const WorkspaceSettingsPage = () => {
   const [searchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || 'company-profile');
+  const sectionId = searchParams.get('section');
   
-  // Update active tab when URL changes
+  // Scroll to the specific section when the URL changes
   useEffect(() => {
-    if (tabFromUrl) {
-      setActiveTab(tabFromUrl);
+    if (sectionId) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        // Add a small delay to ensure the DOM is fully rendered
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
     } else {
-      setActiveTab('company-profile');
+      // Scroll to top if no section specified
+      window.scrollTo(0, 0);
     }
-  }, [tabFromUrl]);
-
-  // Render the appropriate component based on the active tab
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'branding':
-        return <BrandingSettings />;
-      case 'integrations':
-        return <IntegrationsSettings />;
-      case 'billing':
-        return <BillingSettings />;
-      case 'team':
-        return <TeamSettings />;
-      case 'notifications':
-        return <NotificationsSettings />;
-      case 'security':
-        return <SecuritySettings />;
-      case 'data-management':
-        return <DataManagementSettings />;
-      case 'danger-zone':
-        return <DangerZoneSettings />;
-      case 'company-profile':
-      default:
-        return <CompanyProfileSettings />;
-    }
-  };
+  }, [sectionId]);
 
   return (
     <div className="container mx-auto py-6">
@@ -60,8 +42,51 @@ const WorkspaceSettingsPage = () => {
           </p>
         </div>
 
-        <div className="bg-card rounded-md border border-border shadow-sm p-6">
-          {renderContent()}
+        <div className="space-y-12">
+          {/* Company Profile Section */}
+          <section id="company-profile" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <CompanyProfileSettings />
+          </section>
+          
+          {/* Branding Section */}
+          <section id="branding" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <BrandingSettings />
+          </section>
+          
+          {/* Integrations Section */}
+          <section id="integrations" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <IntegrationsSettings />
+          </section>
+          
+          {/* Billing Section */}
+          <section id="billing" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <BillingSettings />
+          </section>
+          
+          {/* Team Section */}
+          <section id="team" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <TeamSettings />
+          </section>
+          
+          {/* Notifications Section */}
+          <section id="notifications" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <NotificationsSettings />
+          </section>
+          
+          {/* Security Section */}
+          <section id="security" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <SecuritySettings />
+          </section>
+          
+          {/* Data Management Section */}
+          <section id="data-management" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <DataManagementSettings />
+          </section>
+          
+          {/* Danger Zone Section */}
+          <section id="danger-zone" className="bg-card rounded-md border border-border shadow-sm p-6">
+            <DangerZoneSettings />
+          </section>
         </div>
       </div>
     </div>

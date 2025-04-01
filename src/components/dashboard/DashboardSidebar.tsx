@@ -30,18 +30,17 @@ import {
   Lock,
   Database,
   Trash2,
-  ChevronDown
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from '@/components/ui/accordion';
 
 const DashboardSidebar = () => {
   const location = useLocation();
@@ -75,15 +74,15 @@ const DashboardSidebar = () => {
 
   // Settings menu items
   const settingsItems = [
-    { title: 'Profil firmy', icon: Building2, path: '/dashboard/settings', },
-    { title: 'Branding', icon: Palette, path: '/dashboard/settings?tab=branding', },
-    { title: 'Integracje', icon: LinkIcon, path: '/dashboard/settings?tab=integrations', },
-    { title: 'Płatności i subskrypcja', icon: CreditCard, path: '/dashboard/settings?tab=billing', },
-    { title: 'Zespół i uprawnienia', icon: Users, path: '/dashboard/settings?tab=team', },
-    { title: 'Powiadomienia', icon: Bell, path: '/dashboard/settings?tab=notifications', },
-    { title: 'Bezpieczeństwo', icon: Lock, path: '/dashboard/settings?tab=security', },
-    { title: 'Zarządzanie danymi', icon: Database, path: '/dashboard/settings?tab=data-management', },
-    { title: 'Strefa zagrożenia', icon: Trash2, path: '/dashboard/settings?tab=danger-zone', },
+    { title: 'Profil firmy', icon: Building2, sectionId: 'company-profile' },
+    { title: 'Branding', icon: Palette, sectionId: 'branding' },
+    { title: 'Integracje', icon: LinkIcon, sectionId: 'integrations' },
+    { title: 'Płatności i subskrypcja', icon: CreditCard, sectionId: 'billing' },
+    { title: 'Zespół i uprawnienia', icon: Users, sectionId: 'team' },
+    { title: 'Powiadomienia', icon: Bell, sectionId: 'notifications' },
+    { title: 'Bezpieczeństwo', icon: Lock, sectionId: 'security' },
+    { title: 'Zarządzanie danymi', icon: Database, sectionId: 'data-management' },
+    { title: 'Strefa zagrożenia', icon: Trash2, sectionId: 'danger-zone' },
   ];
 
   return (
@@ -156,25 +155,30 @@ const DashboardSidebar = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton isActive={isSettingsActive()}>
-                      <Settings />
-                      <span>Ustawienia workspace</span>
-                      <ChevronDown className="h-4 w-4 ml-auto" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-64 p-0">
-                    {settingsItems.map((item) => (
-                      <DropdownMenuItem key={item.title} asChild>
-                        <Link to={item.path} className="flex items-center gap-2 p-3 cursor-pointer">
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Accordion type="single" collapsible className="w-full border-none">
+                  <AccordionItem value="settings" className="border-none">
+                    <AccordionTrigger asChild>
+                      <SidebarMenuButton isActive={isSettingsActive()}>
+                        <Settings />
+                        <span>Ustawienia workspace</span>
+                      </SidebarMenuButton>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-8 pr-2 pt-1 pb-0">
+                      <div className="flex flex-col space-y-1">
+                        {settingsItems.map((item) => (
+                          <Link 
+                            key={item.sectionId}
+                            to={`/dashboard/settings?section=${item.sectionId}`}
+                            className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
