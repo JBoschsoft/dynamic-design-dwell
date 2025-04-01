@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -10,7 +11,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { CandidateTableProps } from './types';
 import { formatDate } from './utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +26,31 @@ import { Users, Briefcase } from 'lucide-react';
 
 const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandidates }) => {
   const navigate = useNavigate();
-  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const location = useLocation();
+  
+  // Initialize from localStorage instead of empty array
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('selectedCandidates');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading selected candidates from localStorage:', e);
+      return [];
+    }
+  });
+  
+  // Save to localStorage whenever selection changes
+  useEffect(() => {
+    localStorage.setItem('selectedCandidates', JSON.stringify(selectedCandidates));
+  }, [selectedCandidates]);
   
   const handleRowDoubleClick = (candidateId: string) => {
-    navigate(`/dashboard/candidates/${candidateId}`);
+    navigate(`/dashboard/candidates/${candidateId}`, {
+      state: { 
+        returnPath: location.pathname,
+        fromCandidatesList: true
+      }
+    });
   };
 
   const handleCheckboxChange = (candidateId: string, isChecked: boolean) => {
