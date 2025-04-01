@@ -18,53 +18,48 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui";
+import { useNavigate } from "react-router-dom";
 
 const candidateFormSchema = z.object({
-  name: z.string().min(2, { message: "Imię i nazwisko jest wymagane" }),
+  firstName: z.string().min(2, { message: "Imię jest wymagane" }),
+  lastName: z.string().min(2, { message: "Nazwisko jest wymagane" }),
   email: z.string().email({ message: "Nieprawidłowy adres email" }),
   phone: z.string().min(9, { message: "Numer telefonu jest wymagany" }),
   stage: z.enum(["Nowy", "Screening", "Wywiad", "Oferta", "Zatrudniony", "Odrzucony"]),
   source: z.string().min(1, { message: "Źródło jest wymagane" }),
-  jobTitle: z.string().optional(),
-  linkedin: z.string().optional(),
-  experience: z.string().optional(),
-  education: z.string().optional(),
-  salary: z.string().optional(),
-  availability: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose }) => {
+  const navigate = useNavigate();
+  
   const form = useForm<CandidateFormValues>({
     resolver: zodResolver(candidateFormSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
       stage: "Nowy",
       source: "",
-      jobTitle: "",
-      linkedin: "",
-      experience: "",
-      education: "",
-      salary: "",
-      availability: "",
-      notes: "",
     },
   });
 
   const handleSubmit = (values: CandidateFormValues) => {
-    onSubmit({
+    // Since we're using firstName and lastName separately in the form,
+    // but the API might expect a combined name, we'll handle that here
+    const newCandidate = {
       ...values,
       appliedAt: new Date(),
-    });
+    };
+    
+    onSubmit(newCandidate);
     form.reset();
   };
 
@@ -73,18 +68,34 @@ const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Dodaj nowego kandydata</DialogTitle>
+          <DialogDescription>
+            Wprowadź podstawowe informacje o kandydacie. Dodatkowe dane można uzupełnić później na stronie profilu.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Imię i nazwisko*</FormLabel>
+                    <FormLabel>Imię*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Jan Kowalski" {...field} />
+                      <Input placeholder="Jan" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nazwisko*</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Kowalski" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,102 +177,7 @@ const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="jobTitle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stanowisko</FormLabel>
-                    <FormControl>
-                      <Input placeholder="np. Frontend Developer" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="linkedin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>LinkedIn</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Profil LinkedIn" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="experience"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Doświadczenie</FormLabel>
-                    <FormControl>
-                      <Input placeholder="np. 3 lata" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="education"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wykształcenie</FormLabel>
-                    <FormControl>
-                      <Input placeholder="np. Magister Informatyki" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="salary"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Oczekiwane wynagrodzenie</FormLabel>
-                    <FormControl>
-                      <Input placeholder="np. 15000-18000 PLN" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="availability"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Dostępność</FormLabel>
-                    <FormControl>
-                      <Input placeholder="np. od zaraz, 1 miesiąc" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notatki</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Dodatkowe informacje o kandydacie" 
-                      className="min-h-[100px]" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <DialogFooter>
               <Button variant="outline" type="button" onClick={onClose}>
                 Anuluj

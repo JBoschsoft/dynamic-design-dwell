@@ -28,6 +28,9 @@ const CandidateDetailsPage: React.FC = () => {
     );
   }
   
+  // Create full name from firstName and lastName
+  const fullName = `${candidate.firstName} ${candidate.lastName}`;
+  
   return (
     <div className="p-6">
       <div className="flex items-center mb-6">
@@ -35,7 +38,7 @@ const CandidateDetailsPage: React.FC = () => {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Powrót
         </Button>
-        <h1 className="text-2xl font-bold">{candidate.name}</h1>
+        <h1 className="text-2xl font-bold">{fullName}</h1>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

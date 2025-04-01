@@ -1,7 +1,8 @@
 
 export interface Candidate {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   stage: 'Nowy' | 'Screening' | 'Wywiad' | 'Oferta' | 'Zatrudniony' | 'Odrzucony';
@@ -65,7 +66,7 @@ export interface ImportATSProps {
   onAtsProjectIdChange: (id: string) => void;
 }
 
-// New types for the candidate form
+// Updated types for the candidate form
 export interface CandidateFormProps {
   onSubmit: (candidate: Omit<Candidate, 'id'>) => void;
   isOpen: boolean;
@@ -73,16 +74,11 @@ export interface CandidateFormProps {
 }
 
 export interface CandidateFormValues {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   stage: Candidate['stage'];
   source: string;
-  jobTitle?: string;
-  linkedin?: string;
-  experience?: string;
-  education?: string;
-  salary?: string;
-  availability?: string;
-  notes?: string;
 }
+

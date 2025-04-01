@@ -13,11 +13,12 @@ const CandidatesList: React.FC<CandidatesListProps> = ({ refreshTrigger }) => {
   const [refreshList, setRefreshList] = useState(0);
   
   // Filter candidates based on search query
-  const filteredCandidates = mockCandidates.filter(candidate => 
-    candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    candidate.phone.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCandidates = mockCandidates.filter(candidate => {
+    const fullName = `${candidate.firstName} ${candidate.lastName}`.toLowerCase();
+    return fullName.includes(searchQuery.toLowerCase()) || 
+      candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      candidate.phone.toLowerCase().includes(searchQuery.toLowerCase());
+  });
   
   // Calculate pagination
   const totalCandidates = filteredCandidates.length;
