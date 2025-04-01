@@ -10,8 +10,15 @@ import {
 } from '@/components/ui/table';
 import { CandidateTableProps } from './types';
 import { formatDate } from './utils';
+import { useNavigate } from 'react-router-dom';
 
 const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
+  const navigate = useNavigate();
+
+  const handleRowDoubleClick = (candidateId: string) => {
+    navigate(`/dashboard/candidates/${candidateId}`);
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -27,7 +34,11 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
         <TableBody>
           {candidates.length > 0 ? (
             candidates.map((candidate) => (
-              <TableRow key={candidate.id} className="cursor-pointer hover:bg-muted/50">
+              <TableRow 
+                key={candidate.id} 
+                className="cursor-pointer hover:bg-muted/50"
+                onDoubleClick={() => handleRowDoubleClick(candidate.id)}
+              >
                 <TableCell className="font-medium">{`${candidate.firstName} ${candidate.lastName}`}</TableCell>
                 <TableCell>{candidate.email}</TableCell>
                 <TableCell>{candidate.phone}</TableCell>
