@@ -1,16 +1,45 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CandidatesListProps } from './types';
 import { mockCandidates } from './mockData';
 import CandidatesSearch from './CandidatesSearch';
 import CandidatesTable from './CandidatesTable';
 import PaginationControls from './PaginationControls';
+import { useLocation } from 'react-router-dom';
 
 const CandidatesList: React.FC<CandidatesListProps> = ({ refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [pageSize, setPageSize] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Initialize pagination state from localStorage
+  const [pageSize, setPageSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('candidatesList.pageSize');
+      return saved ? parseInt(saved) : 10;
+    } catch (e) {
+      return 10;
+    }
+  });
+  
+  const [currentPage, setCurrentPage] = useState(() => {
+    try {
+      const saved = localStorage.getItem('candidatesList.currentPage');
+      return saved ? parseInt(saved) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+  
   const [refreshList, setRefreshList] = useState(0);
+  const location = useLocation();
+  
+  // Save pagination state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('candidatesList.currentPage', currentPage.toString());
+  }, [currentPage]);
+  
+  useEffect(() => {
+    localStorage.setItem('candidatesList.pageSize', pageSize.toString());
+  }, [pageSize]);
   
   // Filter candidates based on search query
   const filteredCandidates = mockCandidates.filter(candidate => {
