@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
-import { Users, Briefcase, CheckCircle2, FileText } from 'lucide-react';
+import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare } from 'lucide-react';
 
 const CandidateDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +23,50 @@ const CandidateDetailsPage: React.FC = () => {
   
   // Create full name from firstName and lastName
   const fullName = `${candidate.firstName} ${candidate.lastName}`;
+
+  // Mock candidate history events for the timeline
+  const candidateHistory = [
+    {
+      id: 1,
+      type: 'import',
+      title: 'Dodano do systemu',
+      description: 'Kandydat został zaimportowany do systemu',
+      date: candidate.appliedAt,
+      icon: Clock
+    },
+    {
+      id: 2,
+      type: 'campaign',
+      title: 'Dodano do kampanii',
+      description: 'Dodano do kampanii "Frontend Developer"',
+      date: new Date(candidate.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000), // 2 days after
+      icon: Briefcase
+    },
+    {
+      id: 3,
+      type: 'screening',
+      title: 'Wstępna rozmowa telefoniczna',
+      description: 'Wynik: Pozytywny. Kandydat wykazał zainteresowanie ofertą.',
+      date: new Date(candidate.appliedAt.getTime() + 5 * 24 * 60 * 60 * 1000), // 5 days after
+      icon: Phone
+    },
+    {
+      id: 4,
+      type: 'interview',
+      title: 'Rozmowa techniczna',
+      description: 'Wynik: Pozytywny. Kandydat ma odpowiednie umiejętności techniczne.',
+      date: new Date(candidate.appliedAt.getTime() + 10 * 24 * 60 * 60 * 1000), // 10 days after
+      icon: Calendar
+    },
+    {
+      id: 5,
+      type: 'feedback',
+      title: 'Informacja zwrotna',
+      description: 'Wysłano informację zwrotną z decyzją pozytywną.',
+      date: new Date(candidate.appliedAt.getTime() + 15 * 24 * 60 * 60 * 1000), // 15 days after
+      icon: MessageSquare
+    }
+  ].sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date descending (newest first)
   
   return (
     <div className="p-6">
@@ -77,150 +121,209 @@ const CandidateDetailsPage: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex flex-col space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Informacje podstawowe</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p>{candidate.email}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Telefon</p>
-              <p>{candidate.phone}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
-                ${candidate.stage === 'Nowy' ? 'bg-blue-100 text-blue-800' : ''}
-                ${candidate.stage === 'Screening' ? 'bg-purple-100 text-purple-800' : ''}
-                ${candidate.stage === 'Wywiad' ? 'bg-amber-100 text-amber-800' : ''}
-                ${candidate.stage === 'Oferta' ? 'bg-green-100 text-green-800' : ''}
-                ${candidate.stage === 'Zatrudniony' ? 'bg-emerald-100 text-emerald-800' : ''}
-                ${candidate.stage === 'Odrzucony' ? 'bg-red-100 text-red-800' : ''}
-              `}>
-                {candidate.stage}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Źródło</p>
-              <p>{candidate.source}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Data aplikacji</p>
-              <p>{formatDate(candidate.appliedAt)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Szczegóły zawodowe</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {candidate.jobTitle && (
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Left column - Main candidate information */}
+        <div className="flex-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Informacje podstawowe</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Stanowisko</p>
-                <p>{candidate.jobTitle}</p>
+                <p className="text-sm text-muted-foreground">Email</p>
+                <p>{candidate.email}</p>
               </div>
-            )}
-            {candidate.experience && (
               <div>
-                <p className="text-sm text-muted-foreground">Doświadczenie</p>
-                <p>{candidate.experience}</p>
+                <p className="text-sm text-muted-foreground">Telefon</p>
+                <p>{candidate.phone}</p>
               </div>
-            )}
-            {candidate.education && (
               <div>
-                <p className="text-sm text-muted-foreground">Wykształcenie</p>
-                <p>{candidate.education}</p>
-              </div>
-            )}
-            {candidate.salary && (
-              <div>
-                <p className="text-sm text-muted-foreground">Oczekiwane wynagrodzenie</p>
-                <p>{candidate.salary}</p>
-              </div>
-            )}
-            {candidate.availability && (
-              <div>
-                <p className="text-sm text-muted-foreground">Dostępność</p>
-                <p>{candidate.availability}</p>
-              </div>
-            )}
-            {candidate.linkedin && (
-              <div>
-                <p className="text-sm text-muted-foreground">LinkedIn</p>
-                <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {candidate.linkedin}
-                </a>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* New CV section */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>CV / Resume</CardTitle>
-            <Button variant="outline" size="sm" className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              <span>Pobierz CV</span>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-md p-4 bg-muted/50">
-              <div className="flex flex-col sm:flex-row gap-4 items-start">
-                <div className="bg-gray-100 rounded-md w-full sm:w-40 h-52 flex items-center justify-center border">
-                  <FileText className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
+                  ${candidate.stage === 'Nowy' ? 'bg-blue-100 text-blue-800' : ''}
+                  ${candidate.stage === 'Screening' ? 'bg-purple-100 text-purple-800' : ''}
+                  ${candidate.stage === 'Wywiad' ? 'bg-amber-100 text-amber-800' : ''}
+                  ${candidate.stage === 'Oferta' ? 'bg-green-100 text-green-800' : ''}
+                  ${candidate.stage === 'Zatrudniony' ? 'bg-emerald-100 text-emerald-800' : ''}
+                  ${candidate.stage === 'Odrzucony' ? 'bg-red-100 text-red-800' : ''}
+                `}>
+                  {candidate.stage}
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium mb-2">CV - {fullName}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Przesłane {formatDate(candidate.appliedAt)}
-                  </p>
-                  <div className="space-y-2">
-                    <div className="text-sm">
-                      <span className="font-medium">Format:</span> PDF
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium">Rozmiar:</span> 1.2 MB
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium">Język:</span> Polski
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Źródło</p>
+                <p>{candidate.source}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Data aplikacji</p>
+                <p>{formatDate(candidate.appliedAt)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Szczegóły zawodowe</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {candidate.jobTitle && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Stanowisko</p>
+                  <p>{candidate.jobTitle}</p>
+                </div>
+              )}
+              {candidate.experience && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Doświadczenie</p>
+                  <p>{candidate.experience}</p>
+                </div>
+              )}
+              {candidate.education && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Wykształcenie</p>
+                  <p>{candidate.education}</p>
+                </div>
+              )}
+              {candidate.salary && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Oczekiwane wynagrodzenie</p>
+                  <p>{candidate.salary}</p>
+                </div>
+              )}
+              {candidate.availability && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Dostępność</p>
+                  <p>{candidate.availability}</p>
+                </div>
+              )}
+              {candidate.linkedin && (
+                <div>
+                  <p className="text-sm text-muted-foreground">LinkedIn</p>
+                  <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    {candidate.linkedin}
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>CV / Resume</CardTitle>
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <FileText className="h-4 w-4" />
+                <span>Pobierz CV</span>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-md p-4 bg-muted/50">
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  <div className="bg-gray-100 rounded-md w-full sm:w-40 h-52 flex items-center justify-center border">
+                    <FileText className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-medium mb-2">CV - {fullName}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Przesłane {formatDate(candidate.appliedAt)}
+                    </p>
+                    <div className="space-y-2">
+                      <div className="text-sm">
+                        <span className="font-medium">Format:</span> PDF
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">Rozmiar:</span> 1.2 MB
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">Język:</span> Polski
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="mt-6 pt-6 border-t">
-                <h4 className="font-medium mb-2">Kluczowe umiejętności z CV</h4>
-                <div className="flex flex-wrap gap-2">
-                  {['Zarządzanie zespołem', 'Excel', 'Analiza danych', 'Prezentacje', 'Negocjacje', 'Obsługa klienta'].map((skill, index) => (
-                    <div key={index} className="bg-secondary px-3 py-1 rounded-full text-xs">
-                      {skill}
-                    </div>
-                  ))}
+                
+                <div className="mt-6 pt-6 border-t">
+                  <h4 className="font-medium mb-2">Kluczowe umiejętności z CV</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {['Zarządzanie zespołem', 'Excel', 'Analiza danych', 'Prezentacje', 'Negocjacje', 'Obsługa klienta'].map((skill, index) => (
+                      <div key={index} className="bg-secondary px-3 py-1 rounded-full text-xs">
+                        {skill}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Notatki</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {candidate.notes ? (
+                <p className="whitespace-pre-wrap">{candidate.notes}</p>
+              ) : (
+                <p className="text-muted-foreground italic">Brak notatek</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Notatki</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {candidate.notes ? (
-              <p className="whitespace-pre-wrap">{candidate.notes}</p>
-            ) : (
-              <p className="text-muted-foreground italic">Brak notatek</p>
-            )}
-          </CardContent>
-        </Card>
+        {/* Right column - Candidate history timeline */}
+        <div className="w-full md:w-80 lg:w-96 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historia kandydata</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-8">
+                {candidateHistory.map((event, index) => (
+                  <div key={event.id} className="relative pl-8">
+                    {/* Timeline connector */}
+                    {index < candidateHistory.length - 1 && (
+                      <div className="absolute left-3.5 top-8 bottom-0 w-px bg-border" />
+                    )}
+                    
+                    {/* Icon */}
+                    <div className="absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-background">
+                      <event.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    
+                    {/* Content */}
+                    <div>
+                      <h4 className="font-medium">{event.title}</h4>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {event.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(event.date)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Działania</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-start">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Dodaj notatkę
+              </Button>
+              <Button variant="outline" className="w-full justify-start">
+                <Phone className="mr-2 h-4 w-4" />
+                Zaplanuj rozmowę
+              </Button>
+              <Button variant="outline" className="w-full justify-start">
+                <Calendar className="mr-2 h-4 w-4" />
+                Dodaj wydarzenie
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
