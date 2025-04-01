@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockCampaigns } from '@/components/campaigns/mockData';
@@ -18,7 +17,6 @@ import {
   Separator,
 } from '@/components/ui';
 import { 
-  ArrowLeft, 
   Edit, 
   Users, 
   Calendar, 
@@ -93,26 +91,14 @@ const CampaignDetailsPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/dashboard/campaigns')}
-            className="rounded-full flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Powrót</span>
-          </Button>
-          
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-              {campaign.name}
-              {getStatusBadge(campaign.status)}
-            </h1>
-            <p className="text-muted-foreground">
-              Szczegóły kampanii rekrutacyjnej
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+            {campaign.name}
+            {getStatusBadge(campaign.status)}
+          </h1>
+          <p className="text-muted-foreground">
+            Szczegóły kampanii rekrutacyjnej
+          </p>
         </div>
         
         <Button>
