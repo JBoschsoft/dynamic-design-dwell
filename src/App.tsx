@@ -26,6 +26,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import DashboardHome from "./pages/DashboardHome";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
+import CandidatesPage from "./pages/CandidatesPage";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardPage />}>
             <Route index element={<DashboardHome />} />
             <Route path="settings" element={<WorkspaceSettingsPage />} />
+            <Route path="candidates" element={<CandidatesPage />} />
             {/* Add more dashboard routes as needed */}
           </Route>
           
