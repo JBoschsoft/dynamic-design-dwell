@@ -71,6 +71,8 @@ export const useVectorSearch = () => {
   });
 
   const [campaignName, setCampaignName] = useState('');
+  const [campaignDescription, setCampaignDescription] = useState('');
+  
   const navigate = useNavigate();
   const location = useLocation();
   const initialRenderRef = useRef(true);
