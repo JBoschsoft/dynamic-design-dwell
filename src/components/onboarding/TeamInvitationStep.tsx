@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Button, 
@@ -5,7 +6,7 @@ import {
   Card, CardContent, CardHeader, CardTitle,
   Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui";
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Info, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 
 interface TeamMember {

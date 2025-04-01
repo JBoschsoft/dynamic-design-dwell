@@ -24,20 +24,15 @@ interface ATSIntegrationStepProps {
   onPrevious: () => void;
 }
 
-const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext }) => {
+const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevious }) => {
   const [selectedAts, setSelectedAts] = useState<string>('teamtailor');
   const [apiKey, setApiKey] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [testSuccessful, setTestSuccessful] = useState<boolean | null>(null);
 
+  // Updated to simply proceed to the next step without testing
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate integration process
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsLoading(false);
     onNext();
   };
 
@@ -242,9 +237,9 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext }) => {
         <Button 
           type="button" 
           variant="outline" 
-          onClick={() => onNext()}
+          onClick={onPrevious}
         >
-          Pomiń ten krok
+          Wstecz
         </Button>
         
         <Button 
