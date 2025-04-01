@@ -12,9 +12,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { 
   LayoutDashboard, 
@@ -100,8 +97,22 @@ const DashboardSidebar = () => {
     }
   }, [currentCandidate, id]);
 
+  // Auto-open the candidates accordion when on the candidates page
+  useEffect(() => {
+    if (isCandidatePath && !isRecentCandidatesOpen) {
+      setIsRecentCandidatesOpen(true);
+    }
+  }, [isCandidatePath]);
+
   const handleCandidatesClick = () => {
     navigate('/dashboard/candidates');
+  };
+
+  const handleToggleAccordion = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking the toggle
+    if (!isCandidatePath) {
+      setIsRecentCandidatesOpen(prev => !prev);
+    }
   };
 
   const handleLogout = async () => {
@@ -174,22 +185,33 @@ const DashboardSidebar = () => {
                   open={isRecentCandidatesOpen} 
                   onOpenChange={setIsRecentCandidatesOpen}
                 >
-                  <CollapsibleTrigger asChild>
+                  <div className="flex items-center w-full">
                     <SidebarMenuButton 
                       onClick={handleCandidatesClick}
-                      className={`flex items-center justify-between w-full ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground bg-sidebar-accent' : ''}`}
+                      className={`flex-1 ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground bg-sidebar-accent' : ''}`}
                     >
                       <div className="flex items-center gap-2">
                         <Users />
                         <span>Kandydaci</span>
                       </div>
-                      {recentCandidates.length > 0 && (
-                        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" 
-                          style={{ transform: isRecentCandidatesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        />
-                      )}
                     </SidebarMenuButton>
-                  </CollapsibleTrigger>
+                    
+                    {recentCandidates.length > 0 && (
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 p-0 hover:bg-transparent"
+                          onClick={handleToggleAccordion}
+                          disabled={isCandidatePath} // Disable toggle when on candidates page
+                        >
+                          <ChevronDown 
+                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isCandidatePath ? 'rotate-180' : isRecentCandidatesOpen ? 'rotate-180' : 'rotate-0'}`} 
+                          />
+                        </Button>
+                      </CollapsibleTrigger>
+                    )}
+                  </div>
                   
                   {recentCandidates.length > 0 && (
                     <CollapsibleContent className="pl-8 pr-2 pt-1 pb-0">
