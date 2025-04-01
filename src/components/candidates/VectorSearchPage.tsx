@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { useVectorSearch } from './vector-search/hooks/useVectorSearch';
 import SearchCriteria from './vector-search/SearchCriteria';
 import SearchResults from './vector-search/SearchResults';
@@ -74,30 +73,6 @@ const VectorSearchPage: React.FC = () => {
             setCampaignDescription={setCampaignDescription}
             createCampaign={createCampaign}
           />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Jak działa wyszukiwanie kandydatów</CardTitle>
-              <CardDescription>
-                Wyszukiwanie semantyczne pozwala na znalezienie pasujących kandydatów nawet jeśli użyto innych sformułowań.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm">
-                  Wpisz dokładnie, jakiego kandydata szukasz. Możesz użyć naturalnego języka, opisując umiejętności, doświadczenie, wykształcenie, itp.
-                </p>
-                <p className="text-sm">
-                  Przykłady zapytań:
-                </p>
-                <ul className="text-sm list-disc pl-5 space-y-1">
-                  <li>Doświadczony frontend developer ze znajomością React i TypeScript</li>
-                  <li>Product Manager z doświadczeniem w branży fintech</li>
-                  <li>Inżynier DevOps znający Kubernetes i AWS</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
