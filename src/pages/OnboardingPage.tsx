@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -16,6 +17,7 @@ import PaymentConfirmDialog from '@/components/onboarding/PaymentConfirmDialog';
 import StripeCheckoutForm from '@/components/onboarding/StripeCheckoutForm';
 import ATSIntegrationStep from '@/components/onboarding/ATSIntegrationStep';
 import BrandingStep from '@/components/onboarding/BrandingStep';
+import TeamInvitationStep from '@/components/onboarding/TeamInvitationStep';
 
 // Load Stripe
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
@@ -165,6 +167,8 @@ const OnboardingPage = () => {
     } else if (currentStep === 4) {
       setCurrentStep(5);
     } else if (currentStep === 5) {
+      setCurrentStep(6);
+    } else if (currentStep === 6) {
       navigate('/dashboard');
     }
   };
@@ -202,7 +206,7 @@ const OnboardingPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ProgressBar currentStep={currentStep} totalSteps={5} />
+      <ProgressBar currentStep={currentStep} totalSteps={6} />
       
       <div className="flex-1 flex items-center justify-center p-4">
         {currentStep === 1 && (
@@ -255,6 +259,13 @@ const OnboardingPage = () => {
         
         {currentStep === 5 && (
           <BrandingStep 
+            onNext={handleNextStep}
+            onPrevious={handlePreviousStep}
+          />
+        )}
+        
+        {currentStep === 6 && (
+          <TeamInvitationStep 
             onNext={handleNextStep}
             onPrevious={handlePreviousStep}
           />

@@ -6,7 +6,6 @@ import {
   Card, CardHeader, CardContent, CardTitle,
   CheckCircle2, ArrowRight, Info
 } from "@/components/ui";
-import { useNavigate } from 'react-router-dom';
 
 interface SuccessStepProps {
   paymentType: 'one-time' | 'subscription';
@@ -21,8 +20,6 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
   subscriptionAmount,
   onNext
 }) => {
-  const navigate = useNavigate();
-  
   const calculateTokenPrice = (quantity: number) => {
     if (quantity >= 150) return 5;
     if (quantity >= 100) return 6;
@@ -87,7 +84,7 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
       </div>
       
       <div className="mt-8">
-        <Button onClick={onNext} className="w-full">
+        <Button onClick={onNext} className="w-full bg-blue-600 hover:bg-blue-700">
           Przejdź do panelu głównego <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
