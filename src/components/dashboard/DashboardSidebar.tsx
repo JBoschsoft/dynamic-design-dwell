@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -13,7 +12,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
-  SidebarInput,
 } from '@/components/ui/sidebar';
 import { 
   LayoutDashboard, 
@@ -44,9 +42,6 @@ const DashboardSidebar = () => {
             <AvatarFallback>HR</AvatarFallback>
           </Avatar>
           <span className="font-bold text-lg">HR Assist</span>
-        </div>
-        <div className="px-1 pt-2">
-          <SidebarInput placeholder="Szukaj..." />
         </div>
       </SidebarHeader>
       
@@ -104,14 +99,14 @@ const DashboardSidebar = () => {
         </SidebarGroup>
         
         <SidebarGroup>
-          <SidebarGroupLabel>Ustawienia</SidebarGroupLabel>
+          <SidebarGroupLabel>Administracja</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive('/dashboard/settings')}>
                   <Link to="/dashboard/settings">
                     <Settings />
-                    <span>Ustawienia konta</span>
+                    <span>Ustawienia workspace</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
