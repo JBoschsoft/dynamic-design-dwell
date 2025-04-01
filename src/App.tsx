@@ -25,6 +25,7 @@ import VerificationPage from "./pages/VerificationPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import DashboardHome from "./pages/DashboardHome";
+import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
           {/* Dashboard Routes */}
           <Route path="/dashboard" element={<DashboardPage />}>
             <Route index element={<DashboardHome />} />
+            <Route path="settings" element={<WorkspaceSettingsPage />} />
             {/* Add more dashboard routes as needed */}
           </Route>
           
