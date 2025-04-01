@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -160,16 +159,12 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     } else if (currentStep === 2) {
-      // For payment step, we always want to go to step 3 (ATS Integration)
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      // ATS Integration step completed - go to Branding step
       setCurrentStep(4);
     } else if (currentStep === 4) {
-      // Branding step completed - go to final step
       setCurrentStep(5);
     } else if (currentStep === 5) {
-      // Final success step - redirect to dashboard
       navigate('/dashboard');
     }
   };
@@ -243,24 +238,25 @@ const OnboardingPage = () => {
         )}
         
         {currentStep === 3 && (
+          <SuccessStep 
+            paymentType={paymentType}
+            tokenAmount={tokenAmount}
+            subscriptionAmount={subscriptionAmount}
+            onNext={handleNextStep}
+          />
+        )}
+        
+        {currentStep === 4 && (
           <ATSIntegrationStep 
             onNext={handleNextStep}
             onPrevious={handlePreviousStep}
           />
         )}
         
-        {currentStep === 4 && (
+        {currentStep === 5 && (
           <BrandingStep 
             onNext={handleNextStep}
             onPrevious={handlePreviousStep}
-          />
-        )}
-        
-        {currentStep === 5 && (
-          <SuccessStep 
-            paymentType={paymentType}
-            tokenAmount={tokenAmount}
-            subscriptionAmount={subscriptionAmount}
           />
         )}
       </div>

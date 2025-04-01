@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { 
-  Button,
+  Button, 
   Alert, AlertTitle, AlertDescription,
   Card, CardHeader, CardContent, CardTitle,
   CheckCircle2, ArrowRight, Info
@@ -12,12 +12,14 @@ interface SuccessStepProps {
   paymentType: 'one-time' | 'subscription';
   tokenAmount: number[];
   subscriptionAmount: number[];
+  onNext: () => void;
 }
 
 const SuccessStep: React.FC<SuccessStepProps> = ({
   paymentType,
   tokenAmount,
-  subscriptionAmount
+  subscriptionAmount,
+  onNext
 }) => {
   const navigate = useNavigate();
   
@@ -32,6 +34,9 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
     const tokenPrice = calculateTokenPrice(amount);
     return amount * tokenPrice;
   };
+  
+  const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
+  const totalPrice = calculateTotalPrice(amount);
   
   return (
     <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
@@ -65,15 +70,11 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
             </div>
             <div className="flex justify-between">
               <span>Zakupione tokeny:</span>
-              <span className="font-medium">
-                {paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0]}
-              </span>
+              <span className="font-medium">{amount}</span>
             </div>
             <div className="flex justify-between">
               <span>Kwota płatności:</span>
-              <span className="font-medium">
-                {calculateTotalPrice(paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0])} PLN
-              </span>
+              <span className="font-medium">{totalPrice} PLN</span>
             </div>
           </CardContent>
         </Card>
@@ -86,7 +87,7 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
       </div>
       
       <div className="mt-8">
-        <Button onClick={() => navigate('/dashboard')} className="w-full">
+        <Button onClick={onNext} className="w-full">
           Przejdź do panelu głównego <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
