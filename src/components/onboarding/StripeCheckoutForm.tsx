@@ -33,13 +33,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
-  // Create payment intent when the form opens
+  // Always get a fresh payment intent when the dialog opens
   useEffect(() => {
-    // Reset client secret when dialog opens to force a new payment intent
     if (open) {
+      // Reset state when dialog opens
       setClientSecret(null);
       setIntentId(null);
+      setError(null);
+      setRetryCount(0);
+      
       fetchPaymentIntent();
     }
   }, [open]);
@@ -99,7 +103,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // Confirm payment/setup
+      // Clear the card element state before confirmation
+      cardElement.update({});
+      
+      // Confirm payment/setup based on payment type
       let result;
       
       if (paymentType === 'one-time') {
@@ -117,9 +124,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error("Brak klucza klienta dla subskrypcji");
         }
         
-        // Refresh the card element before confirmation
-        cardElement.update({});
-        
+        // Confirm the setup intent with the card element
         result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -148,14 +153,23 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } catch (error: any) {
       console.error('Payment error:', error);
       
-      // Check if it's a "No such setupintent" or "No such paymentIntent" error
-      const noIntentError = 
+      // Check if the error is due to an expired or invalid setup/payment intent
+      const intentExpiredError = 
         error.message?.includes("No such setupintent") || 
-        error.message?.includes("No such payment_intent");
+        error.message?.includes("No such payment_intent") ||
+        error.message?.includes("expired");
       
-      if (noIntentError) {
-        setError("Sesja płatności wygasła - odświeżamy dane płatności, spróbuj ponownie.");
-        // Get a new payment intent immediately
+      if (intentExpiredError && retryCount < 3) {
+        // Get a new intent and increment retry count
+        setRetryCount(prev => prev + 1);
+        setError("Sesja płatności wygasła - odświeżamy dane płatności, spróbuj ponownie za chwilę.");
+        
+        // Reset the card input
+        if (cardElement) {
+          cardElement.clear();
+        }
+        
+        // Get a new payment intent
         await fetchPaymentIntent();
       } else {
         setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
@@ -166,16 +180,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
         });
         
-        // Reset the form and get a new client secret if there was an error
-        if (elements) {
-          const cardElement = elements.getElement(CardElement);
-          if (cardElement) {
-            cardElement.clear();
-          }
+        // Reset the form if there's an error
+        if (cardElement) {
+          cardElement.clear();
         }
-        
-        // Get a new payment intent
-        fetchPaymentIntent();
       }
     } finally {
       setLoading(false);

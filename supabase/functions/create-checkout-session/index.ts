@@ -68,7 +68,7 @@ serve(async (req) => {
         }
       );
     } else {
-      // Create a setup intent for subscription payments
+      // Create a setup intent for subscription payments with more persistent configuration
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],
         metadata: {
@@ -76,9 +76,9 @@ serve(async (req) => {
           unitPrice: unitPrice.toString(),
           paymentType
         },
-        // Always creating a new setup intent, never reusing
+        // Set to off_session to allow future off-session payments
         usage: 'off_session',
-        // Set longer expiration through confirm parameters
+        // Do not confirm yet - client side confirmation
         confirm: false
       });
       
