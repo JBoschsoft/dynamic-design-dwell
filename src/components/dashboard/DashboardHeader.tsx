@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Bell, 
@@ -6,7 +5,8 @@ import {
   User as UserIcon,
   Settings,
   HelpCircle,
-  LogOut
+  LogOut,
+  ArrowLeft
 } from 'lucide-react';
 import { 
   Button,
@@ -16,13 +16,57 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Badge
+  Badge,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator
 } from '@/components/ui';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { mockCandidates } from '@/components/candidates/mockData';
 
 const DashboardHeader = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  
+  const isCandidateDetailsPage = location.pathname.includes('/dashboard/candidates/') && id;
+  
+  const candidate = isCandidateDetailsPage ? 
+    mockCandidates.find(c => c.id === id) : null;
+  
+  const fullName = candidate ? `${candidate.firstName} ${candidate.lastName}` : '';
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-end gap-4 border-b bg-background px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
+      {isCandidateDetailsPage ? (
+        <div className="flex items-center">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/dashboard/candidates">Kandydaci</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{fullName}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center ml-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Powrót
+          </Button>
+        </div>
+      ) : (
+        <div></div>
+      )}
+      
       <div className="flex items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
