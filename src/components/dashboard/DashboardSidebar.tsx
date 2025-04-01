@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -70,6 +69,7 @@ const DashboardSidebar = () => {
     return location.pathname === path;
   };
 
+  const isCandidatesListPage = location.pathname === '/dashboard/candidates';
   const isCandidatePath = location.pathname.startsWith('/dashboard/candidates');
   const isSpecificCandidate = location.pathname.includes('/dashboard/candidates/') && id;
   
@@ -97,12 +97,12 @@ const DashboardSidebar = () => {
     }
   }, [currentCandidate, id]);
 
-  // Auto-open the candidates accordion when on the candidates page
+  // Auto-open the accordion only when on the candidates list page
   useEffect(() => {
-    if (isCandidatePath && !isRecentCandidatesOpen) {
+    if (isCandidatesListPage && !isRecentCandidatesOpen) {
       setIsRecentCandidatesOpen(true);
     }
-  }, [isCandidatePath]);
+  }, [isCandidatesListPage]);
 
   const handleCandidatesClick = () => {
     navigate('/dashboard/candidates');
@@ -110,9 +110,7 @@ const DashboardSidebar = () => {
 
   const handleToggleAccordion = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent navigation when clicking the toggle
-    if (!isCandidatePath) {
-      setIsRecentCandidatesOpen(prev => !prev);
-    }
+    setIsRecentCandidatesOpen(prev => !prev);
   };
 
   const handleLogout = async () => {
@@ -203,10 +201,9 @@ const DashboardSidebar = () => {
                           size="icon" 
                           className="h-8 w-8 p-0 hover:bg-transparent"
                           onClick={handleToggleAccordion}
-                          disabled={isCandidatePath} // Disable toggle when on candidates page
                         >
                           <ChevronDown 
-                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isCandidatePath ? 'rotate-180' : isRecentCandidatesOpen ? 'rotate-180' : 'rotate-0'}`} 
+                            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isRecentCandidatesOpen ? 'rotate-180' : 'rotate-0'}`} 
                           />
                         </Button>
                       </CollapsibleTrigger>
