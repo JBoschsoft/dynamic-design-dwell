@@ -71,6 +71,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   };
 
+  // Handle row click
+  const handleRowClick = (id: string, e: React.MouseEvent) => {
+    // Only toggle if the click didn't originate from the button area
+    if (!(e.target instanceof HTMLElement && e.target.closest('.profile-button'))) {
+      toggleCandidateSelection(id);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -110,9 +118,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             {currentResults.map(candidate => (
               <div 
                 key={candidate.id}
-                className={`p-4 border rounded-lg flex items-start justify-between transition-colors ${
+                className={`p-4 border rounded-lg flex items-start justify-between transition-colors cursor-pointer ${
                   selectedCandidates.includes(candidate.id) ? 'bg-primary/5 border-primary/30' : ''
                 }`}
+                onClick={(e) => handleRowClick(candidate.id, e)}
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -120,6 +129,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                       checked={selectedCandidates.includes(candidate.id)}
                       onCheckedChange={() => toggleCandidateSelection(candidate.id)}
                       className="mr-1"
+                      onClick={(e) => e.stopPropagation()} // Prevent row click from firing
                     />
                     <h3 className="font-medium">{candidate.name}</h3>
                     <Badge>{Math.round(candidate.relevance * 100)}% zgodności</Badge>
@@ -130,8 +140,16 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => navigateToCandidateProfile(candidate.id)}>
+                <div className="flex gap-2 profile-button">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigateToCandidateProfile(candidate.id);
+                    }}
+                    className="profile-button"
+                  >
                     <Eye className="h-4 w-4 mr-1" />
                     Profil
                   </Button>
