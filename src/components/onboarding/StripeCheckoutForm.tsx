@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -233,12 +234,16 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       const createIntent = async () => {
         try {
           const amount = tokenAmount[0];
+          console.log("Creating intent for:", { paymentType, amount });
+          
           const { data, error } = await supabase.functions.invoke('create-checkout-session', {
             body: JSON.stringify({
               paymentType,
               tokenAmount: amount,
             }),
           });
+
+          console.log("Response from create-checkout-session:", { data, error });
 
           if (error) throw new Error(error.message);
           
@@ -272,13 +277,31 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setClientSecret(null);
       setPaymentDetails(null);
     }
-  }, [open, paymentType, tokenAmount, supabase]);
+  }, [open, paymentType, tokenAmount]);
 
   const handleSuccess = (paymentType: string, amount: number) => {
     onSuccess(paymentType, amount);
     // Close the dialog after a delay
     setTimeout(() => onOpenChange(false), 2000);
   };
+
+  // Define Stripe options with appearance
+  const stripeOptions = (secret: string) => ({
+    clientSecret: secret,
+    appearance: {
+      theme: 'stripe',
+      variables: {
+        colorPrimary: '#2563eb',
+        colorBackground: '#ffffff',
+        colorText: '#1f2937',
+        colorDanger: '#ef4444',
+        fontFamily: 'system-ui, sans-serif',
+        spacingUnit: '4px',
+        borderRadius: '8px',
+      },
+    },
+    locale: 'pl'
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -307,7 +330,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </div>
           </div>
         ) : clientSecret && paymentDetails ? (
-          <Elements stripe={stripePromise} options={{ clientSecret, locale: 'pl' }}>
+          <Elements stripe={stripePromise} options={stripeOptions(clientSecret)}>
             <CheckoutForm 
               clientSecret={clientSecret}
               onSuccess={handleSuccess}
