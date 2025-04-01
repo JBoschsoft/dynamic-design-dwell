@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { 
   Card, 
@@ -53,14 +52,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   const resultsContainerRef = useRef<HTMLDivElement>(null);
   
-  // Calculate pagination values
   const totalResults = searchResults.length;
   const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalResults);
   const currentResults = searchResults.slice(startIndex, endIndex);
-  
-  // Handle select all toggle
+
   const handleSelectAllToggle = () => {
     if (areAllSelected) {
       deselectAllCandidates?.();
@@ -69,38 +66,31 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   };
 
-  // Handle row click
   const handleRowClick = (id: string, e: React.MouseEvent) => {
-    // Only toggle if the click didn't originate from the button area
     if (!(e.target instanceof HTMLElement && e.target.closest('.profile-button'))) {
       toggleCandidateSelection(id);
     }
   };
 
-  // Scroll into view for last viewed candidate when results load
   useEffect(() => {
     if (lastViewedCandidateId && searchResults.length > 0) {
-      // Find which page the candidate is on
       const candidateIndex = searchResults.findIndex(c => c.id === lastViewedCandidateId);
       
       if (candidateIndex >= 0) {
-        // Calculate the page the candidate is on
         const candidatePage = Math.floor(candidateIndex / pageSize) + 1;
         
-        // If the candidate is not on the current page, change to that page
         if (candidatePage !== currentPage) {
           console.log(`Candidate is on page ${candidatePage}, changing from current page ${currentPage}`);
           handlePageChange(candidatePage);
         }
         
-        // Use setTimeout to allow the DOM to update after pagination change
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           const candidateElement = document.getElementById(`candidate-${lastViewedCandidateId}`);
           if (candidateElement) {
-            console.log('Scrolling to candidate element');
-            candidateElement.scrollIntoView({ behavior: 'auto', block: 'center' });
+            console.log('Immediately scrolling to candidate element');
+            candidateElement.scrollIntoView({ behavior: 'instant', block: 'center' });
           }
-        }, 150);
+        });
       }
     }
   }, [lastViewedCandidateId, searchResults, currentResults, currentPage, handlePageChange, pageSize]);
@@ -157,7 +147,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                         checked={selectedCandidates.includes(candidate.id)}
                         onCheckedChange={() => toggleCandidateSelection(candidate.id)}
                         className="mr-1"
-                        onClick={(e) => e.stopPropagation()} // Prevent row click from firing
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <h3 className="font-medium">{candidate.name}</h3>
                       <Badge>{Math.round(candidate.relevance * 100)}% zgodności</Badge>
@@ -185,7 +175,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 </div>
               ))}
               
-              {/* Pagination controls */}
               {searchResults.length > 0 && (
                 <div className="mt-4 pt-4 border-t">
                   <PaginationControls

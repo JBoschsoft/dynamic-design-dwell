@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   validateSearchQuery, 
   performVectorSearch, 
@@ -71,9 +71,9 @@ export const useVectorSearch = () => {
   });
 
   const [campaignName, setCampaignName] = useState('');
-  const [campaignDescription, setCampaignDescription] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const initialRenderRef = useRef(true);
 
   useEffect(() => {
     localStorage.setItem('vectorSearch.query', searchQuery);
@@ -103,23 +103,26 @@ export const useVectorSearch = () => {
 
   useEffect(() => {
     if (location.state?.from === 'candidateProfile') {
-      setTimeout(() => {
+      if (initialRenderRef.current) {
         const savedScrollPosition = parseInt(localStorage.getItem('vectorSearch.scrollPosition') || '0');
-        console.log('Restoring scroll position to:', savedScrollPosition);
+        console.log('Immediately restoring scroll position to:', savedScrollPosition);
         window.scrollTo(0, savedScrollPosition);
         
         if (lastViewedCandidateId) {
           const element = document.getElementById(`candidate-${lastViewedCandidateId}`);
           if (element) {
             console.log('Highlighting last viewed candidate:', lastViewedCandidateId);
-            element.scrollIntoView({ block: 'center', behavior: 'auto' });
+            element.scrollIntoView({ block: 'center', behavior: 'instant' });
             element.classList.add('highlight-candidate');
             setTimeout(() => {
               element.classList.remove('highlight-candidate');
             }, 2000);
           }
         }
-      }, 300);
+        initialRenderRef.current = false;
+      }
+    } else {
+      initialRenderRef.current = true;
     }
   }, [location, lastViewedCandidateId]);
 

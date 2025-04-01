@@ -37,9 +37,12 @@ const DashboardHeader = () => {
   const handleBackClick = () => {
     // Check if we have state information about where to return
     if (location.state && location.state.returnPath) {
-      // Navigate back with explicit state
+      // Store that we're returning to the previous page
       console.log('Navigating back to:', location.state.returnPath);
+      
+      // Navigate with replace: true to avoid adding to history stack
       navigate(location.state.returnPath, {
+        replace: true,
         state: { 
           from: 'candidateProfile',
           returnedAt: new Date().getTime() // Add timestamp to ensure state change
@@ -47,7 +50,7 @@ const DashboardHeader = () => {
       });
     } else {
       // Default fallback to the candidates list
-      navigate('/dashboard/candidates');
+      navigate('/dashboard/candidates', { replace: true });
     }
   };
 

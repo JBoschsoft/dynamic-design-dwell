@@ -73,6 +73,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Improve scroll behavior for instant position restoration */
+    scroll-behavior: auto !important;
   }
 }
 
