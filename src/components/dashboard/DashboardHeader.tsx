@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -37,7 +36,7 @@ import {
   Keyboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SidebarToggle } from '@/components/ui/sidebar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -82,7 +81,7 @@ const DashboardHeader = () => {
 
   return (
     <header className="flex items-center h-16 px-4 border-b shrink-0 md:px-6">
-      <SidebarToggle />
+      <SidebarTrigger />
       
       <div className="flex items-center ml-auto gap-4">
         <Button variant="outline" size="sm" className="h-9 md:flex items-center gap-1" onClick={() => setOpen(true)}>

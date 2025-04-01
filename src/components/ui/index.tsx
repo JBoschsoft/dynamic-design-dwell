@@ -85,6 +85,19 @@ export {
   useSidebar,
 } from "./sidebar";
 
+// Export Command components
+export {
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+  CommandSeparator,
+} from "./command";
+
 // Re-export icons directly
 export { 
   Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, 
