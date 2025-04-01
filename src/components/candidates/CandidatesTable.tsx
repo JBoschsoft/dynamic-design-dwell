@@ -63,6 +63,11 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
   // Check if some but not all candidates are selected
   const areSomeCandidatesSelected = selectedCandidates.length > 0 && !areAllCandidatesSelected;
 
+  // Custom class for the indeterminate state
+  const indeterminateClass = areSomeCandidatesSelected 
+    ? "data-[state=indeterminate]:bg-primary/50 data-[state=indeterminate]:opacity-100" 
+    : "";
+
   return (
     <div className="rounded-md border">
       {selectedCandidates.length > 0 && (
@@ -129,7 +134,7 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
                 onCheckedChange={handleSelectAllChange}
                 aria-label="Zaznacz wszystkich kandydatów"
                 data-state={areSomeCandidatesSelected ? "indeterminate" : areAllCandidatesSelected ? "checked" : "unchecked"}
-                className={areSomeCandidatesSelected ? "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:opacity-100" : ""}
+                className={indeterminateClass}
               />
             </TableHead>
             <TableHead>Nazwa</TableHead>
