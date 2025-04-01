@@ -295,31 +295,43 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
         </div>
       </div>
       
-      <div className="mt-8 flex space-x-3">
+      <div className="mt-8 flex flex-col space-y-4">
+        <div className="flex space-x-3">
+          <Button 
+            variant="outline"
+            onClick={onPrevious}
+            className="w-1/3"
+            disabled={paymentLoading || paymentSuccess}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+          </Button>
+          
+          <Button 
+            onClick={onNext}
+            className="w-2/3"
+            disabled={paymentLoading || paymentSuccess}
+          >
+            {paymentLoading ? (
+              <span className="flex items-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                Przetwarzanie płatności...
+              </span>
+            ) : (
+              <>
+                Zapłać i kontynuuj <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+
         <Button 
-          variant="outline"
-          onClick={onPrevious}
-          className="w-1/3"
-          disabled={paymentLoading || paymentSuccess}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
-        </Button>
-        
-        <Button 
+          variant="secondary"
           onClick={onNext}
-          className="w-2/3"
+          className="w-full"
           disabled={paymentLoading || paymentSuccess}
         >
-          {paymentLoading ? (
-            <span className="flex items-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-              Przetwarzanie płatności...
-            </span>
-          ) : (
-            <>
-              Zapłać i kontynuuj <ArrowRight className="ml-2 h-4 w-4" />
-            </>
-          )}
+          Przejdź do następnego kroku 
+          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>
