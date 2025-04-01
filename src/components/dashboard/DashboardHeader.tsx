@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -61,10 +62,6 @@ const DashboardHeader = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleProfileClick = () => {
-    navigate('/dashboard/settings?section=company-profile');
   };
 
   React.useEffect(() => {

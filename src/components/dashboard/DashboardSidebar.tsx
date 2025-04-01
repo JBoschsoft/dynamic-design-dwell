@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -59,6 +59,8 @@ const DashboardSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const sectionId = searchParams.get('section');
   
   const [recentCandidates, setRecentCandidates] = useState<RecentCandidate[]>(() => {
     const saved = localStorage.getItem('recentlyViewedCandidates');
@@ -66,6 +68,8 @@ const DashboardSidebar = () => {
   });
   
   const [isRecentCandidatesOpen, setIsRecentCandidatesOpen] = useState(false);
+  const [activeSettingsSection, setActiveSettingsSection] = useState<string | null>(sectionId);
+  const [isSettingsAccordionOpen, setIsSettingsAccordionOpen] = useState(location.pathname === '/dashboard/settings');
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -75,6 +79,7 @@ const DashboardSidebar = () => {
   const isCandidateSearchPage = location.pathname === '/dashboard/candidates/search';
   const isCandidatePath = location.pathname.startsWith('/dashboard/candidates');
   const isSpecificCandidate = location.pathname.includes('/dashboard/candidates/') && id;
+  const isSettingsPage = location.pathname === '/dashboard/settings';
   
   const currentCandidate = isSpecificCandidate ? 
     mockCandidates.find(c => c.id === id) : null;
@@ -100,11 +105,54 @@ const DashboardSidebar = () => {
     }
   }, [currentCandidate, id]);
 
+  // Auto-open the candidates list when on candidates page
   useEffect(() => {
     if (isCandidatesListPage && !isRecentCandidatesOpen) {
       setIsRecentCandidatesOpen(true);
     }
   }, [isCandidatesListPage]);
+
+  // Auto-open the settings accordion when on settings page
+  useEffect(() => {
+    if (isSettingsPage && !isSettingsAccordionOpen) {
+      setIsSettingsAccordionOpen(true);
+    }
+  }, [isSettingsPage]);
+
+  // Listen for scroll events to highlight active section when on settings page
+  useEffect(() => {
+    if (!isSettingsPage) return;
+
+    const handleScroll = () => {
+      // Get all section elements
+      const sections = document.querySelectorAll('[id^="company-profile"], [id^="branding"], [id^="integrations"], [id^="billing"], [id^="team"], [id^="notifications"], [id^="security"], [id^="data-management"], [id^="danger-zone"]');
+      
+      // Find the section currently in view
+      let currentSection = null;
+      let minDistance = Infinity;
+      
+      sections.forEach((section) => {
+        const rect = section.getBoundingClientRect();
+        // Consider the section in view if its top is close to the viewport top
+        const distance = Math.abs(rect.top - 100); // 100px offset for header
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          currentSection = section.id;
+        }
+      });
+      
+      if (currentSection) {
+        setActiveSettingsSection(currentSection);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    // Trigger once to set initial state
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isSettingsPage]);
 
   const handleCandidatesClick = () => {
     navigate('/dashboard/candidates');
@@ -277,9 +325,17 @@ const DashboardSidebar = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <Accordion type="single" collapsible className="w-full border-none">
+                <Accordion 
+                  type="single" 
+                  collapsible 
+                  className="w-full border-none"
+                  value={isSettingsAccordionOpen ? 'settings' : ''}
+                  onValueChange={(value) => setIsSettingsAccordionOpen(value === 'settings')}
+                >
                   <AccordionItem value="settings" className="border-none">
-                    <AccordionTrigger className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent">
+                    <AccordionTrigger 
+                      className={`flex items-center gap-2 w-full px-2 py-2 rounded-md ${isSettingsPage ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent'}`}
+                    >
                       <div className="flex items-center gap-2 flex-1 text-left">
                         <Settings className="h-4 w-4" />
                         <span>Ustawienia workspace</span>
@@ -291,7 +347,8 @@ const DashboardSidebar = () => {
                           <Link 
                             key={item.sectionId}
                             to={`/dashboard/settings?section=${item.sectionId}`}
-                            className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${activeSettingsSection === item.sectionId ? 'bg-sidebar-accent/50 text-sidebar-accent-foreground font-medium' : ''}`}
+                            onClick={() => setActiveSettingsSection(item.sectionId)}
                           >
                             <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
