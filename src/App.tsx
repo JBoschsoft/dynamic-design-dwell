@@ -29,6 +29,8 @@ import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 import CandidatesPage from "./pages/CandidatesPage";
 import CandidateDetailsPage from "./pages/CandidateDetailsPage";
 import VectorSearchPage from "./components/candidates/VectorSearchPage";
+import CampaignsPage from "./pages/CampaignsPage";
+import CampaignDetailsPage from "./pages/CampaignDetailsPage";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +67,8 @@ const App = () => (
             <Route path="candidates" element={<CandidatesPage />} />
             <Route path="candidates/search" element={<VectorSearchPage />} />
             <Route path="candidates/:id" element={<CandidateDetailsPage />} />
+            <Route path="campaigns" element={<CampaignsPage />} />
+            <Route path="campaigns/:id" element={<CampaignDetailsPage />} />
             {/* Add more dashboard routes as needed */}
           </Route>
           
