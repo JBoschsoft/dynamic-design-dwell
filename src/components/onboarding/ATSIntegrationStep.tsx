@@ -238,16 +238,7 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
         </AlertDescription>
       </Alert>
       
-      <div className="flex justify-between pt-6">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={onPrevious}
-          className="px-5"
-        >
-          Wstecz
-        </Button>
-        
+      <div className="flex justify-end pt-6">
         <Button 
           type="submit"
           onClick={handleSubmit}
