@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Sidebar,
@@ -32,8 +32,8 @@ import {
   Lock,
   Database,
   Trash2,
-  ChevronDown,
   User,
+  Clock,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -47,10 +47,22 @@ import {
 } from '@/components/ui/accordion';
 import { mockCandidates } from '@/components/candidates/mockData';
 
+interface RecentCandidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+  viewedAt: Date;
+}
+
 const DashboardSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  
+  const [recentCandidates, setRecentCandidates] = useState<RecentCandidate[]>(() => {
+    const saved = localStorage.getItem('recentlyViewedCandidates');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -61,6 +73,27 @@ const DashboardSidebar = () => {
   
   const currentCandidate = isSpecificCandidate ? 
     mockCandidates.find(c => c.id === id) : null;
+    
+  useEffect(() => {
+    if (currentCandidate && id) {
+      const newRecentCandidate = {
+        id: currentCandidate.id,
+        firstName: currentCandidate.firstName,
+        lastName: currentCandidate.lastName,
+        viewedAt: new Date()
+      };
+      
+      setRecentCandidates(prev => {
+        const filtered = prev.filter(c => c.id !== id);
+        const updated = [newRecentCandidate, ...filtered];
+        const limited = updated.slice(0, 10);
+        
+        localStorage.setItem('recentlyViewedCandidates', JSON.stringify(limited));
+        
+        return limited;
+      });
+    }
+  }, [currentCandidate, id]);
 
   const handleLogout = async () => {
     try {
@@ -142,15 +175,8 @@ const DashboardSidebar = () => {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="pl-8 pr-2 pt-1 pb-0">
-                      <div className="flex flex-col space-y-1">
-                        <Link 
-                          to="/dashboard/candidates"
-                          className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive('/dashboard/candidates') ? 'bg-sidebar-accent/50 font-medium' : ''}`}
-                        >
-                          <span>Wszyscy kandydaci</span>
-                        </Link>
-                        
-                        {isSpecificCandidate && currentCandidate && (
+                      {isSpecificCandidate && currentCandidate ? (
+                        <div className="flex flex-col space-y-1">
                           <Link 
                             to={`/dashboard/candidates/${id}`}
                             className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md bg-sidebar-accent/50 font-medium"
@@ -158,8 +184,39 @@ const DashboardSidebar = () => {
                             <User className="h-3 w-3" />
                             <span className="truncate">{`${currentCandidate.firstName} ${currentCandidate.lastName}`}</span>
                           </Link>
-                        )}
-                      </div>
+                          
+                          {recentCandidates.length > 1 && (
+                            <>
+                              <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground mt-2">
+                                <Clock className="h-3 w-3" />
+                                <span>Ostatnio przeglądane</span>
+                              </div>
+                              
+                              {recentCandidates
+                                .filter(c => c.id !== id)
+                                .slice(0, 5)
+                                .map(candidate => (
+                                  <Link 
+                                    key={candidate.id}
+                                    to={`/dashboard/candidates/${candidate.id}`}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent/30"
+                                  >
+                                    <User className="h-3 w-3" />
+                                    <span className="truncate">{`${candidate.firstName} ${candidate.lastName}`}</span>
+                                  </Link>
+                                ))
+                              }
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <Link 
+                          to="/dashboard/candidates"
+                          className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-sidebar-accent/50 font-medium"
+                        >
+                          <span>Wszyscy Kandydaci</span>
+                        </Link>
+                      )}
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
