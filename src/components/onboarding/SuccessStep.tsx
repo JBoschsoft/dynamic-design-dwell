@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -38,11 +37,6 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
   const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
   const totalPrice = calculateTotalPrice(amount);
   
-  const handleGoToDashboard = () => {
-    navigate('/dashboard');
-  };
-  
-  // Updated to properly call the onNext function
   const handleNextStep = () => {
     onNext();
   };
@@ -110,14 +104,9 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
         </div>
       </div>
       
-      <div className="mt-8 space-y-4">
-        {/* Use a button that calls onNext to proceed to step 4 */}
+      <div className="mt-8">
         <Button onClick={handleNextStep} className="w-full bg-primary hover:bg-primary/90">
           Przejdź do następnego kroku <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-        
-        <Button onClick={handleGoToDashboard} variant="outline" className="w-full">
-          Pomiń i przejdź do panelu głównego
         </Button>
       </div>
     </div>
