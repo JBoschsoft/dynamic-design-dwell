@@ -16,7 +16,8 @@ import {
   TabsContent,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  Info
 } from "@/components/ui";
 
 interface ATSIntegrationStepProps {
