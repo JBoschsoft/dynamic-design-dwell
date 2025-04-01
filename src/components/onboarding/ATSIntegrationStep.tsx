@@ -1,24 +1,22 @@
 
 import React, { useState } from 'react';
+import { toast } from "@/hooks/use-toast";
 import { 
   Button, 
   Card, 
   CardContent,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   ArrowRight,
-  ArrowLeft,
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
   Alert,
-  AlertDescription
+  AlertDescription,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  CheckCircle2,
+  AlertCircle,
+  Loader2
 } from "@/components/ui";
 
 interface ATSIntegrationStepProps {
@@ -26,11 +24,11 @@ interface ATSIntegrationStepProps {
   onPrevious: () => void;
 }
 
-const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevious }) => {
-  const [integrationType, setIntegrationType] = useState<string>('');
+const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext }) => {
+  const [selectedAts, setSelectedAts] = useState<string>('teamtailor');
   const [apiKey, setApiKey] = useState<string>('');
-  const [apiUrl, setApiUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [testSuccessful, setTestSuccessful] = useState<boolean | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +41,46 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
     onNext();
   };
 
+  const testConnection = async () => {
+    if (!apiKey) {
+      toast({
+        variant: "destructive",
+        title: "Brak klucza API",
+        description: "Wprowadź klucz API, aby przetestować połączenie."
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      // Simulate API test
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // 80% chance of success for demo purposes
+      const isSuccess = Math.random() > 0.2;
+      
+      if (isSuccess) {
+        toast({
+          title: "Połączenie udane",
+          description: "Pomyślnie połączono z systemem ATS.",
+        });
+        setTestSuccessful(true);
+      } else {
+        throw new Error("Błąd autoryzacji. Sprawdź swój klucz API.");
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Błąd połączenia",
+        description: error.message || "Nie udało się połączyć z systemem ATS. Sprawdź swój klucz API."
+      });
+      setTestSuccessful(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
       <h2 className="text-2xl font-bold text-center mb-6">
@@ -50,108 +88,177 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
       </h2>
       
       <p className="text-gray-600 text-center mb-8">
-        Połącz z istniejącym systemem ATS lub skonfiguruj integrację ręcznie.
+        Połącz z istniejącym systemem ATS, aby automatycznie pobierać dane o kandydatach.
       </p>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="integration-type">Typ integracji</Label>
-          <Select 
-            value={integrationType} 
-            onValueChange={setIntegrationType}
-          >
-            <SelectTrigger id="integration-type">
-              <SelectValue placeholder="Wybierz system ATS" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="workable">Workable</SelectItem>
-              <SelectItem value="lever">Lever</SelectItem>
-              <SelectItem value="greenhouse">Greenhouse</SelectItem>
-              <SelectItem value="bamboohr">BambooHR</SelectItem>
-              <SelectItem value="oracle">Oracle HCM</SelectItem>
-              <SelectItem value="sap">SAP SuccessFactors</SelectItem>
-              <SelectItem value="custom">Niestandardowa integracja</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">
-            Wybierz system ATS, z którym chcesz się zintegrować
-          </p>
-        </div>
+      <Tabs 
+        defaultValue="teamtailor" 
+        value={selectedAts}
+        onValueChange={setSelectedAts}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsTrigger value="teamtailor">Team Tailor</TabsTrigger>
+          <TabsTrigger value="erecruiter">eRecruiter</TabsTrigger>
+        </TabsList>
         
-        {integrationType && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="api-key">Klucz API</Label>
-              <Input 
-                id="api-key" 
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Wprowadź klucz API" 
-              />
-              <p className="text-sm text-muted-foreground">
-                Klucz API znajdziesz w ustawieniach swojego konta ATS
+        <TabsContent value="teamtailor" className="space-y-4">
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-medium mb-2">Team Tailor API</h3>
+              <p className="text-gray-600 mb-4">
+                Aby zintegrować się z Team Tailor, wykonaj następujące kroki:
               </p>
-            </div>
-            
-            {integrationType === 'custom' && (
-              <div className="space-y-2">
-                <Label htmlFor="api-url">URL API</Label>
-                <Input 
-                  id="api-url" 
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="https://api.example.com/v1" 
-                />
-                <p className="text-sm text-muted-foreground">
-                  Wprowadź bazowy URL do API twojego systemu ATS
-                </p>
+              
+              <ol className="list-decimal pl-5 space-y-2 mb-4">
+                <li>Zaloguj się do panelu administracyjnego Team Tailor</li>
+                <li>Przejdź do ustawień integracji (Settings &gt; Integrations)</li>
+                <li>Utwórz nowy klucz API (Create API key)</li>
+                <li>Skopiuj wygenerowany klucz i wklej go poniżej</li>
+              </ol>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="teamtailor-api-key">Klucz API Team Tailor</Label>
+                  <div className="flex">
+                    <Input 
+                      id="teamtailor-api-key" 
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value);
+                        setTestSuccessful(null);
+                      }}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" 
+                      className="flex-1 mr-2"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={testConnection}
+                      disabled={isLoading || !apiKey}
+                      className="whitespace-nowrap"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Testowanie...
+                        </>
+                      ) : (
+                        'Testuj połączenie'
+                      )}
+                    </Button>
+                  </div>
+                  {testSuccessful === true && (
+                    <div className="flex items-center text-green-600 text-sm mt-1">
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Połączenie udane
+                    </div>
+                  )}
+                  {testSuccessful === false && (
+                    <div className="flex items-center text-red-600 text-sm mt-1">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      Połączenie nieudane
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            
-            <Alert>
-              <AlertDescription>
-                Integracja z systemem ATS pozwoli na automatyczne pobieranie danych o kandydatach
-                i synchronizację statusów rekrutacyjnych.
-              </AlertDescription>
-            </Alert>
-            
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="permissions">
-                <AccordionTrigger>Wymagane uprawnienia</AccordionTrigger>
-                <AccordionContent>
-                  <ul className="list-disc pl-5 space-y-1 text-sm">
-                    <li>Odczyt kandydatów</li>
-                    <li>Odczyt stanowisk</li>
-                    <li>Aktualizacja statusów rekrutacyjnych</li>
-                    <li>Dodawanie notatek</li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </>
-        )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         
-        <div className="flex justify-between pt-6">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onPrevious}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
-          </Button>
-          
-          <Button 
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading ? "Konfigurowanie..." : (
-              <>
-                Dalej <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
+        <TabsContent value="erecruiter" className="space-y-4">
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-medium mb-2">eRecruiter API</h3>
+              <p className="text-gray-600 mb-4">
+                Aby zintegrować się z eRecruiter, wykonaj następujące kroki:
+              </p>
+              
+              <ol className="list-decimal pl-5 space-y-2 mb-4">
+                <li>Zaloguj się do panelu administracyjnego eRecruiter</li>
+                <li>Przejdź do ustawień (Konfiguracja &gt; API)</li>
+                <li>Utwórz nowy token dostępu (Dodaj nowy token)</li>
+                <li>Skopiuj wygenerowany token i wklej go poniżej</li>
+              </ol>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="erecruiter-api-key">Token API eRecruiter</Label>
+                  <div className="flex">
+                    <Input 
+                      id="erecruiter-api-key" 
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value);
+                        setTestSuccessful(null);
+                      }}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" 
+                      className="flex-1 mr-2"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={testConnection}
+                      disabled={isLoading || !apiKey}
+                      className="whitespace-nowrap"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Testowanie...
+                        </>
+                      ) : (
+                        'Testuj połączenie'
+                      )}
+                    </Button>
+                  </div>
+                  {testSuccessful === true && (
+                    <div className="flex items-center text-green-600 text-sm mt-1">
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Połączenie udane
+                    </div>
+                  )}
+                  {testSuccessful === false && (
+                    <div className="flex items-center text-red-600 text-sm mt-1">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      Połączenie nieudane
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      <Alert className="mt-6">
+        <AlertDescription>
+          Integracja z systemem ATS pozwoli na automatyczne pobieranie danych o kandydatach
+          i synchronizację statusów rekrutacyjnych.
+        </AlertDescription>
+      </Alert>
+      
+      <div className="flex justify-between pt-6">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => onNext()}
+        >
+          Pomiń ten krok
+        </Button>
+        
+        <Button 
+          type="submit"
+          onClick={handleSubmit}
+          disabled={isLoading}
+        >
+          {isLoading ? "Konfigurowanie..." : (
+            <>
+              Dalej <ArrowRight className="ml-2 h-4 w-4" />
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
