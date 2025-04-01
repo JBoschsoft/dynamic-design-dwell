@@ -1,245 +1,188 @@
-import React, { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-  PaymentElement,
-  LinkAuthenticationElement,
-  useStripe,
-  useElements,
-  Elements,
-} from '@stripe/react-stripe-js';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Label,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  Input,
-} from '@/components/ui';
-import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-interface CheckoutFormProps {
-  clientSecret: string | null;
-  amount: number;
-  onSuccess: (paymentType: string, amount: number) => void;
-  paymentType: 'one-time' | 'subscription';
-}
-
-interface PaymentDetails {
-  id: string;
-  email: string;
-}
-
-const PaymentDetails = ({ details }: { details: PaymentDetails | null }) => {
-  if (!details) {
-    return <p>Brak danych płatności.</p>;
-  }
-
-  return (
-    <div>
-      <p>ID płatności: {details.id}</p>
-      <p>Email: {details.email}</p>
-    </div>
-  );
-};
-
-const PriceLabel = ({ amount }: { amount: number }) => {
-  return (
-    <div className="text-sm text-muted-foreground">
-      Do zapłaty: {amount} PLN
-    </div>
-  );
-};
-
-const CheckoutForm = ({ 
-  clientSecret, 
-  amount, 
-  onSuccess,
-  paymentType 
-}: CheckoutFormProps) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-
-    if (!stripe || !elements) {
-      toast({
-        variant: "destructive",
-        title: "Błąd",
-        description: "Stripe.js nie został załadowany."
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        redirect: 'if_required'
-      }
-    }).then((result) => {
-      if (result.error) {
-        toast({
-          variant: "destructive",
-          title: "Błąd płatności",
-          description: result.error.message || "Wystąpił błąd podczas przetwarzania płatności."
-        });
-      } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-        toast({
-          title: "Płatność zakończona sukcesem",
-          description: "Dziękujemy za dokonanie płatności!"
-        });
-        onSuccess(paymentType, amount);
-      }
-      setIsLoading(false);
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <LinkAuthenticationElement />
-      <PaymentElement />
-      <Button disabled={isLoading || !stripe || !elements} className="w-full mt-4">
-        {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Przetwarzanie...</> : "Zapłać"}
-      </Button>
-    </form>
-  );
-};
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Button, Label, Input, LoaderIcon
+} from "@/components/ui";
+import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 
 interface StripeCheckoutFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   paymentType: 'one-time' | 'subscription';
   tokenAmount: number[];
-  onSuccess: (paymentType: string, amount: number) => void;
+  onSuccess?: (paymentType: string, amount: number) => void;
 }
 
-const StripeCheckoutForm = ({
+const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   open,
   onOpenChange,
   paymentType,
   tokenAmount,
   onSuccess
-}: StripeCheckoutFormProps) => {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+}) => {
+  const navigate = useNavigate();
+  const stripe = useStripe();
+  const elements = useElements();
+  
+  const [loading, setLoading] = useState(false);
+  const [cardName, setCardName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
-
-  useEffect(() => {
-    const fetchClientSecret = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await supabase
-          .functions
-          .invoke('create-payment-intent', {
-            body: {
-              amount: paymentType === 'one-time' ? tokenAmount[0] : tokenAmount[0],
-              currency: 'pln',
-              paymentType: paymentType
-            }
-          });
-
-        if (response.error) {
-          console.error("Error from Supabase function:", response.error);
-          setError(response.error.message || 'Wystąpił błąd podczas tworzenia płatności.');
-        } else if (response.data && response.data.clientSecret) {
-          setClientSecret(response.data.clientSecret);
-          setPaymentDetails(response.data.paymentDetails || null);
-        } else {
-          setError('Nie udało się pobrać sekretu klienta.');
-        }
-      } catch (e: any) {
-        console.error("Error fetching client secret:", e);
-        setError(e.message || 'Wystąpił błąd podczas pobierania informacji o płatności.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (open) {
-      fetchClientSecret();
-    } else {
-      setClientSecret(null);
-      setIsLoading(false);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
     }
-  }, [open, paymentType, tokenAmount]);
-
-  const handleSuccess = (paymentType: string, amount: number) => {
-    onSuccess(paymentType, amount);
-    onOpenChange(false);
-  };
-
-  const options = clientSecret ? {
-    clientSecret,
-    appearance: {
-      theme: 'stripe',
-      variables: {
-        colorPrimary: '#1a56db',
-        colorBackground: '#ffffff',
-        colorText: '#30313d',
-        colorDanger: '#df1b41',
-        fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-        spacingUnit: '4px',
-        borderRadius: '4px'
+    
+    if (!cardName) {
+      setError('Proszę podać imię i nazwisko na karcie');
+      return;
+    }
+    
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      setError('Wystąpił błąd z formularzem płatności');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // In a real implementation, you'd create a payment intent on your server
+      // For demo purposes, we'll simulate a successful payment after a short delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate a successful payment
+      if (Math.random() > 0.2) { // 80% success rate for demo
+        // Notify about success
+        if (onSuccess) {
+          onSuccess(paymentType, tokenAmount[0]);
+        }
+        
+        // Close modal
+        onOpenChange(false);
+        
+        // Redirect to success page
+        navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+      } else {
+        // Simulate payment error
+        throw new Error("Odmowa autoryzacji karty. Proszę użyć innej metody płatności.");
       }
-    },
-    locale: 'pl'
-  } as const : undefined;
-
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
+      
+      toast({
+        variant: "destructive",
+        title: "Błąd płatności",
+        description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const calculatePrice = () => {
+    const amount = tokenAmount[0];
+    const pricePerToken = amount >= 150 ? 5 : amount >= 100 ? 6 : amount >= 50 ? 7 : 8;
+    return amount * pricePerToken;
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {paymentType === 'one-time' ? 'Jednorazowa płatność' : 'Ustawienie płatności cyklicznych'}
-          </DialogTitle>
+          <DialogTitle>Płatność za tokeny</DialogTitle>
           <DialogDescription>
             {paymentType === 'one-time' 
-              ? `Doładuj swoje konto o ${tokenAmount[0]} tokenów.` 
-              : 'Skonfiguruj automatyczne płatności, które doładują Twoje konto, gdy liczba tokenów spadnie poniżej 10.'}
+              ? 'Podaj dane karty aby dokończyć jednorazowy zakup tokenów'
+              : 'Podaj dane karty aby ustawić automatyczną płatność miesięczną'
+            }
           </DialogDescription>
         </DialogHeader>
         
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-            <p>Przygotowywanie płatności...</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-8 text-destructive">
-            <AlertCircle className="h-8 w-8 mb-2" />
-            <p>{error}</p>
-          </div>
-        ) : clientSecret && paymentDetails ? (
-          <Elements 
-            stripe={stripePromise} 
-            options={options}
-          >
-            <CheckoutForm 
-              clientSecret={clientSecret}
-              amount={tokenAmount[0]}
-              onSuccess={handleSuccess}
-              paymentType={paymentType}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="cardName">Imię i nazwisko na karcie</Label>
+            <Input 
+              id="cardName" 
+              value={cardName} 
+              onChange={(e) => setCardName(e.target.value)} 
+              placeholder="Wprowadź imię i nazwisko"
             />
-          </Elements>
-        ) : null}
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Dane karty</Label>
+            <div className="border rounded-md p-3">
+              <CardElement 
+                options={{
+                  style: {
+                    base: {
+                      fontSize: '16px',
+                      color: '#424770',
+                      '::placeholder': {
+                        color: '#aab7c4',
+                      },
+                    },
+                    invalid: {
+                      color: '#9e2146',
+                    },
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          {error && (
+            <div className="text-sm text-red-500">
+              {error}
+            </div>
+          )}
+          
+          <div className="bg-gray-50 p-3 rounded-md">
+            <div className="flex justify-between">
+              <span>Liczba tokenów:</span>
+              <span className="font-medium">{tokenAmount[0]}</span>
+            </div>
+            <div className="flex justify-between mt-1">
+              <span>Kwota płatności:</span>
+              <span className="font-semibold">{calculatePrice()} PLN</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-2">
+              {paymentType === 'one-time' 
+                ? 'Jednorazowa płatność'
+                : 'Płatność miesięczna, możesz anulować w dowolnym momencie'
+              }
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Anuluj
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                  Przetwarzanie...
+                </>
+              ) : (
+                `Zapłać ${calculatePrice()} PLN`
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -13,6 +13,7 @@ import SuccessStep from '@/components/onboarding/SuccessStep';
 import LegalAgreementsModal from '@/components/onboarding/LegalAgreementsModal';
 import PaymentConfirmDialog from '@/components/onboarding/PaymentConfirmDialog';
 import StripeCheckoutForm from '@/components/onboarding/StripeCheckoutForm';
+import ATSIntegrationStep from '@/components/onboarding/ATSIntegrationStep';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -153,14 +154,13 @@ const OnboardingPage = () => {
         setLoading(false);
       }
     } else if (currentStep === 2) {
-      // For the "next step" button, we want to directly go to step 3
-      // For the payment button, we want to open the payment dialog
-      if (paymentType === 'one-time') {
-        setConfirmDialogOpen(true);
-      } else {
-        proceedToPayment();
-      }
+      // For payment step, we always want to go to step 3 (ATS Integration)
+      setCurrentStep(3);
     } else if (currentStep === 3) {
+      // ATS Integration step completed - go to final step
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
+      // Final success step - redirect to dashboard
       navigate('/dashboard');
     }
   };
@@ -183,7 +183,7 @@ const OnboardingPage = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ProgressBar currentStep={currentStep} totalSteps={5} />
+      <ProgressBar currentStep={currentStep} totalSteps={4} />
       
       <div className="flex-1 flex items-center justify-center p-4">
         {currentStep === 1 && (
@@ -211,7 +211,7 @@ const OnboardingPage = () => {
             setTokenAmount={setTokenAmount}
             subscriptionAmount={subscriptionAmount}
             setSubscriptionAmount={setSubscriptionAmount}
-            onNext={() => setCurrentStep(3)}
+            onNext={handleNextStep}
             onPrevious={handlePreviousStep}
             paymentLoading={paymentLoading}
             paymentSuccess={paymentSuccess}
@@ -219,6 +219,13 @@ const OnboardingPage = () => {
         )}
         
         {currentStep === 3 && (
+          <ATSIntegrationStep 
+            onNext={handleNextStep}
+            onPrevious={handlePreviousStep}
+          />
+        )}
+        
+        {currentStep === 4 && (
           <SuccessStep 
             paymentType={paymentType}
             tokenAmount={tokenAmount}
