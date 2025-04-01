@@ -83,7 +83,7 @@ const DashboardHeader = () => {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="py-2 cursor-pointer hover:bg-gray-50">
               <Link to="/dashboard/profile">
-                <User className="mr-2 h-4 w-4" />
+                <UserIcon className="mr-2 h-4 w-4" />
                 <span>Profil</span>
               </Link>
             </DropdownMenuItem>
