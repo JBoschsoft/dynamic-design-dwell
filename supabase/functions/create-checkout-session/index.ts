@@ -72,7 +72,9 @@ serve(async (req) => {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
           paymentType
-        }
+        },
+        // Always creating a new setup intent, never reusing
+        usage: 'off_session'
       });
       
       console.log("Setup intent created successfully:", setupIntent.id);

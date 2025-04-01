@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -47,6 +48,7 @@ const OnboardingPage = () => {
   
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
   
+  // Stripe configuration
   const stripeOptions = {
     appearance: {
       theme: 'stripe' as const,
@@ -133,6 +135,7 @@ const OnboardingPage = () => {
   };
   
   const handleOpenCheckout = () => {
+    // Reset any previous errors before opening the checkout
     setCheckoutDialogOpen(true);
   };
   
@@ -289,15 +292,18 @@ const OnboardingPage = () => {
         onConfirm={handleConfirmOneTimePayment}
       />
       
-      <Elements stripe={stripePromise} options={stripeOptions}>
-        <StripeCheckoutForm
-          open={checkoutDialogOpen}
-          onOpenChange={setCheckoutDialogOpen}
-          paymentType={paymentType}
-          tokenAmount={paymentType === 'one-time' ? tokenAmount : subscriptionAmount}
-          onSuccess={handlePaymentSuccess}
-        />
-      </Elements>
+      {/* Each time the dialog is opened, a new Stripe Elements instance is created with fresh state */}
+      {checkoutDialogOpen && (
+        <Elements stripe={stripePromise} options={stripeOptions}>
+          <StripeCheckoutForm
+            open={checkoutDialogOpen}
+            onOpenChange={setCheckoutDialogOpen}
+            paymentType={paymentType}
+            tokenAmount={paymentType === 'one-time' ? tokenAmount : subscriptionAmount}
+            onSuccess={handlePaymentSuccess}
+          />
+        </Elements>
+      )}
     </div>
   );
 };

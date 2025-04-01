@@ -35,17 +35,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   
   // Create payment intent when the form opens
   useEffect(() => {
-    if (open && !clientSecret) {
+    // Reset client secret when dialog opens to force a new payment intent
+    if (open) {
+      setClientSecret(null);
       fetchPaymentIntent();
     }
-  }, [open, paymentType, tokenAmount]);
+  }, [open]);
   
   const fetchPaymentIntent = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // In a real implementation, this would call your Supabase Edge Function
+      // Call Supabase Edge Function to create a payment intent
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: paymentType,
@@ -56,6 +58,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       if (error) throw error;
       
       if (data?.clientSecret) {
+        console.log("Received new client secret:", data.clientSecret);
         setClientSecret(data.clientSecret);
       } else {
         throw new Error("Nie otrzymano klucza klienta od serwera płatności");
@@ -136,6 +139,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         title: "Błąd płatności",
         description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
       });
+      
+      // Reset the form and get a new client secret if there was an error
+      if (elements) {
+        const cardElement = elements.getElement(CardElement);
+        if (cardElement) {
+          cardElement.clear();
+        }
+      }
+      
+      // Get a new payment intent
+      fetchPaymentIntent();
     } finally {
       setLoading(false);
     }
