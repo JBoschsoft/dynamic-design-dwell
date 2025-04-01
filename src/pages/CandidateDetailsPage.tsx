@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverConte
 import { Input } from '@/components/ui/input';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
-import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye, ArrowLeft } from 'lucide-react';
+import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -134,15 +134,6 @@ const CandidateDetailsPage: React.FC = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleBackNavigation}
-            className="flex items-center gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Powrót</span>
-          </Button>
           <h1 className="text-2xl font-bold">{fullName}</h1>
         </div>
         
