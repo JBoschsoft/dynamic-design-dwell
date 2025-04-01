@@ -10,7 +10,8 @@ import {
   Bell, 
   Lock, 
   Database, 
-  Trash2
+  Trash2,
+  ChevronRight
 } from 'lucide-react';
 import CompanyProfileSettings from '@/components/settings/CompanyProfileSettings';
 import BrandingSettings from '@/components/settings/BrandingSettings';
@@ -35,111 +36,138 @@ const WorkspaceSettingsPage = () => {
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <Tabs 
-            value={activeTab} 
-            onValueChange={setActiveTab} 
-            className="w-full"
-          >
-            <div className="flex flex-col md:flex-row gap-6 w-full">
-              <TabsList className="flex flex-col h-auto bg-card p-2 mb-2 rounded-md border border-border w-full md:w-64 shrink-0">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={setActiveTab} 
+          className="w-full"
+        >
+          <div className="flex flex-col md:flex-row gap-6 w-full">
+            <div className="md:sticky md:top-6 md:self-start">
+              <TabsList className="flex flex-col h-auto bg-card p-1 mb-2 rounded-md border border-border w-full md:w-64 shrink-0">
                 <TabsTrigger 
                   value="company-profile" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Building2 className="h-4 w-4" />
-                  <span>Profil firmy</span>
+                  <Building2 className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Profil firmy</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="branding" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Palette className="h-4 w-4" />
-                  <span>Branding</span>
+                  <Palette className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Branding</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="integrations" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <LinkIcon className="h-4 w-4" />
-                  <span>Integracje</span>
+                  <LinkIcon className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Integracje</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="billing" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <CreditCard className="h-4 w-4" />
-                  <span>Płatności i subskrypcja</span>
+                  <CreditCard className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Płatności i subskrypcja</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="team" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Users className="h-4 w-4" />
-                  <span>Zespół i uprawnienia</span>
+                  <Users className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Zespół i uprawnienia</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="notifications" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Bell className="h-4 w-4" />
-                  <span>Powiadomienia</span>
+                  <Bell className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Powiadomienia</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="security" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Lock className="h-4 w-4" />
-                  <span>Bezpieczeństwo</span>
+                  <Lock className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Bezpieczeństwo</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="data-management" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                 >
-                  <Database className="h-4 w-4" />
-                  <span>Zarządzanie danymi</span>
+                  <Database className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Zarządzanie danymi</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
                 <TabsTrigger 
                   value="danger-zone" 
-                  className="w-full justify-start gap-2 px-3 py-2 h-10 text-destructive"
+                  className="w-full justify-start gap-3 px-4 py-3 h-auto text-start mb-1 rounded-sm data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground"
                 >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Strefa zagrożenia</span>
+                  <Trash2 className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">Strefa zagrożenia</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </TabsTrigger>
               </TabsList>
-
-              <div className="flex-1 p-6 bg-card rounded-md border border-border">
-                <TabsContent value="company-profile" className="mt-0">
-                  <CompanyProfileSettings />
-                </TabsContent>
-                <TabsContent value="branding" className="mt-0">
-                  <BrandingSettings />
-                </TabsContent>
-                <TabsContent value="integrations" className="mt-0">
-                  <IntegrationsSettings />
-                </TabsContent>
-                <TabsContent value="billing" className="mt-0">
-                  <BillingSettings />
-                </TabsContent>
-                <TabsContent value="team" className="mt-0">
-                  <TeamSettings />
-                </TabsContent>
-                <TabsContent value="notifications" className="mt-0">
-                  <NotificationsSettings />
-                </TabsContent>
-                <TabsContent value="security" className="mt-0">
-                  <SecuritySettings />
-                </TabsContent>
-                <TabsContent value="data-management" className="mt-0">
-                  <DataManagementSettings />
-                </TabsContent>
-                <TabsContent value="danger-zone" className="mt-0">
-                  <DangerZoneSettings />
-                </TabsContent>
-              </div>
             </div>
-          </Tabs>
-        </div>
+
+            <div className="flex-1 p-6 bg-card rounded-md border border-border shadow-sm">
+              <TabsContent value="company-profile" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <CompanyProfileSettings />
+              </TabsContent>
+              <TabsContent value="branding" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <BrandingSettings />
+              </TabsContent>
+              <TabsContent value="integrations" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <IntegrationsSettings />
+              </TabsContent>
+              <TabsContent value="billing" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <BillingSettings />
+              </TabsContent>
+              <TabsContent value="team" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <TeamSettings />
+              </TabsContent>
+              <TabsContent value="notifications" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <NotificationsSettings />
+              </TabsContent>
+              <TabsContent value="security" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <SecuritySettings />
+              </TabsContent>
+              <TabsContent value="data-management" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <DataManagementSettings />
+              </TabsContent>
+              <TabsContent value="danger-zone" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+                <DangerZoneSettings />
+              </TabsContent>
+            </div>
+          </div>
+        </Tabs>
       </div>
     </div>
   );
