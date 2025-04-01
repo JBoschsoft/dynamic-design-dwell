@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -187,7 +188,7 @@ const OnboardingPage = () => {
   
   const stripeOptions = {
     appearance: {
-      theme: 'stripe',
+      theme: 'stripe' as const, // Explicitly type as 'stripe' literal
       variables: {
         colorPrimary: '#6366f1',
         colorBackground: '#ffffff',
