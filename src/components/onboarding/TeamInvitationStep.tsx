@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Button, 
@@ -175,7 +176,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                   variant="ghost"
                   size="icon"
                   onClick={() => handleRemoveMember(index)}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  className="text-gray-400 hover:text-red-500 transition-colors self-center"
                   aria-label="Usuń członka zespołu"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -219,7 +220,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                     variant="ghost"
                     size="icon"
                     onClick={handleAddMember}
-                    className="text-gray-400 hover:text-primary transition-colors"
+                    className="text-gray-400 hover:text-primary transition-colors self-center"
                     aria-label="Dodaj kolejnego członka zespołu"
                   >
                     <Plus className="h-4 w-4" />

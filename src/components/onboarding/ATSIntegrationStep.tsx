@@ -30,7 +30,6 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
   const [isLoading, setIsLoading] = useState(false);
   const [testSuccessful, setTestSuccessful] = useState<boolean | null>(null);
 
-  // Updated to simply proceed to the next step without testing
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onNext();
@@ -49,10 +48,8 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
     setIsLoading(true);
     
     try {
-      // Simulate API test
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // 80% chance of success for demo purposes
       const isSuccess = Math.random() > 0.2;
       
       if (isSuccess) {
@@ -77,8 +74,14 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
   };
 
   return (
-    <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
-      <h2 className="text-2xl font-bold text-center mb-6">
+    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md w-full max-w-2xl">
+      <div className="flex items-center justify-center mb-6">
+        <div className="bg-primary/10 p-3 rounded-full">
+          <CheckCircle2 className="h-6 w-6 text-primary" />
+        </div>
+      </div>
+
+      <h2 className="text-2xl font-bold text-center mb-2">
         Integracja z ATS
       </h2>
       
@@ -98,7 +101,7 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
         </TabsList>
         
         <TabsContent value="teamtailor" className="space-y-4">
-          <Card>
+          <Card className="border-primary/20 shadow-sm">
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-2">Team Tailor API</h3>
               <p className="text-gray-600 mb-4">
@@ -124,7 +127,7 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
                         setTestSuccessful(null);
                       }}
                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" 
-                      className="flex-1 mr-2"
+                      className="flex-1 mr-2 bg-white focus:border-primary"
                     />
                     <Button 
                       type="button" 
@@ -162,7 +165,7 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
         </TabsContent>
         
         <TabsContent value="erecruiter" className="space-y-4">
-          <Card>
+          <Card className="border-primary/20 shadow-sm">
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-2">eRecruiter API</h3>
               <p className="text-gray-600 mb-4">
@@ -188,7 +191,7 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
                         setTestSuccessful(null);
                       }}
                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" 
-                      className="flex-1 mr-2"
+                      className="flex-1 mr-2 bg-white focus:border-primary"
                     />
                     <Button 
                       type="button" 
@@ -226,8 +229,9 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
         </TabsContent>
       </Tabs>
       
-      <Alert className="mt-6">
-        <AlertDescription>
+      <Alert className="bg-blue-50 border-blue-200 mt-6">
+        <Info className="h-4 w-4 text-blue-500" />
+        <AlertDescription className="text-blue-700">
           Integracja z systemem ATS pozwoli na automatyczne pobieranie danych o kandydatach
           i synchronizację statusów rekrutacyjnych.
         </AlertDescription>
@@ -238,6 +242,7 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
           type="button" 
           variant="outline" 
           onClick={onPrevious}
+          className="px-5"
         >
           Wstecz
         </Button>
@@ -246,8 +251,14 @@ const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevi
           type="submit"
           onClick={handleSubmit}
           disabled={isLoading}
+          className="px-5 bg-primary hover:bg-primary/90"
         >
-          {isLoading ? "Konfigurowanie..." : (
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Konfigurowanie...
+            </>
+          ) : (
             <>
               Dalej <ArrowRight className="ml-2 h-4 w-4" />
             </>

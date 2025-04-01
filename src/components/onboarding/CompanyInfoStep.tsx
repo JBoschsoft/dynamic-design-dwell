@@ -5,8 +5,8 @@ import {
   Input,
   Label,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Card, CardContent,
-  FileText, CheckCircle2, Building2, ArrowRight
+  Card, CardContent, CardHeader, CardTitle, CardDescription,
+  FileText, CheckCircle2, Building2, ArrowRight, Loader2
 } from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
 
@@ -76,14 +76,14 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   };
   
   return (
-    <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md w-full max-w-2xl">
       <div className="flex items-center justify-center mb-6">
-        <div className="rounded-full bg-primary/10 p-3">
-          <Building2 className="h-8 w-8 text-primary" />
+        <div className="bg-primary/10 p-3 rounded-full">
+          <Building2 className="h-6 w-6 text-primary" />
         </div>
       </div>
       
-      <h2 className="text-2xl font-bold text-center mb-6">
+      <h2 className="text-2xl font-bold text-center mb-2">
         Konfiguracja firmy
       </h2>
       
@@ -91,50 +91,65 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
         Wprowadź podstawowe informacje o swojej firmie, aby dostosować platformę do Twoich potrzeb.
       </p>
       
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="company-name">Nazwa firmy</Label>
-          <Input 
-            id="company-name" 
-            placeholder="Wprowadź nazwę firmy" 
-            value={companyName} 
-            onChange={e => setCompanyName(e.target.value)}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="industry">Branża</Label>
-          <Select value={industry} onValueChange={setIndustry}>
-            <SelectTrigger id="industry">
-              <SelectValue placeholder="Wybierz branżę" />
-            </SelectTrigger>
-            <SelectContent>
-              {industries.map(ind => (
-                <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="company-size">Wielkość firmy</Label>
-          <Select value={companySize} onValueChange={setCompanySize}>
-            <SelectTrigger id="company-size">
-              <SelectValue placeholder="Wybierz wielkość firmy" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1-10">1-10 pracowników</SelectItem>
-              <SelectItem value="11-50">11-50 pracowników</SelectItem>
-              <SelectItem value="51-200">51-200 pracowników</SelectItem>
-              <SelectItem value="201-500">201-500 pracowników</SelectItem>
-              <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="pt-4 space-y-3">
-          <div className="text-sm font-medium mb-2">Akceptacja warunków:</div>
+      <Card className="border-primary/20 shadow-sm mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Informacje o firmie</CardTitle>
+          <CardDescription>
+            Podaj podstawowe dane o Twojej firmie
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <div className="space-y-2">
+            <Label htmlFor="company-name">Nazwa firmy</Label>
+            <Input 
+              id="company-name" 
+              placeholder="Wprowadź nazwę firmy" 
+              value={companyName} 
+              onChange={e => setCompanyName(e.target.value)}
+              className="bg-white focus:border-primary"
+            />
+          </div>
           
+          <div className="space-y-2">
+            <Label htmlFor="industry">Branża</Label>
+            <Select value={industry} onValueChange={setIndustry}>
+              <SelectTrigger id="industry" className="bg-white focus:border-primary">
+                <SelectValue placeholder="Wybierz branżę" />
+              </SelectTrigger>
+              <SelectContent>
+                {industries.map(ind => (
+                  <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="company-size">Wielkość firmy</Label>
+            <Select value={companySize} onValueChange={setCompanySize}>
+              <SelectTrigger id="company-size" className="bg-white focus:border-primary">
+                <SelectValue placeholder="Wybierz wielkość firmy" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1-10">1-10 pracowników</SelectItem>
+                <SelectItem value="11-50">11-50 pracowników</SelectItem>
+                <SelectItem value="51-200">51-200 pracowników</SelectItem>
+                <SelectItem value="201-500">201-500 pracowników</SelectItem>
+                <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-primary/20 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Akceptacja warunków</CardTitle>
+          <CardDescription>
+            Zapoznaj się i zaakceptuj niezbędne warunki korzystania z serwisu
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-0">
           <div className="flex items-center">
             <div className={`mr-2 ${tosAgreed ? 'text-green-500' : 'text-gray-400'}`}>
               {tosAgreed ? <CheckCircle2 size={20} /> : <FileText size={20} />}
@@ -173,12 +188,17 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
               {msaAgreed ? 'Umowa ramowa zaakceptowana' : 'Zapoznaj się z umową ramową'}
             </button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       
-      <div className="mt-8">
-        <Button onClick={handleNextStep} className="w-full" disabled={loading}>
-          {loading ? "Zapisywanie danych..." : (
+      <div className="flex justify-end pt-6">
+        <Button onClick={handleNextStep} className="px-5 bg-primary hover:bg-primary/90" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Zapisywanie danych...
+            </>
+          ) : (
             <>
               Dalej <ArrowRight className="ml-2 h-4 w-4" />
             </>

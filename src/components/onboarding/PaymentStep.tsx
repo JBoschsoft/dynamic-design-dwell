@@ -4,7 +4,7 @@ import {
   Button,
   RadioGroup, RadioGroupItem,
   Label,
-  Card, CardHeader, CardContent, CardFooter, CardTitle,
+  Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription,
   Slider,
   CreditCard as CreditCardIcon, Repeat, DollarSign, TrendingDown, 
   Gauge, Lock, RefreshCcw, ArrowLeft, ArrowRight, Loader2, CheckCircle2
@@ -50,21 +50,19 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
     return `${amount} tokenów (${price} PLN/token)`;
   };
   
-  // Create a direct navigation handler that bypasses payment processing
   const handleDirectNextStep = () => {
-    // Skip payment process and go directly to the next step
     onNext();
   };
   
   return (
-    <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md w-full max-w-2xl">
       <div className="flex items-center justify-center mb-6">
-        <div className="rounded-full bg-primary/10 p-3">
-          <CreditCardIcon className="h-8 w-8 text-primary" />
+        <div className="bg-primary/10 p-3 rounded-full">
+          <CreditCardIcon className="h-6 w-6 text-primary" />
         </div>
       </div>
       
-      <h2 className="text-2xl font-bold text-center mb-6">
+      <h2 className="text-2xl font-bold text-center mb-2">
         Wybierz plan płatności
       </h2>
       
@@ -141,14 +139,17 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
                       </div>
                     </div>
                     
-                    <Card className="border border-primary/20">
+                    <Card className="border-primary/20 shadow-sm">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center">
                           <Gauge className="mr-2 h-5 w-5 text-primary" />
                           Automatyczne płatności
                         </CardTitle>
+                        <CardDescription>
+                          Szczegóły doładowania tokenów
+                        </CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-2">
+                      <CardContent className="space-y-2 pt-0">
                         <div className="flex justify-between">
                           <span>Próg doładowania:</span>
                           <span className="font-medium">poniżej 10 tokenów</span>
@@ -249,14 +250,17 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
                       </div>
                     </div>
                     
-                    <Card className="border border-primary/20">
+                    <Card className="border-primary/20 shadow-sm">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center">
                           <Gauge className="mr-2 h-5 w-5 text-primary" />
                           Podsumowanie zakupu
                         </CardTitle>
+                        <CardDescription>
+                          Szczegóły transakcji
+                        </CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-2">
+                      <CardContent className="space-y-2 pt-0">
                         <div className="flex justify-between">
                           <span>Ilość tokenów:</span>
                           <span className="font-medium">{tokenAmount[0]}</span>
@@ -307,7 +311,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
           <Button 
             variant="outline"
             onClick={onPrevious}
-            className="w-1/3"
+            className="w-1/3 px-5"
             disabled={paymentLoading || paymentSuccess}
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
@@ -315,7 +319,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
           
           <Button 
             onClick={onNext}
-            className="w-2/3"
+            className="w-2/3 px-5 bg-primary hover:bg-primary/90"
             disabled={paymentLoading || paymentSuccess}
           >
             {paymentLoading ? (
@@ -334,7 +338,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
         <Button 
           variant="secondary"
           onClick={handleDirectNextStep}
-          className="w-full"
+          className="w-full px-5"
           disabled={paymentLoading || paymentSuccess}
         >
           Przejdź do następnego kroku 

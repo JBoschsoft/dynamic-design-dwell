@@ -3,7 +3,7 @@ import React from 'react';
 import { 
   Button, 
   Alert, AlertTitle, AlertDescription,
-  Card, CardHeader, CardContent, CardTitle,
+  Card, CardHeader, CardContent, CardTitle, CardDescription,
   CheckCircle2, ArrowRight, Info
 } from "@/components/ui";
 
@@ -36,31 +36,38 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
   const totalPrice = calculateTotalPrice(amount);
   
   return (
-    <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
+    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md w-full max-w-2xl">
       <div className="flex items-center justify-center mb-6">
-        <div className="rounded-full bg-green-100 p-3">
-          <CheckCircle2 className="h-8 w-8 text-green-500" />
+        <div className="bg-green-100 p-3 rounded-full">
+          <CheckCircle2 className="h-6 w-6 text-green-500" />
         </div>
       </div>
       
-      <h2 className="text-2xl font-bold text-center mb-6">
+      <h2 className="text-2xl font-bold text-center mb-2">
         Płatność zrealizowana pomyślnie!
       </h2>
       
-      <Alert className="mb-6">
-        <Info className="h-4 w-4" />
-        <AlertTitle>Konfiguracja konta zakończona</AlertTitle>
-        <AlertDescription>
+      <p className="text-gray-600 text-center mb-6">
+        Twoje konto zostało pomyślnie skonfigurowane i doładowane tokenami.
+      </p>
+      
+      <Alert className="bg-blue-50 border-blue-200 mb-6">
+        <Info className="h-4 w-4 text-blue-500" />
+        <AlertTitle className="text-blue-700 font-medium">Konfiguracja konta zakończona</AlertTitle>
+        <AlertDescription className="text-blue-700">
           Twoje konto zostało pomyślnie skonfigurowane i doładowane tokenami. Możesz teraz korzystać z pełnej funkcjonalności platformy.
         </AlertDescription>
       </Alert>
       
       <div className="space-y-6">
-        <Card>
+        <Card className="border-primary/20 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Podsumowanie</CardTitle>
+            <CardDescription>
+              Szczegóły Twojej transakcji
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 pt-0">
             <div className="flex justify-between">
               <span>Typ płatności:</span>
               <span className="font-medium">{paymentType === 'one-time' ? 'Jednorazowa' : 'Automatyczna'}</span>
@@ -84,7 +91,7 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
       </div>
       
       <div className="mt-8">
-        <Button onClick={onNext} className="w-full bg-blue-600 hover:bg-blue-700">
+        <Button onClick={onNext} className="w-full bg-primary hover:bg-primary/90">
           Przejdź do panelu głównego <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
