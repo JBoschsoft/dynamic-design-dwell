@@ -1,12 +1,24 @@
 
 import React, { useState } from 'react';
 import { 
-  Button,
-  Card, CardContent, CardHeader, CardTitle, CardDescription,
-  Form, FormField, FormItem, FormLabel, FormControl, FormDescription,
-  Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Alert, AlertTitle, AlertDescription,
-  CheckCircle2, AlertCircle, ArrowRight, Loader2
+  Button, 
+  Card, 
+  CardContent,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  ArrowRight,
+  ArrowLeft,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Alert,
+  AlertDescription
 } from "@/components/ui";
 
 interface ATSIntegrationStepProps {
@@ -14,174 +26,132 @@ interface ATSIntegrationStepProps {
   onPrevious: () => void;
 }
 
-const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({
-  onNext,
-  onPrevious
-}) => {
-  const [atsProvider, setAtsProvider] = useState<string>('');
+const ATSIntegrationStep: React.FC<ATSIntegrationStepProps> = ({ onNext, onPrevious }) => {
+  const [integrationType, setIntegrationType] = useState<string>('');
   const [apiKey, setApiKey] = useState<string>('');
-  const [apiEndpoint, setApiEndpoint] = useState<string>('');
-  const [testing, setTesting] = useState<boolean>(false);
-  const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [apiUrl, setApiUrl] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleTestConnection = async () => {
-    // Validate inputs
-    if (!atsProvider) {
-      setTestStatus('error');
-      setErrorMessage('Wybierz dostawcę ATS');
-      return;
-    }
-
-    if (!apiKey) {
-      setTestStatus('error');
-      setErrorMessage('Wprowadź klucz API');
-      return;
-    }
-
-    if (atsProvider === 'other' && !apiEndpoint) {
-      setTestStatus('error');
-      setErrorMessage('Wprowadź endpoint API');
-      return;
-    }
-
-    setTesting(true);
-    setTestStatus('idle');
-    setErrorMessage('');
-
-    try {
-      // Simulate API connection test
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // For demo purposes we'll simulate a successful connection
-      setTestStatus('success');
-    } catch (error: any) {
-      setTestStatus('error');
-      setErrorMessage(error.message || 'Wystąpił nieznany błąd podczas testowania połączenia');
-    } finally {
-      setTesting(false);
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Simulate integration process
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setIsLoading(false);
+    onNext();
   };
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
-      <h2 className="text-2xl font-bold mb-6">Integracja z ATS</h2>
+      <h2 className="text-2xl font-bold text-center mb-6">
+        Integracja z ATS
+      </h2>
       
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Konfiguracja systemu rekrutacyjnego</CardTitle>
-          <CardDescription>
-            Połącz swój system rekrutacyjny (ATS) aby umożliwić automatyczne importowanie kandydatów
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <FormLabel>Wybierz dostawcę ATS</FormLabel>
-              <Select value={atsProvider} onValueChange={setAtsProvider}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wybierz system ATS" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="teamtailor">Teamtailor</SelectItem>
-                  <SelectItem value="erecruiter">Erecruiter</SelectItem>
-                  <SelectItem value="workable">Workable</SelectItem>
-                  <SelectItem value="lever">Lever</SelectItem>
-                  <SelectItem value="greenhouse">Greenhouse</SelectItem>
-                  <SelectItem value="other">Inny system</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <FormLabel htmlFor="apiKey">Klucz API</FormLabel>
-              <Input 
-                id="apiKey" 
-                type="password" 
-                value={apiKey} 
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Wprowadź klucz API twojego systemu ATS"
-              />
-              <FormDescription>
-                Klucz API znajduje się w ustawieniach twojego konta ATS, w sekcji integracji lub API
-              </FormDescription>
-            </div>
-
-            {atsProvider === 'other' && (
-              <div className="space-y-2">
-                <FormLabel htmlFor="apiEndpoint">Endpoint API</FormLabel>
-                <Input 
-                  id="apiEndpoint" 
-                  type="text" 
-                  value={apiEndpoint} 
-                  onChange={(e) => setApiEndpoint(e.target.value)}
-                  placeholder="np. https://api.twojsystem.com/v1"
-                />
-              </div>
-            )}
-
-            <Button 
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleTestConnection}
-              disabled={testing}
-            >
-              {testing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-                  Testowanie połączenia...
-                </>
-              ) : (
-                <>Testuj połączenie</>
-              )}
-            </Button>
-
-            {testStatus === 'success' && (
-              <Alert variant="default" className="bg-green-50 border-green-200">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800">Połączenie udane</AlertTitle>
-                <AlertDescription className="text-green-700">
-                  Pomyślnie połączono z systemem ATS. Możesz teraz przejść do następnego kroku.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {testStatus === 'error' && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Błąd połączenia</AlertTitle>
-                <AlertDescription>
-                  {errorMessage || 'Sprawdź poprawność wprowadzonych danych i spróbuj ponownie.'}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {testStatus === 'success' && (
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-          <p className="text-center text-sm text-gray-600">
-            Twój system ATS został pomyślnie zintegrowany. Możesz teraz przejść do następnego kroku aby skonfigurować import kandydatów.
+      <p className="text-gray-600 text-center mb-8">
+        Połącz z istniejącym systemem ATS lub skonfiguruj integrację ręcznie.
+      </p>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="integration-type">Typ integracji</Label>
+          <Select 
+            value={integrationType} 
+            onValueChange={setIntegrationType}
+          >
+            <SelectTrigger id="integration-type">
+              <SelectValue placeholder="Wybierz system ATS" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="workable">Workable</SelectItem>
+              <SelectItem value="lever">Lever</SelectItem>
+              <SelectItem value="greenhouse">Greenhouse</SelectItem>
+              <SelectItem value="bamboohr">BambooHR</SelectItem>
+              <SelectItem value="oracle">Oracle HCM</SelectItem>
+              <SelectItem value="sap">SAP SuccessFactors</SelectItem>
+              <SelectItem value="custom">Niestandardowa integracja</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Wybierz system ATS, z którym chcesz się zintegrować
           </p>
         </div>
-      )}
-
-      <div className="flex justify-between gap-4">
-        <Button 
-          variant="outline" 
-          onClick={onPrevious}
-        >
-          Wróć
-        </Button>
-        <Button 
-          onClick={onNext} 
-          disabled={testStatus !== 'success'}
-        >
-          Przejdź dalej <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
+        
+        {integrationType && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="api-key">Klucz API</Label>
+              <Input 
+                id="api-key" 
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Wprowadź klucz API" 
+              />
+              <p className="text-sm text-muted-foreground">
+                Klucz API znajdziesz w ustawieniach swojego konta ATS
+              </p>
+            </div>
+            
+            {integrationType === 'custom' && (
+              <div className="space-y-2">
+                <Label htmlFor="api-url">URL API</Label>
+                <Input 
+                  id="api-url" 
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="https://api.example.com/v1" 
+                />
+                <p className="text-sm text-muted-foreground">
+                  Wprowadź bazowy URL do API twojego systemu ATS
+                </p>
+              </div>
+            )}
+            
+            <Alert>
+              <AlertDescription>
+                Integracja z systemem ATS pozwoli na automatyczne pobieranie danych o kandydatach
+                i synchronizację statusów rekrutacyjnych.
+              </AlertDescription>
+            </Alert>
+            
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="permissions">
+                <AccordionTrigger>Wymagane uprawnienia</AccordionTrigger>
+                <AccordionContent>
+                  <ul className="list-disc pl-5 space-y-1 text-sm">
+                    <li>Odczyt kandydatów</li>
+                    <li>Odczyt stanowisk</li>
+                    <li>Aktualizacja statusów rekrutacyjnych</li>
+                    <li>Dodawanie notatek</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </>
+        )}
+        
+        <div className="flex justify-between pt-6">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onPrevious}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Wstecz
+          </Button>
+          
+          <Button 
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? "Konfigurowanie..." : (
+              <>
+                Dalej <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };
