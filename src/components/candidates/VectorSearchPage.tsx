@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Search, Calendar, Briefcase } from 'lucide-react';
+import { Search, Calendar, Briefcase, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const VectorSearchPage = () => {
