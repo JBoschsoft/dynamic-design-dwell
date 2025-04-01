@@ -97,22 +97,6 @@ const VectorSearchPage = () => {
     setSelectedCandidates([]);
   };
 
-  const setupScreening = () => {
-    if (selectedCandidates.length === 0) {
-      toast({
-        title: "Brak wybranych kandydatów",
-        description: "Wybierz co najmniej jednego kandydata",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    toast({
-      title: "Akcja w trakcie implementacji",
-      description: "Funkcja ustawiania screeningu będzie dostępna wkrótce.",
-    });
-  };
-
   const navigateToCandidateProfile = (candidateId: string) => {
     // Navigate to candidate profile with state to remember the source
     navigate(`/dashboard/candidates/${candidateId}`, {
@@ -211,15 +195,6 @@ const VectorSearchPage = () => {
                 >
                   <Briefcase className="mr-2 h-4 w-4" />
                   Utwórz kampanię ({selectedCandidates.length})
-                </Button>
-                
-                <Button 
-                  onClick={setupScreening} 
-                  disabled={selectedCandidates.length === 0}
-                  variant="outline"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Zaplanuj screeningi ({selectedCandidates.length})
                 </Button>
               </div>
             </div>
