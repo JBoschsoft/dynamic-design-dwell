@@ -1,12 +1,10 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Button, Label, Input
+  Button, Label, Input, Loader2
 } from "@/components/ui";
-import { Loader2 } from 'lucide-react'; // Import Loader2 directly from lucide-react
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 
 interface StripeCheckoutFormProps {
@@ -54,24 +52,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // In a real implementation, you'd create a payment intent on your server
-      // For demo purposes, we'll simulate a successful payment after a short delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Simulate a successful payment
-      if (Math.random() > 0.2) { // 80% success rate for demo
-        // Notify about success
+      if (Math.random() > 0.2) {
         if (onSuccess) {
           onSuccess(paymentType, tokenAmount[0]);
         }
         
-        // Close modal
         onOpenChange(false);
         
-        // Redirect to success page
         navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
       } else {
-        // Simulate payment error
         throw new Error("Odmowa autoryzacji karty. Proszę użyć innej metody płatności.");
       }
     } catch (error: any) {
