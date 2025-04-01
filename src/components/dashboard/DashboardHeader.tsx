@@ -37,7 +37,11 @@ const DashboardHeader = () => {
   const handleBackClick = () => {
     // Check if we have state information about where to return
     if (location.state && location.state.returnPath) {
-      navigate(location.state.returnPath);
+      navigate(location.state.returnPath, {
+        state: { 
+          from: 'candidateProfile'
+        }
+      });
     } else {
       // Default fallback to the candidates list
       navigate('/dashboard/candidates');

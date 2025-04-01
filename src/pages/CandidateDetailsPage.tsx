@@ -121,7 +121,19 @@ const CandidateDetailsPage: React.FC = () => {
     console.log('Viewing CV for', fullName);
     window.open('#', '_blank');
   };
-  
+
+  const handleBackClick = () => {
+    if (location.state && location.state.returnPath) {
+      navigate(location.state.returnPath, {
+        state: { 
+          from: 'candidateProfile'
+        }
+      });
+    } else {
+      navigate('/dashboard/candidates');
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -419,6 +431,10 @@ const CandidateDetailsPage: React.FC = () => {
           </Card>
         </div>
       </div>
+      
+      <Button variant="outline" size="sm" className="mt-6" onClick={handleBackClick}>
+        Wróć do listy kandydatów
+      </Button>
     </div>
   );
 };
