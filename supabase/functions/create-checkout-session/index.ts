@@ -46,88 +46,102 @@ serve(async (req) => {
       // Continue without email if there's an error
     }
 
-    let sessionConfig;
-
     if (paymentType === 'one-time') {
       // Calculate price per token based on quantity
       const pricePerToken = calculatePricePerToken(tokenAmount);
+      const amount = pricePerToken * tokenAmount * 100; // Price in cents
       
-      // One-time purchase config
-      sessionConfig = {
-        line_items: [
-          {
-            price_data: {
-              currency: 'pln',
-              product_data: {
-                name: `${tokenAmount} tokenów`,
-                description: 'Tokeny dla ProstyScreening.ai platform',
-                images: ['https://your-site.com/token-image.png'], // Optional
-              },
-              unit_amount: pricePerToken * 100, // Price in cents
-              tax_behavior: 'exclusive',
-            },
-            quantity: tokenAmount,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${req.headers.get('origin')}/onboarding?step=3&success=true&tokens=${tokenAmount}`,
-        cancel_url: `${req.headers.get('origin')}/onboarding?step=2&canceled=true`,
-        payment_method_types: ['card'],
-        billing_address_collection: 'auto',
-        allow_promotion_codes: true,
-      };
+      // Create a payment intent for one-time purchase
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'pln',
+        description: `${tokenAmount} tokenów dla ProstyScreening.ai`,
+        metadata: {
+          tokenAmount: tokenAmount.toString(),
+          paymentType: 'one-time',
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        }
+      });
+
+      console.log('Payment intent created successfully:', paymentIntent.id);
+      return new Response(
+        JSON.stringify({ 
+          clientSecret: paymentIntent.client_secret,
+          paymentType: 'one-time',
+          amount: tokenAmount,
+          unitPrice: pricePerToken,
+          totalPrice: amount / 100 // Convert back to PLN
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     } else {
-      // Calculate price per token based on quantity
+      // Subscription flow - create a setup intent
+      // First find or create customer
+      let customer;
+      
+      if (customerEmail) {
+        // Look for existing customer
+        const customers = await stripe.customers.list({
+          email: customerEmail,
+          limit: 1
+        });
+        
+        if (customers.data.length > 0) {
+          customer = customers.data[0];
+        } else {
+          // Create a new customer
+          customer = await stripe.customers.create({
+            email: customerEmail,
+            metadata: {
+              tokenSubscriptionAmount: tokenAmount.toString()
+            }
+          });
+        }
+      } else {
+        // Create anonymous customer
+        customer = await stripe.customers.create({
+          metadata: {
+            tokenSubscriptionAmount: tokenAmount.toString()
+          }
+        });
+      }
+      
+      // Create a SetupIntent
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customer.id,
+        payment_method_types: ['card'],
+        metadata: {
+          tokenAmount: tokenAmount.toString(),
+          paymentType: 'subscription',
+        },
+      });
+      
+      // Calculate price for display
       const pricePerToken = calculatePricePerToken(tokenAmount);
       
-      // Subscription config
-      sessionConfig = {
-        line_items: [
-          {
-            price_data: {
-              currency: 'pln',
-              product_data: {
-                name: 'Automatyczne doładowanie tokenów',
-                description: `Automatyczne doładowanie ${tokenAmount} tokenów gdy stan konta spada poniżej 10`,
-                images: ['https://your-site.com/subscription-image.png'], // Optional
-              },
-              unit_amount: pricePerToken * 100, // Price per token in cents
-              recurring: {
-                interval: 'month',
-                interval_count: 1,
-              },
-              tax_behavior: 'exclusive',
-            },
-            quantity: tokenAmount,
-          },
-        ],
-        mode: 'subscription',
-        success_url: `${req.headers.get('origin')}/onboarding?step=3&success=true&tokens=${tokenAmount}`,
-        cancel_url: `${req.headers.get('origin')}/onboarding?step=2&canceled=true`,
-        payment_method_types: ['card'],
-        billing_address_collection: 'auto',
-        allow_promotion_codes: true,
-      };
+      console.log('Setup intent created successfully:', setupIntent.id);
+      return new Response(
+        JSON.stringify({ 
+          clientSecret: setupIntent.client_secret,
+          customerId: customer.id,
+          paymentType: 'subscription',
+          amount: tokenAmount,
+          unitPrice: pricePerToken,
+          totalPrice: pricePerToken * tokenAmount
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
-
-    // If we have a customer email, add it to the session config
-    if (customerEmail) {
-      sessionConfig.customer_email = customerEmail;
-    }
-
-    console.log('Creating checkout session with config:', sessionConfig);
-    const session = await stripe.checkout.sessions.create(sessionConfig);
-
-    console.log('Session created successfully:', session.id);
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('Error creating payment:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

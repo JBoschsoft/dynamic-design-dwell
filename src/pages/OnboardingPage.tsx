@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -12,6 +11,7 @@ import PaymentStep from '@/components/onboarding/PaymentStep';
 import SuccessStep from '@/components/onboarding/SuccessStep';
 import LegalAgreementsModal from '@/components/onboarding/LegalAgreementsModal';
 import PaymentConfirmDialog from '@/components/onboarding/PaymentConfirmDialog';
+import StripeCheckoutForm from '@/components/onboarding/StripeCheckoutForm';
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -35,6 +35,7 @@ const OnboardingPage = () => {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
   
@@ -97,36 +98,19 @@ const OnboardingPage = () => {
     }
   };
   
+  const handlePaymentSuccess = (paymentType: string, amount: number) => {
+    toast({
+      title: "Płatność zakończona sukcesem",
+      description: `Twoje konto zostało pomyślnie doładowane o ${amount} tokenów.`
+    });
+    setPaymentSuccess(true);
+    setTimeout(() => {
+      setCurrentStep(3);
+    }, 2000);
+  };
+  
   const proceedToPayment = async () => {
-    setPaymentLoading(true);
-    
-    try {
-      const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
-      
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: JSON.stringify({
-          paymentType,
-          tokenAmount: amount,
-        }),
-      });
-      
-      if (error) throw new Error(error.message);
-      
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL returned from the server');
-      }
-      
-    } catch (error: any) {
-      console.error('Stripe checkout error:', error);
-      toast({
-        variant: "destructive",
-        title: "Błąd płatności",
-        description: error.message || "Wystąpił błąd podczas przetwarzania płatności."
-      });
-      setPaymentLoading(false);
-    }
+    setCheckoutDialogOpen(true);
   };
   
   const handleNextStep = async () => {
@@ -251,6 +235,14 @@ const OnboardingPage = () => {
         open={confirmDialogOpen}
         onOpenChange={setConfirmDialogOpen}
         onConfirm={handleConfirmOneTimePayment}
+      />
+      
+      <StripeCheckoutForm
+        open={checkoutDialogOpen}
+        onOpenChange={setCheckoutDialogOpen}
+        paymentType={paymentType}
+        tokenAmount={paymentType === 'one-time' ? tokenAmount : subscriptionAmount}
+        onSuccess={handlePaymentSuccess}
       />
     </div>
   );

@@ -33,5 +33,5 @@ export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./
 export { 
   Building2, ArrowRight, FileText, CheckCircle2, CreditCard, ArrowLeft, 
   DollarSign, Gauge, Repeat, TrendingDown, Loader2, 
-  Calendar, Lock, RefreshCcw, AlertCircle, Info 
+  Calendar, Lock, RefreshCcw, AlertCircle, Info, ShieldCheck
 } from 'lucide-react';
