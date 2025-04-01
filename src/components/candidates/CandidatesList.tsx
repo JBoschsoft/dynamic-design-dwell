@@ -10,14 +10,12 @@ const CandidatesList: React.FC<CandidatesListProps> = ({ refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState('appliedAt');
-  const [sortDirection, setSortDirection] = useState('desc');
   
   // Filter candidates based on search query
   const filteredCandidates = mockCandidates.filter(candidate => 
     candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     candidate.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    candidate.position.toLowerCase().includes(searchQuery.toLowerCase())
+    candidate.phone.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
   // Calculate pagination

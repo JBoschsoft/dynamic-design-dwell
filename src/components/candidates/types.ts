@@ -3,7 +3,7 @@ export interface Candidate {
   id: string;
   name: string;
   email: string;
-  position: string;
+  phone: string; // Added phone field
   stage: 'Nowy' | 'Screening' | 'Wywiad' | 'Oferta' | 'Zatrudniony' | 'Odrzucony';
   source: string;
   appliedAt: Date;

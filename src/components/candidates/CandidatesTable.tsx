@@ -19,7 +19,7 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
           <TableRow>
             <TableHead>Nazwa</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Stanowisko</TableHead>
+            <TableHead>Telefon</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Źródło</TableHead>
             <TableHead>Data aplikacji</TableHead>
@@ -31,7 +31,7 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
               <TableRow key={candidate.id} className="cursor-pointer hover:bg-muted/50">
                 <TableCell className="font-medium">{candidate.name}</TableCell>
                 <TableCell>{candidate.email}</TableCell>
-                <TableCell>{candidate.position}</TableCell>
+                <TableCell>{candidate.phone}</TableCell>
                 <TableCell>
                   <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                     ${candidate.stage === 'Nowy' ? 'bg-blue-100 text-blue-800' : ''}

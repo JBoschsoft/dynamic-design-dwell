@@ -32,29 +32,28 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
   const pageNumbers = getPageNumbers(currentPage, totalPages);
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Wyświetlanie {startIndex + 1}-{endIndex} z {totalCandidates} wyników</span>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Pokaż:</span>
-          <Select 
-            value={pageSize.toString()} 
-            onValueChange={onPageSizeChange}
-          >
-            <SelectTrigger className="w-[80px] h-8">
-              <SelectValue placeholder="10" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-              <SelectItem value="200">200</SelectItem>
-              <SelectItem value="300">300</SelectItem>
-              <SelectItem value="400">400</SelectItem>
-              <SelectItem value="500">500</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-sm text-muted-foreground">Wyświetlanie {startIndex + 1}-{endIndex} z {totalCandidates}</span>
+        <span className="text-sm text-muted-foreground">•</span>
+        <span className="text-sm text-muted-foreground">Pokaż:</span>
+        <Select 
+          value={pageSize.toString()} 
+          onValueChange={onPageSizeChange}
+        >
+          <SelectTrigger className="w-[70px] h-8">
+            <SelectValue placeholder="10" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="10">10</SelectItem>
+            <SelectItem value="50">50</SelectItem>
+            <SelectItem value="100">100</SelectItem>
+            <SelectItem value="200">200</SelectItem>
+            <SelectItem value="300">300</SelectItem>
+            <SelectItem value="400">400</SelectItem>
+            <SelectItem value="500">500</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       <Pagination>
