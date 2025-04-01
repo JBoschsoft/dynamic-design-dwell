@@ -15,9 +15,9 @@ serve(async (req) => {
   
   try {
     // Parse the request body
-    const { paymentType, tokenAmount } = await req.json();
+    const { paymentType, tokenAmount, paymentMethodId, customerId } = await req.json();
     
-    console.log("Received request with:", { paymentType, tokenAmount });
+    console.log("Received request with:", { paymentType, tokenAmount, paymentMethodId, customerId });
     
     // Initialize Stripe with secret key from environment variables
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -35,6 +35,81 @@ serve(async (req) => {
     const unitPrice = getTokenPrice(tokenAmount);
     const totalAmount = unitPrice * tokenAmount;
     
+    // If we already have a paymentMethodId from a setup intent confirmation
+    if (paymentMethodId && paymentType === 'subscription') {
+      try {
+        // Find or create a customer to attach the payment method to
+        let customer;
+        if (customerId) {
+          customer = await stripe.customers.retrieve(customerId);
+        } else {
+          // Create a new customer with the payment method
+          customer = await stripe.customers.create({
+            payment_method: paymentMethodId,
+            metadata: {
+              autoRecharge: "true",
+              rechargeThreshold: "10",
+              rechargeAmount: tokenAmount.toString()
+            }
+          });
+        }
+        
+        // Attach the payment method to the customer if not already
+        try {
+          await stripe.paymentMethods.attach(paymentMethodId, {
+            customer: customer.id,
+          });
+        } catch (error) {
+          console.log("Payment method already attached or error:", error);
+          // Continue if the error is because it's already attached
+        }
+        
+        // Set as the default payment method
+        await stripe.customers.update(customer.id, {
+          invoice_settings: {
+            default_payment_method: paymentMethodId,
+          },
+        });
+        
+        // Create a payment intent for the initial charge
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: totalAmount * 100, // amount in cents
+          currency: 'pln',
+          customer: customer.id,
+          payment_method: paymentMethodId,
+          off_session: true,
+          confirm: true,
+          metadata: {
+            tokenAmount: tokenAmount.toString(),
+            unitPrice: unitPrice.toString(),
+            paymentType: "subscription-initial",
+            autoRecharge: "true"
+          },
+        });
+        
+        console.log("Initial subscription charge created:", paymentIntent.id);
+        
+        return new Response(
+          JSON.stringify({
+            paymentIntentId: paymentIntent.id,
+            status: paymentIntent.status,
+            customerId: customer.id,
+            amount: tokenAmount,
+            unitPrice,
+            totalPrice: totalAmount,
+            setupForAutoRecharge: true
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        );
+      } catch (error) {
+        console.error("Error creating initial subscription charge:", error);
+        throw error;
+      }
+    }
+    
     // Create a payment intent or setup intent based on payment type
     if (paymentType === 'one-time') {
       // Create a payment intent for one-time payments
@@ -45,10 +120,9 @@ serve(async (req) => {
         metadata: {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
-          paymentType
-        },
-        // Set longer timeout to prevent expiration issues
-        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+          paymentType,
+          autoRecharge: "false"
+        }
       });
       
       console.log("Payment intent created successfully:", paymentIntent.id);
@@ -68,13 +142,16 @@ serve(async (req) => {
         }
       );
     } else {
-      // Create a setup intent for subscription payments with more persistent configuration
+      // Create a setup intent for subscription payments to securely collect card details
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],
         metadata: {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
-          paymentType
+          paymentType,
+          autoRecharge: "true",
+          rechargeThreshold: "10",
+          rechargeAmount: tokenAmount.toString()
         },
         // Set to off_session to allow future off-session payments
         usage: 'off_session',

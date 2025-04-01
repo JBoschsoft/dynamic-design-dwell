@@ -34,6 +34,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
   
   // Always get a fresh payment intent when the dialog opens
   useEffect(() => {
@@ -43,6 +44,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setIntentId(null);
       setError(null);
       setRetryCount(0);
+      setProcessingSetupConfirmation(false);
       
       fetchPaymentIntent();
     }
@@ -85,6 +87,51 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
+  const createInitialCharge = async (paymentMethodId: string) => {
+    setProcessingSetupConfirmation(true);
+    
+    try {
+      // Call the edge function to create an initial charge for subscription users
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          paymentType: 'subscription',
+          tokenAmount: tokenAmount[0],
+          paymentMethodId
+        }
+      });
+      
+      if (error) throw error;
+      
+      console.log("Initial charge created:", data);
+      
+      // Handle successful payment
+      if (onSuccess) {
+        onSuccess(paymentType, tokenAmount[0]);
+      }
+      
+      onOpenChange(false);
+      
+      navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+      
+      toast({
+        title: "Płatność zrealizowana",
+        description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów. Automatyczne doładowywanie zostało aktywowane.`,
+      });
+      
+    } catch (error: any) {
+      console.error("Error creating initial charge:", error);
+      setError(error.message || "Wystąpił błąd podczas przetwarzania płatności początkowej");
+      
+      toast({
+        variant: "destructive",
+        title: "Błąd płatności",
+        description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
+      });
+    } finally {
+      setProcessingSetupConfirmation(false);
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -119,6 +166,25 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             card: cardElement,
           }
         });
+        
+        if (result.error) {
+          throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
+        }
+        
+        // Handle successful payment
+        if (onSuccess) {
+          onSuccess(paymentType, tokenAmount[0]);
+        }
+        
+        onOpenChange(false);
+        
+        navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+        
+        toast({
+          title: "Płatność zrealizowana",
+          description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+        });
+        
       } else {
         if (!clientSecret) {
           throw new Error("Brak klucza klienta dla subskrypcji");
@@ -130,25 +196,20 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             card: cardElement,
           }
         });
+        
+        if (result.error) {
+          throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
+        }
+        
+        // For subscription, we need to now create an initial charge with the stored payment method
+        const setupResult = result.setupIntent;
+        
+        if (setupResult && setupResult.payment_method) {
+          await createInitialCharge(setupResult.payment_method);
+        } else {
+          throw new Error("Brak informacji o metodzie płatności");
+        }
       }
-      
-      if (result.error) {
-        throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
-      }
-      
-      // Handle successful payment
-      if (onSuccess) {
-        onSuccess(paymentType, tokenAmount[0]);
-      }
-      
-      onOpenChange(false);
-      
-      navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-      
-      toast({
-        title: "Płatność zrealizowana",
-        description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
-      });
       
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -254,7 +315,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           <div className="text-xs text-gray-500 mt-2">
             {paymentType === 'one-time' 
               ? 'Jednorazowa płatność bez zapisywania danych karty'
-              : 'Zapisujemy dane Twojej karty, aby móc automatycznie doładowywać konto'
+              : 'Zapisujemy dane Twojej karty, aby móc automatycznie doładowywać konto gdy liczba tokenów spadnie poniżej 10'
             }
           </div>
           
@@ -263,15 +324,18 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              disabled={loading}
+              disabled={loading || processingSetupConfirmation}
             >
               Anuluj
             </Button>
-            <Button type="submit" disabled={loading || !clientSecret}>
-              {loading ? (
+            <Button 
+              type="submit" 
+              disabled={loading || !clientSecret || processingSetupConfirmation}
+            >
+              {loading || processingSetupConfirmation ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Przetwarzanie...
+                  {processingSetupConfirmation ? 'Przetwarzanie płatności...' : 'Sprawdzanie...'}
                 </>
               ) : (
                 `Zapłać ${calculateTotalPrice(tokenAmount[0])} PLN`
