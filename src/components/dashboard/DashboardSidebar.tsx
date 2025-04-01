@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -71,6 +72,7 @@ const DashboardSidebar = () => {
   };
 
   const isCandidatesListPage = location.pathname === '/dashboard/candidates';
+  const isCandidateSearchPage = location.pathname === '/dashboard/candidates/search';
   const isCandidatePath = location.pathname.startsWith('/dashboard/candidates');
   const isSpecificCandidate = location.pathname.includes('/dashboard/candidates/') && id;
   
@@ -186,7 +188,7 @@ const DashboardSidebar = () => {
                   <div className="flex items-center w-full">
                     <SidebarMenuButton 
                       onClick={handleCandidatesClick}
-                      className={`flex-1 ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground bg-sidebar-accent' : ''}`}
+                      className={`flex-1 ${isCandidatePath && !isCandidateSearchPage ? 'font-medium text-sidebar-accent-foreground bg-sidebar-accent' : ''}`}
                     >
                       <div className="flex items-center gap-2">
                         <Users />
@@ -250,8 +252,8 @@ const DashboardSidebar = () => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/dashboard/search')}>
-                  <Link to="/dashboard/search">
+                <SidebarMenuButton asChild isActive={isActive('/dashboard/candidates/search')}>
+                  <Link to="/dashboard/candidates/search">
                     <Search />
                     <span>Wyszukiwanie kandydatów</span>
                   </Link>
