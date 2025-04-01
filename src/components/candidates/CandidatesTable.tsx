@@ -24,7 +24,7 @@ import {
 } from '@/components/ui';
 import { Users, Briefcase, CheckCircle2 } from 'lucide-react';
 
-const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
+const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandidates }) => {
   const navigate = useNavigate();
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   
@@ -42,15 +42,25 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
 
   const handleSelectAllChange = (isChecked: boolean) => {
     if (isChecked) {
-      const allIds = candidates.map(candidate => candidate.id);
-      setSelectedCandidates(allIds);
+      // If allCandidates is provided, use it to select all candidates across all pages
+      const idsToSelect = allCandidates ? allCandidates.map(candidate => candidate.id) : candidates.map(candidate => candidate.id);
+      setSelectedCandidates(idsToSelect);
     } else {
       setSelectedCandidates([]);
     }
   };
 
-  const isAllSelected = candidates.length > 0 && selectedCandidates.length === candidates.length;
-  const isSomeSelected = selectedCandidates.length > 0 && selectedCandidates.length < candidates.length;
+  // Check if all candidates across all pages are selected
+  const isAllSelected = allCandidates
+    ? allCandidates.length > 0 && selectedCandidates.length === allCandidates.length
+    : candidates.length > 0 && selectedCandidates.length === candidates.length;
+    
+  // Check if some candidates are selected
+  const isSomeSelected = selectedCandidates.length > 0 && (
+    allCandidates 
+      ? selectedCandidates.length < allCandidates.length
+      : selectedCandidates.length < candidates.length
+  );
 
   return (
     <div className="rounded-md border">

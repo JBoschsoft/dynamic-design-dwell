@@ -1,4 +1,3 @@
-
 export interface Candidate {
   id: string;
   firstName: string;
@@ -24,6 +23,7 @@ export interface CandidatesListProps {
 
 export interface CandidateTableProps {
   candidates: Candidate[];
+  allCandidates?: Candidate[]; // All candidates across all pages
 }
 
 export interface PaginationControlsProps {

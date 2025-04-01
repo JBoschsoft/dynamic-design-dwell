@@ -47,7 +47,10 @@ const CandidatesList: React.FC<CandidatesListProps> = ({ refreshTrigger }) => {
         onCandidateAdded={handleCandidateAdded}
       />
       
-      <CandidatesTable candidates={paginatedCandidates} />
+      <CandidatesTable 
+        candidates={paginatedCandidates} 
+        allCandidates={filteredCandidates} 
+      />
       
       <PaginationControls
         currentPage={currentPage}
