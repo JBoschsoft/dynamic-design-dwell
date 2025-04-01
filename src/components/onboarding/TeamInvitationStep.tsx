@@ -1,14 +1,11 @@
-
 import React, { useState } from 'react';
 import { 
   Button, 
   Alert, AlertDescription,
   Card, CardContent, CardHeader, CardTitle, CardDescription,
   Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-  Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
 } from "@/components/ui";
-import { Plus, Trash2, Info, ArrowRight, Loader2, HelpCircle, Users } from 'lucide-react';
+import { Plus, Trash2, Info, ArrowRight, Loader2, Users } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 
@@ -75,7 +72,6 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
   };
 
   const validateEmails = () => {
-    // Check for empty emails
     const emptyEmails = teamMembers.some(member => !member.email.trim());
     if (emptyEmails) {
       toast({
@@ -86,7 +82,6 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
       return false;
     }
 
-    // Check for valid email format
     const invalidEmails = teamMembers.some(
       member => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)
     );
@@ -99,7 +94,6 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
       return false;
     }
 
-    // Check for duplicate emails
     const emails = teamMembers.map(member => member.email.toLowerCase());
     const hasDuplicates = emails.some((email, index) => emails.indexOf(email) !== index);
     if (hasDuplicates) {
@@ -123,7 +117,6 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
 
     setIsLoading(true);
 
-    // Simulate sending invitations
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
@@ -202,30 +195,9 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                   />
                 </div>
                 <div className="w-1/3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Label htmlFor={`role-${index}`} className="text-sm font-medium">
-                      Rola
-                    </Label>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="cursor-help">
-                            <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" align="center" className="max-w-xs p-4">
-                          <div className="space-y-2">
-                            <p className="font-medium">Opis ról:</p>
-                            <div className="text-xs space-y-1.5">
-                              <p><strong>{ROLE_LABELS['hr-director']}:</strong> {ROLE_DESCRIPTIONS['hr-director']}</p>
-                              <p><strong>{ROLE_LABELS['hr-specialist']}:</strong> {ROLE_DESCRIPTIONS['hr-specialist']}</p>
-                              <p><strong>{ROLE_LABELS['recruiter']}:</strong> {ROLE_DESCRIPTIONS['recruiter']}</p>
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                  <Label htmlFor={`role-${index}`} className="text-sm font-medium mb-1 block">
+                    Rola
+                  </Label>
                   <Select
                     value={member.role}
                     onValueChange={(value) => handleRoleChange(index, value as any)}
