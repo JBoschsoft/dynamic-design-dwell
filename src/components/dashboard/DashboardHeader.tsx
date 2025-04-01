@@ -18,7 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
-  SidebarTrigger,
   Badge
 } from '@/components/ui';
 import { Link } from 'react-router-dom';
@@ -26,8 +25,6 @@ import { Link } from 'react-router-dom';
 const DashboardHeader = () => {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
-      <SidebarTrigger />
-      
       <div className="hidden flex-1 md:flex">
         <form className="w-full max-w-lg">
           <div className="relative">
