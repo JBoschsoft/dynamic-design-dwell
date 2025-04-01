@@ -1,13 +1,36 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
+import { Input } from '@/components/ui/input';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
-import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare } from 'lucide-react';
+import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+
+interface NoteEntry {
+  id: string;
+  text: string;
+  createdAt: Date;
+  createdBy: string;
+}
 
 const CandidateDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [notes, setNotes] = useState<NoteEntry[]>([
+    {
+      id: '1',
+      text: 'Kandydat był bardzo zainteresowany pozycją i dobrze wypadł podczas rozmowy technicznej.',
+      createdAt: new Date(),
+      createdBy: 'Anna Kowalska'
+    }
+  ]);
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  
+  const form = useForm<{ noteText: string }>({
+    defaultValues: {
+      noteText: ''
+    }
+  });
   
   // Find the candidate from the mock data
   const candidate = mockCandidates.find(c => c.id === id);
@@ -68,6 +91,21 @@ const CandidateDetailsPage: React.FC = () => {
     }
   ].sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date descending (newest first)
   
+  const handleAddNote = (data: { noteText: string }) => {
+    if (data.noteText.trim()) {
+      const newNote: NoteEntry = {
+        id: Date.now().toString(),
+        text: data.noteText,
+        createdAt: new Date(),
+        createdBy: 'Jan Nowak' // In a real app, this would be the current user
+      };
+      
+      setNotes([newNote, ...notes]);
+      setIsAddingNote(false);
+      form.reset();
+    }
+  };
+  
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -122,7 +160,6 @@ const CandidateDetailsPage: React.FC = () => {
       </div>
       
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Left column - Main candidate information */}
         <div className="flex-1 space-y-6">
           <Card>
             <CardHeader>
@@ -255,12 +292,61 @@ const CandidateDetailsPage: React.FC = () => {
           </Card>
           
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Notatki</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1"
+                onClick={() => setIsAddingNote(true)}
+              >
+                <Pen className="h-4 w-4" />
+                <span>Dodaj notatkę</span>
+              </Button>
             </CardHeader>
-            <CardContent>
-              {candidate.notes ? (
-                <p className="whitespace-pre-wrap">{candidate.notes}</p>
+            <CardContent className="space-y-4">
+              {isAddingNote && (
+                <div className="mb-6 border rounded-md p-4 bg-muted/30">
+                  <form onSubmit={form.handleSubmit(handleAddNote)}>
+                    <div className="mb-3">
+                      <Textarea
+                        placeholder="Wpisz notatkę..."
+                        className="w-full min-h-[100px]"
+                        {...form.register('noteText')}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setIsAddingNote(false);
+                          form.reset();
+                        }}
+                      >
+                        Anuluj
+                      </Button>
+                      <Button type="submit" size="sm">
+                        Zapisz
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
+              
+              {notes.length > 0 ? (
+                <div className="space-y-4">
+                  {notes.map((note) => (
+                    <div key={note.id} className="border rounded-md p-4">
+                      <p className="whitespace-pre-wrap mb-3">{note.text}</p>
+                      <div className="text-xs text-muted-foreground flex justify-between">
+                        <span>{note.createdBy}</span>
+                        <span>{formatDate(note.createdAt)} {note.createdAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-muted-foreground italic">Brak notatek</p>
               )}
@@ -268,7 +354,6 @@ const CandidateDetailsPage: React.FC = () => {
           </Card>
         </div>
         
-        {/* Right column - Candidate history timeline */}
         <div className="w-full md:w-80 lg:w-96 space-y-6">
           <Card>
             <CardHeader>
@@ -278,17 +363,14 @@ const CandidateDetailsPage: React.FC = () => {
               <div className="space-y-8">
                 {candidateHistory.map((event, index) => (
                   <div key={event.id} className="relative pl-8">
-                    {/* Timeline connector */}
                     {index < candidateHistory.length - 1 && (
                       <div className="absolute left-3.5 top-8 bottom-0 w-px bg-border" />
                     )}
                     
-                    {/* Icon */}
                     <div className="absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-background">
                       <event.icon className="h-4 w-4 text-primary" />
                     </div>
                     
-                    {/* Content */}
                     <div>
                       <h4 className="font-medium">{event.title}</h4>
                       <p className="text-sm text-muted-foreground mb-1">
@@ -301,26 +383,6 @@ const CandidateDetailsPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Działania</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Dodaj notatkę
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Phone className="mr-2 h-4 w-4" />
-                Zaplanuj rozmowę
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Calendar className="mr-2 h-4 w-4" />
-                Dodaj wydarzenie
-              </Button>
             </CardContent>
           </Card>
         </div>
