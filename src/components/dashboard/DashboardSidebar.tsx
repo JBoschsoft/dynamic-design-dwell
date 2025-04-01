@@ -113,6 +113,10 @@ const DashboardSidebar = () => {
     }
   };
 
+  const handleCandidatesAccordionClick = () => {
+    navigate('/dashboard/candidates');
+  };
+
   const settingsItems = [
     { title: 'Profil firmy', icon: Building2, sectionId: 'company-profile' },
     { title: 'Branding', icon: Palette, sectionId: 'branding' },
@@ -168,7 +172,10 @@ const DashboardSidebar = () => {
                   defaultValue={isCandidatePath ? "candidates" : undefined}
                 >
                   <AccordionItem value="candidates" className="border-none">
-                    <AccordionTrigger className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                    <AccordionTrigger 
+                      onClick={handleCandidatesAccordionClick}
+                      className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    >
                       <div className={`flex items-center gap-2 flex-1 text-left ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground' : ''}`}>
                         <Users className="h-4 w-4" />
                         <span>Kandydaci</span>
@@ -209,14 +216,7 @@ const DashboardSidebar = () => {
                             </>
                           )}
                         </div>
-                      ) : (
-                        <Link 
-                          to="/dashboard/candidates"
-                          className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-sidebar-accent/50 font-medium"
-                        >
-                          <span>Wszyscy Kandydaci</span>
-                        </Link>
-                      )}
+                      ) : null}
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
