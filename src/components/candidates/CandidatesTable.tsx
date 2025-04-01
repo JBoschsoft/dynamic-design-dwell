@@ -50,17 +50,18 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
     }
   };
 
+  // Check if all visible candidates are selected
+  const areAllCurrentPageCandidatesSelected = 
+    candidates.length > 0 && 
+    candidates.every(candidate => selectedCandidates.includes(candidate.id));
+  
   // Check if all candidates across all pages are selected
-  const isAllSelected = allCandidates
+  const areAllCandidatesSelected = allCandidates
     ? allCandidates.length > 0 && selectedCandidates.length === allCandidates.length
-    : candidates.length > 0 && selectedCandidates.length === candidates.length;
+    : areAllCurrentPageCandidatesSelected;
     
-  // Check if some candidates are selected
-  const isSomeSelected = selectedCandidates.length > 0 && (
-    allCandidates 
-      ? selectedCandidates.length < allCandidates.length
-      : selectedCandidates.length < candidates.length
-  );
+  // Check if some but not all candidates are selected
+  const areSomeCandidatesSelected = selectedCandidates.length > 0 && !areAllCandidatesSelected;
 
   return (
     <div className="rounded-md border">
@@ -124,11 +125,11 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
           <TableRow>
             <TableHead className="w-12">
               <Checkbox 
-                checked={isAllSelected}
+                checked={areAllCandidatesSelected}
                 onCheckedChange={handleSelectAllChange}
                 aria-label="Zaznacz wszystkich kandydatów"
-                data-state={isSomeSelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
-                className={isSomeSelected ? "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:opacity-100" : ""}
+                data-state={areSomeCandidatesSelected ? "indeterminate" : areAllCandidatesSelected ? "checked" : "unchecked"}
+                className={areSomeCandidatesSelected ? "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:opacity-100" : ""}
               />
             </TableHead>
             <TableHead>Nazwa</TableHead>
