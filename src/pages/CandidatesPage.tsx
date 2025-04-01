@@ -32,7 +32,7 @@ const CandidatesPage = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle>Lista kandydatów</CardTitle>
+          <CardTitle>Lista kandydaci</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
