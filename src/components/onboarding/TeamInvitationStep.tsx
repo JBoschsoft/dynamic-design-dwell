@@ -8,7 +8,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
   Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
 } from "@/components/ui";
-import { PlusCircle, Trash2, Info, ArrowRight, Loader2, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, Info, ArrowRight, Loader2, HelpCircle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 
@@ -158,7 +158,18 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
           </CardHeader>
           <CardContent className="space-y-4">
             {teamMembers.map((member, index) => (
-              <div key={index} className="flex items-end gap-2 p-3 rounded-md bg-gray-50 border border-gray-100">
+              <div key={index} className="flex items-center gap-2 p-3 rounded-md bg-gray-50 border border-gray-100">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveMember(index)}
+                  className="text-gray-400 hover:text-red-500"
+                  aria-label="Usuń członka zespołu"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                
                 <div className="flex-1">
                   <Label htmlFor={`email-${index}`} className="mb-1 block">
                     Adres email
@@ -206,28 +217,21 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveMember(index)}
-                  className="mb-0.5 self-end"
-                  aria-label="Usuń członka zespołu"
-                >
-                  <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
-                </Button>
+                
+                {index === teamMembers.length - 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleAddMember}
+                    className="text-gray-400 hover:text-primary"
+                    aria-label="Dodaj kolejnego członka zespołu"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             ))}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddMember}
-              className="w-full mt-2"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Dodaj kolejną osobę
-            </Button>
           </CardContent>
         </Card>
         
