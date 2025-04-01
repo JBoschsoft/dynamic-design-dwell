@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
 import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye, ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface NoteEntry {
   id: string;
@@ -35,21 +35,21 @@ const CandidateDetailsPage: React.FC = () => {
     }
   });
   
-  // Extract return path and source from location state
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  
   const returnPath = location.state?.returnPath || '/dashboard/candidates';
   const fromSource = location.state?.from || '';
   
-  // Function to handle back navigation with state preservation
   const handleBackNavigation = () => {
     navigate(returnPath, {
       state: { 
         from: 'candidateProfile',
-        // Pass any other state that might be needed
       }
     });
   };
   
-  // Find the candidate from the mock data
   const candidate = mockCandidates.find(c => c.id === id);
   
   if (!candidate) {
@@ -61,10 +61,8 @@ const CandidateDetailsPage: React.FC = () => {
     );
   }
   
-  // Create full name from firstName and lastName
   const fullName = `${candidate.firstName} ${candidate.lastName}`;
 
-  // Mock candidate history events for the timeline
   const candidateHistory = [
     {
       id: 1,
@@ -79,7 +77,7 @@ const CandidateDetailsPage: React.FC = () => {
       type: 'campaign',
       title: 'Dodano do kampanii',
       description: 'Dodano do kampanii "Frontend Developer"',
-      date: new Date(candidate.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000), // 2 days after
+      date: new Date(candidate.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000),
       icon: Briefcase
     },
     {
@@ -87,7 +85,7 @@ const CandidateDetailsPage: React.FC = () => {
       type: 'screening',
       title: 'Wstępna rozmowa telefoniczna',
       description: 'Wynik: Pozytywny. Kandydat wykazał zainteresowanie ofertą.',
-      date: new Date(candidate.appliedAt.getTime() + 5 * 24 * 60 * 60 * 1000), // 5 days after
+      date: new Date(candidate.appliedAt.getTime() + 5 * 24 * 60 * 60 * 1000),
       icon: Phone
     },
     {
@@ -95,7 +93,7 @@ const CandidateDetailsPage: React.FC = () => {
       type: 'interview',
       title: 'Rozmowa techniczna',
       description: 'Wynik: Pozytywny. Kandydat ma odpowiednie umiejętności techniczne.',
-      date: new Date(candidate.appliedAt.getTime() + 10 * 24 * 60 * 60 * 1000), // 10 days after
+      date: new Date(candidate.appliedAt.getTime() + 10 * 24 * 60 * 60 * 1000),
       icon: Calendar
     },
     {
@@ -103,10 +101,10 @@ const CandidateDetailsPage: React.FC = () => {
       type: 'feedback',
       title: 'Informacja zwrotna',
       description: 'Wysłano informację zwrotną z decyzją pozytywną.',
-      date: new Date(candidate.appliedAt.getTime() + 15 * 24 * 60 * 60 * 1000), // 15 days after
+      date: new Date(candidate.appliedAt.getTime() + 15 * 24 * 60 * 60 * 1000),
       icon: MessageSquare
     }
-  ].sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date descending (newest first)
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
   
   const handleAddNote = (data: { noteText: string }) => {
     if (data.noteText.trim()) {
@@ -114,7 +112,7 @@ const CandidateDetailsPage: React.FC = () => {
         id: Date.now().toString(),
         text: data.noteText,
         createdAt: new Date(),
-        createdBy: 'Jan Nowak' // In a real app, this would be the current user
+        createdBy: 'Jan Nowak'
       };
       
       setNotes([newNote, ...notes]);
@@ -124,15 +122,12 @@ const CandidateDetailsPage: React.FC = () => {
   };
 
   const handleDownloadCV = () => {
-    // In a real app, this would trigger a download of the actual CV file
     console.log('Downloading CV for', fullName);
-    // Implementation would depend on how files are stored (e.g., using browser's download API)
   };
 
   const handleViewCV = () => {
-    // In a real app, this would open the CV in a new window or tab
     console.log('Viewing CV for', fullName);
-    window.open('#', '_blank'); // Replace '#' with actual CV URL in a real app
+    window.open('#', '_blank');
   };
   
   return (
@@ -346,7 +341,6 @@ const CandidateDetailsPage: React.FC = () => {
             </CardContent>
           </Card>
           
-          {/* CV/Resume section moved to the bottom */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>CV / Resume</CardTitle>
