@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
 import { Input } from '@/components/ui/input';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
-import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye, ArrowLeft } from 'lucide-react';
+import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -42,14 +41,6 @@ const CandidateDetailsPage: React.FC = () => {
   
   const returnPath = location.state?.returnPath || '/dashboard/candidates';
   const fromSource = location.state?.from || '';
-  
-  const handleBackNavigation = () => {
-    navigate(returnPath, {
-      state: { 
-        from: 'candidateProfile',
-      }
-    });
-  };
   
   const candidate = mockCandidates.find(c => c.id === id);
   
@@ -134,18 +125,7 @@ const CandidateDetailsPage: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleBackNavigation}
-            className="flex items-center gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Powrót</span>
-          </Button>
-          <h1 className="text-2xl font-bold">{fullName}</h1>
-        </div>
+        <h1 className="text-2xl font-bold">{fullName}</h1>
         
         <div className="flex items-center gap-2">
           <Popover>
