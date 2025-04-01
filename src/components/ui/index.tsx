@@ -32,6 +32,15 @@ export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
 export { Badge } from "./badge";
 export { Separator } from "./separator";
 export { 
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  BreadcrumbEllipsis,
+} from "./breadcrumb";
+export { 
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
