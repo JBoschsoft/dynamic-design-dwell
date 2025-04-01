@@ -30,6 +30,7 @@ import {
   Lock,
   Database,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -157,11 +158,12 @@ const DashboardSidebar = () => {
               <SidebarMenuItem>
                 <Accordion type="single" collapsible className="w-full border-none">
                   <AccordionItem value="settings" className="border-none">
-                    <AccordionTrigger asChild>
-                      <SidebarMenuButton isActive={isSettingsActive()}>
-                        <Settings />
+                    {/* The key fix is here - AccordionTrigger must have exactly one child */}
+                    <AccordionTrigger className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent">
+                      <div className="flex items-center gap-2 flex-1 text-left">
+                        <Settings className="h-4 w-4" />
                         <span>Ustawienia workspace</span>
-                      </SidebarMenuButton>
+                      </div>
                     </AccordionTrigger>
                     <AccordionContent className="pl-8 pr-2 pt-1 pb-0">
                       <div className="flex flex-col space-y-1">
