@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,18 +27,18 @@ const SearchCriteria: React.FC<SearchCriteriaProps> = ({
   };
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Kryteria wyszukiwania</CardTitle>
         <CardDescription>
           Opisz szczegółowo jakiego rodzaju kandydatów poszukujesz. Im bardziej szczegółowy opis, tym lepsze wyniki.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="space-y-2 flex-1 flex flex-col">
           <Textarea
             placeholder="Np. 'Szukam programisty Java z 5-letnim doświadczeniem w bankowości i znajomością Spring Boot. Kandydat powinien mieć doświadczenie w prowadzeniu zespołu i komunikować się płynnie po angielsku.'"
-            className="min-h-[120px]"
+            className="min-h-[120px] flex-1"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -49,7 +49,7 @@ const SearchCriteria: React.FC<SearchCriteriaProps> = ({
         </div>
         <Button 
           onClick={handleSearch} 
-          className="w-full" 
+          className="w-full mt-4" 
           disabled={isSearching || !searchQuery.trim()}
         >
           {isSearching ? (

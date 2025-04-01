@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Briefcase } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 
 interface CampaignActionsProps {
   selectedCandidates: string[];
@@ -32,15 +31,15 @@ const CampaignActions: React.FC<CampaignActionsProps> = ({
   createCampaign
 }) => {
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle>Akcje dla wybranych kandydatów</CardTitle>
         <CardDescription>
           Wybierz co najmniej jednego kandydata z wyników, aby wykonać akcje
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="flex-1 flex flex-col justify-between">
+        <div className="space-y-4 flex-1">
           <div>
             <Label htmlFor="campaign-name">Nazwa kampanii rekrutacyjnej</Label>
             <Input 
@@ -62,17 +61,17 @@ const CampaignActions: React.FC<CampaignActionsProps> = ({
               onChange={(e) => setCampaignDescription(e.target.value)}
             />
           </div>
+        </div>
           
-          <div className="flex flex-col space-y-2">
-            <Button 
-              onClick={createCampaign} 
-              disabled={selectedCandidates.length === 0}
-              variant="outline"
-            >
-              <Briefcase className="mr-2 h-4 w-4" />
-              Utwórz kampanię ({selectedCandidates.length})
-            </Button>
-          </div>
+        <div className="flex flex-col space-y-2 mt-4">
+          <Button 
+            onClick={createCampaign} 
+            disabled={selectedCandidates.length === 0}
+            variant="outline"
+          >
+            <Briefcase className="mr-2 h-4 w-4" />
+            Utwórz kampanię ({selectedCandidates.length})
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -38,33 +38,18 @@ const VectorSearchPage: React.FC = () => {
         <h1 className="text-2xl font-bold">Wyszukiwanie kandydatów</h1>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-5">
-        <div className="md:col-span-3 space-y-6">
+      {/* Top row with equal height columns */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="h-full">
           <SearchCriteria 
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             isSearching={isSearching}
             handleSearch={handleSearch}
           />
-          
-          <SearchResults 
-            searchResults={searchResults}
-            isSearching={isSearching}
-            selectedCandidates={selectedCandidates}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            lastViewedCandidateId={lastViewedCandidateId}
-            toggleCandidateSelection={toggleCandidateSelection}
-            navigateToCandidateProfile={navigateToCandidateProfile}
-            handlePageChange={handlePageChange}
-            handlePageSizeChange={handlePageSizeChange}
-            selectAllCandidates={selectAllCandidates}
-            deselectAllCandidates={deselectAllCandidates}
-            areAllSelected={areAllSelected}
-          />
         </div>
         
-        <div className="md:col-span-2 space-y-6">
+        <div className="h-full">
           <CampaignActions 
             selectedCandidates={selectedCandidates}
             campaignName={campaignName}
@@ -74,6 +59,25 @@ const VectorSearchPage: React.FC = () => {
             createCampaign={createCampaign}
           />
         </div>
+      </div>
+      
+      {/* Full width search results */}
+      <div className="w-full">
+        <SearchResults 
+          searchResults={searchResults}
+          isSearching={isSearching}
+          selectedCandidates={selectedCandidates}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          lastViewedCandidateId={lastViewedCandidateId}
+          toggleCandidateSelection={toggleCandidateSelection}
+          navigateToCandidateProfile={navigateToCandidateProfile}
+          handlePageChange={handlePageChange}
+          handlePageSizeChange={handlePageSizeChange}
+          selectAllCandidates={selectAllCandidates}
+          deselectAllCandidates={deselectAllCandidates}
+          areAllSelected={areAllSelected}
+        />
       </div>
     </div>
   );
