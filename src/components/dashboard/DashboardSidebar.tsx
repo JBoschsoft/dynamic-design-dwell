@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -73,7 +72,6 @@ const DashboardSidebar = () => {
     }
   };
 
-  // Settings menu items
   const settingsItems = [
     { title: 'Profil firmy', icon: Building2, sectionId: 'company-profile' },
     { title: 'Branding', icon: Palette, sectionId: 'branding' },
@@ -158,7 +156,6 @@ const DashboardSidebar = () => {
               <SidebarMenuItem>
                 <Accordion type="single" collapsible className="w-full border-none">
                   <AccordionItem value="settings" className="border-none">
-                    {/* The key fix is here - AccordionTrigger must have exactly one child */}
                     <AccordionTrigger className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent">
                       <div className="flex items-center gap-2 flex-1 text-left">
                         <Settings className="h-4 w-4" />
@@ -184,11 +181,16 @@ const DashboardSidebar = () => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/dashboard/help')}>
-                  <Link to="/dashboard/help">
+                <SidebarMenuButton asChild>
+                  <a 
+                    href="/dokumentacja" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-2"
+                  >
                     <HelpCircle />
                     <span>Pomoc i wsparcie</span>
-                  </Link>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
