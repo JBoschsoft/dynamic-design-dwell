@@ -129,20 +129,7 @@ const CandidateDetailsPage: React.FC = () => {
         <h1 className="text-2xl font-bold">{fullName}</h1>
         
         <div className="flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                <span>Przypisz właściciela</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                <h4 className="font-medium">Wybierz właściciela</h4>
-                <p className="text-xs text-muted-foreground">To be implemented</p>
-              </div>
-            </PopoverContent>
-          </Popover>
+          
           
           <Popover>
             <PopoverTrigger asChild>
@@ -159,20 +146,7 @@ const CandidateDetailsPage: React.FC = () => {
             </PopoverContent>
           </Popover>
           
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Rozpocznij screening</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                <h4 className="font-medium">Wybierz workflow</h4>
-                <p className="text-xs text-muted-foreground">To be implemented</p>
-              </div>
-            </PopoverContent>
-          </Popover>
+          
         </div>
       </div>
       
