@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription, Button, Input } from '@/components/ui';
@@ -36,16 +35,12 @@ const ImportATS: React.FC<ImportATSProps> = ({
               <SelectContent>
                 <SelectItem value="teamtailor">Teamtailor</SelectItem>
                 <SelectItem value="erecruiter">eRecruiter</SelectItem>
-                <SelectItem value="workable">Workable</SelectItem>
-                <SelectItem value="lever">Lever</SelectItem>
-                <SelectItem value="greenhouse">Greenhouse</SelectItem>
-                <SelectItem value="custom">Inny (niestandardowy)</SelectItem>
               </SelectContent>
             </Select>
           </FormItem>
         </div>
         
-        {selectedAts && selectedAts !== 'custom' && (
+        {selectedAts && (
           <div className="space-y-4">
             <div className="space-y-2">
               <FormItem>
