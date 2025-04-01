@@ -79,6 +79,4 @@ export interface CandidateFormValues {
   email: string;
   phone: string;
   stage: Candidate['stage'];
-  source: string;
 }
-

@@ -33,7 +33,6 @@ const candidateFormSchema = z.object({
   email: z.string().email({ message: "Nieprawidłowy adres email" }),
   phone: z.string().min(9, { message: "Numer telefonu jest wymagany" }),
   stage: z.enum(["Nowy", "Screening", "Wywiad", "Oferta", "Zatrudniony", "Odrzucony"]),
-  source: z.string().min(1, { message: "Źródło jest wymagane" }),
 });
 
 const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose }) => {
@@ -47,7 +46,6 @@ const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose
       email: "",
       phone: "",
       stage: "Nowy",
-      source: "",
     },
   });
 
@@ -56,6 +54,7 @@ const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose
     // but the API might expect a combined name, we'll handle that here
     const newCandidate = {
       ...values,
+      source: "Manual", // Default source
       appliedAt: new Date(),
     };
     
@@ -123,31 +122,6 @@ const CandidateForm: React.FC<CandidateFormProps> = ({ onSubmit, isOpen, onClose
                     <FormControl>
                       <Input placeholder="+48 123 456 789" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="source"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Źródło*</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Wybierz źródło" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                        <SelectItem value="Strona firmowa">Strona firmowa</SelectItem>
-                        <SelectItem value="Polecenie">Polecenie</SelectItem>
-                        <SelectItem value="Teamtailor">Teamtailor</SelectItem>
-                        <SelectItem value="eRecruiter">eRecruiter</SelectItem>
-                        <SelectItem value="Inne">Inne</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

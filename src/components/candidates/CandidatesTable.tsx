@@ -21,15 +21,14 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
             <TableHead>Email</TableHead>
             <TableHead>Telefon</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Źródło</TableHead>
-            <TableHead>Data aplikacji</TableHead>
+            <TableHead>Date created</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {candidates.length > 0 ? (
             candidates.map((candidate) => (
               <TableRow key={candidate.id} className="cursor-pointer hover:bg-muted/50">
-                <TableCell className="font-medium">{candidate.name}</TableCell>
+                <TableCell className="font-medium">{`${candidate.firstName} ${candidate.lastName}`}</TableCell>
                 <TableCell>{candidate.email}</TableCell>
                 <TableCell>{candidate.phone}</TableCell>
                 <TableCell>
@@ -44,13 +43,12 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
                     {candidate.stage}
                   </div>
                 </TableCell>
-                <TableCell>{candidate.source}</TableCell>
                 <TableCell>{formatDate(candidate.appliedAt)}</TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={5} className="h-24 text-center">
                 Brak wyników dla podanych kryteriów wyszukiwania.
               </TableCell>
             </TableRow>
