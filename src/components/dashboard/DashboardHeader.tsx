@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -196,7 +195,7 @@ const DashboardHeader = () => {
               <span>Zespół</span>
             </CommandItem>
             <CommandItem onSelect={() => navigate('/dashboard/settings?section=billing')}>
-              <CreditCard className="mr-2 h-4 w-4" />
+              <Settings className="mr-2 h-4 w-4" />
               <span>Płatności</span>
             </CommandItem>
           </CommandGroup>
