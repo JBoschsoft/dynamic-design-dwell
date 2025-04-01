@@ -5,10 +5,13 @@ import {
   Alert, AlertDescription,
   Card, CardContent, CardHeader, CardTitle, CardDescription,
   Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui";
 import { Plus, Trash2, Info, ArrowRight, Loader2, Users } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
+import { useNavigate } from 'react-router-dom';
 
 interface TeamMember {
   email: string;
@@ -33,10 +36,12 @@ const ROLE_LABELS = {
 };
 
 const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevious }) => {
+  const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { email: '', role: 'hr-specialist' }
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   
   const form = useForm({
     defaultValues: {
@@ -52,10 +57,14 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
     if (teamMembers.length > 1) {
       setTeamMembers(teamMembers.filter((_, i) => i !== index));
     } else {
+      // If it's the last member, just clear the email field
+      const updatedMembers = [...teamMembers];
+      updatedMembers[index].email = '';
+      setTeamMembers(updatedMembers);
+      
       toast({
-        title: "Nie można usunąć",
-        description: "Musisz mieć co najmniej jednego członka zespołu.",
-        variant: "destructive"
+        title: "Ostatni członek zespołu",
+        description: "Możesz pozostawić to pole puste, jeśli nie chcesz dodawać członków zespołu.",
       });
     }
   };
@@ -73,17 +82,15 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
   };
 
   const validateEmails = () => {
-    const emptyEmails = teamMembers.some(member => !member.email.trim());
-    if (emptyEmails) {
-      toast({
-        title: "Brak adresu email",
-        description: "Wszystkie adresy email muszą być wypełnione.",
-        variant: "destructive"
-      });
-      return false;
+    // Filter out empty emails first
+    const nonEmptyMembers = teamMembers.filter(member => member.email.trim() !== '');
+    
+    // If all are empty, we'll handle this in handleSubmit
+    if (nonEmptyMembers.length === 0) {
+      return true;
     }
 
-    const invalidEmails = teamMembers.some(
+    const invalidEmails = nonEmptyMembers.some(
       member => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)
     );
     if (invalidEmails) {
@@ -95,7 +102,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
       return false;
     }
 
-    const emails = teamMembers.map(member => member.email.toLowerCase());
+    const emails = nonEmptyMembers.map(member => member.email.toLowerCase());
     const hasDuplicates = emails.some((email, index) => emails.indexOf(email) !== index);
     if (hasDuplicates) {
       toast({
@@ -112,6 +119,15 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if there are any non-empty team members
+    const nonEmptyMembers = teamMembers.filter(member => member.email.trim() !== '');
+    
+    // If no team members were added, ask for confirmation
+    if (nonEmptyMembers.length === 0) {
+      setConfirmDialogOpen(true);
+      return;
+    }
+    
     if (!validateEmails()) {
       return;
     }
@@ -123,7 +139,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
       
       toast({
         title: "Zaproszenia wysłane",
-        description: `Wysłano zaproszenia do ${teamMembers.length} członków zespołu.`,
+        description: `Wysłano zaproszenia do ${nonEmptyMembers.length} członków zespołu.`,
       });
       
       onNext();
@@ -136,6 +152,15 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSkipInvitations = () => {
+    setConfirmDialogOpen(false);
+    navigate('/dashboard');
+  };
+
+  const handleContinueAddingMembers = () => {
+    setConfirmDialogOpen(false);
   };
 
   return (
@@ -151,7 +176,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
       </h2>
       
       <p className="text-gray-600 text-center mb-8">
-        Zaproś współpracowników do wspólnego korzystania z platformy
+        Zaproś współpracowników do wspólnego korzystania z platformy. Ten krok jest opcjonalny.
       </p>
       
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -166,6 +191,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
             </CardTitle>
             <CardDescription>
               Dodaj osoby, które będą korzystać z systemu. Każdy członek zespołu otrzyma email z zaproszeniem.
+              Ten krok jest opcjonalny.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -261,12 +287,32 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
               </>
             ) : (
               <>
-                Wyślij zaproszenia <ArrowRight className="ml-2 h-4 w-4" />
+                {teamMembers.some(m => m.email.trim() !== '') ? 
+                  'Wyślij zaproszenia' : 'Przejdź dalej'} <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}
           </Button>
         </div>
       </form>
+      
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Brak dodanych członków zespołu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nie dodałeś żadnych członków zespołu. Czy na pewno chcesz przejść dalej bez zapraszania współpracowników?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleContinueAddingMembers}>
+              Nie, chcę dodać członków
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleSkipInvitations}>
+              Tak, przejdź do panelu głównego
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

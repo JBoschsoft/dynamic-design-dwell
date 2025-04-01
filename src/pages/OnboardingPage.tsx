@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -186,7 +185,7 @@ const OnboardingPage = () => {
     } else if (currentStep === 3) {
       // Fix: Explicitly navigate to step 4 when leaving the success screen
       setCurrentStep(4);
-      // Update URL with the new step (optional)
+      // Update URL with the new step
       navigate(`/onboarding?step=4`, { replace: true });
     } else if (currentStep === 4) {
       setCurrentStep(5);
