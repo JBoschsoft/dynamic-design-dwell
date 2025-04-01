@@ -29,6 +29,7 @@ interface PaymentStepProps {
   onPrevious: () => void;
   paymentLoading: boolean;
   paymentSuccess: boolean;
+  onOpenCheckout: () => void;
 }
 
 const PaymentStep: React.FC<PaymentStepProps> = ({
@@ -41,7 +42,8 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
   onNext,
   onPrevious,
   paymentLoading,
-  paymentSuccess
+  paymentSuccess,
+  onOpenCheckout
 }) => {
   
   const formatSubscriptionValue = (value: number[]) => {
@@ -318,7 +320,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
           </Button>
           
           <Button 
-            onClick={onNext}
+            onClick={onOpenCheckout}
             className="w-2/3 px-5 bg-primary hover:bg-primary/90"
             disabled={paymentLoading || paymentSuccess}
           >

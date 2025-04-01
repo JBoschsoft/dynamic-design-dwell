@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -47,6 +46,21 @@ const OnboardingPage = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
+  
+  const stripeOptions = {
+    appearance: {
+      theme: 'stripe' as const,
+      variables: {
+        colorPrimary: '#6366f1',
+        colorBackground: '#ffffff',
+        colorText: '#303238',
+        colorDanger: '#ef4444',
+        fontFamily: 'system-ui, sans-serif',
+        spacingUnit: '4px',
+        borderRadius: '4px',
+      },
+    },
+  };
   
   useEffect(() => {
     const stepParam = searchParams.get('step');
@@ -116,6 +130,10 @@ const OnboardingPage = () => {
     setTimeout(() => {
       setCurrentStep(3);
     }, 2000);
+  };
+  
+  const handleOpenCheckout = () => {
+    setCheckoutDialogOpen(true);
   };
   
   const proceedToPayment = async () => {
@@ -189,21 +207,6 @@ const OnboardingPage = () => {
     proceedToPayment();
   };
   
-  const stripeOptions = {
-    appearance: {
-      theme: 'stripe' as const,
-      variables: {
-        colorPrimary: '#6366f1',
-        colorBackground: '#ffffff',
-        colorText: '#303238',
-        colorDanger: '#ef4444',
-        fontFamily: 'system-ui, sans-serif',
-        spacingUnit: '4px',
-        borderRadius: '4px',
-      },
-    },
-  };
-  
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <ProgressBar currentStep={currentStep} totalSteps={6} />
@@ -238,6 +241,7 @@ const OnboardingPage = () => {
             onPrevious={handlePreviousStep}
             paymentLoading={paymentLoading}
             paymentSuccess={paymentSuccess}
+            onOpenCheckout={handleOpenCheckout}
           />
         )}
         
