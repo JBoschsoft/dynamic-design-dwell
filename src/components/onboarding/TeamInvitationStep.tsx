@@ -3,11 +3,14 @@ import React, { useState } from 'react';
 import { 
   Button, 
   Alert, AlertDescription,
-  Card, CardContent, CardHeader, CardTitle,
-  Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+  Card, CardContent, CardHeader, CardTitle, CardDescription,
+  Label, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+  Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
 } from "@/components/ui";
-import { PlusCircle, Trash2, Info, ArrowRight, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, Info, ArrowRight, Loader2, HelpCircle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
 
 interface TeamMember {
   email: string;
@@ -19,11 +22,23 @@ interface TeamInvitationStepProps {
   onPrevious: () => void;
 }
 
+const ROLE_DESCRIPTIONS = {
+  'hr-director': 'Pełny dostęp do wszystkich funkcji systemu, możliwość zarządzania użytkownikami',
+  'hr-specialist': 'Dostęp do większości funkcji rekrutacyjnych, bez możliwości zarządzania użytkownikami',
+  'recruiter': 'Podstawowy dostęp do funkcji rekrutacyjnych'
+};
+
 const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevious }) => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { email: '', role: 'hr-specialist' }
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  const form = useForm({
+    defaultValues: {
+      teamMembers: [{ email: '', role: 'hr-specialist' }]
+    }
+  });
 
   const handleAddMember = () => {
     setTeamMembers([...teamMembers, { email: '', role: 'hr-specialist' }]);
@@ -53,10 +68,8 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
     setTeamMembers(updatedMembers);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate emails
+  const validateEmails = () => {
+    // Check for empty emails
     const emptyEmails = teamMembers.some(member => !member.email.trim());
     if (emptyEmails) {
       toast({
@@ -64,10 +77,10 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
         description: "Wszystkie adresy email muszą być wypełnione.",
         variant: "destructive"
       });
-      return;
+      return false;
     }
 
-    // Validate email format
+    // Check for valid email format
     const invalidEmails = teamMembers.some(
       member => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)
     );
@@ -77,6 +90,28 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
         description: "Jeden lub więcej adresów email ma nieprawidłowy format.",
         variant: "destructive"
       });
+      return false;
+    }
+
+    // Check for duplicate emails
+    const emails = teamMembers.map(member => member.email.toLowerCase());
+    const hasDuplicates = emails.some((email, index) => emails.indexOf(email) !== index);
+    if (hasDuplicates) {
+      toast({
+        title: "Zduplikowane adresy email",
+        description: "Każdy adres email musi być unikalny.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEmails()) {
       return;
     }
 
@@ -105,7 +140,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-2xl">
-      <h2 className="text-2xl font-bold text-center mb-6">
+      <h2 className="text-2xl font-bold text-center mb-2">
         Zaproś członków zespołu
       </h2>
       
@@ -117,10 +152,13 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
         <Card className="mb-6">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Członkowie zespołu</CardTitle>
+            <CardDescription>
+              Dodaj osoby, które będą korzystać z systemu. Każdy członek zespołu otrzyma email z zaproszeniem.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {teamMembers.map((member, index) => (
-              <div key={index} className="flex items-end gap-2">
+              <div key={index} className="flex items-end gap-2 p-3 rounded-md bg-gray-50 border border-gray-100">
                 <div className="flex-1">
                   <Label htmlFor={`email-${index}`} className="mb-1 block">
                     Adres email
@@ -131,17 +169,34 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                     value={member.email}
                     onChange={(e) => handleEmailChange(index, e.target.value)}
                     placeholder="email@firma.pl"
+                    className="bg-white"
                   />
                 </div>
                 <div className="w-1/3">
-                  <Label htmlFor={`role-${index}`} className="mb-1 block">
-                    Rola
-                  </Label>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Label htmlFor={`role-${index}`}>
+                      Rola
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p><strong>Dyrektor HR:</strong> {ROLE_DESCRIPTIONS['hr-director']}</p>
+                          <p><strong>Specjalista HR:</strong> {ROLE_DESCRIPTIONS['hr-specialist']}</p>
+                          <p><strong>Rekruter:</strong> {ROLE_DESCRIPTIONS['recruiter']}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select
                     value={member.role}
                     onValueChange={(value) => handleRoleChange(index, value as any)}
                   >
-                    <SelectTrigger id={`role-${index}`}>
+                    <SelectTrigger id={`role-${index}`} className="bg-white">
                       <SelectValue placeholder="Wybierz rolę" />
                     </SelectTrigger>
                     <SelectContent>
@@ -156,9 +211,10 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                   variant="ghost"
                   size="icon"
                   onClick={() => handleRemoveMember(index)}
-                  className="mb-0.5"
+                  className="mb-0.5 self-end"
+                  aria-label="Usuń członka zespołu"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
                 </Button>
               </div>
             ))}
@@ -179,7 +235,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
           <Info className="h-4 w-4" />
           <AlertDescription>
             Zaproszeni użytkownicy otrzymają email z tytułem "Dołącz do workspace'a na ProstyScreening.ai"
-            wraz z linkiem aktywacyjnym.
+            wraz z linkiem aktywacyjnym ważnym przez 7 dni.
           </AlertDescription>
         </Alert>
         
