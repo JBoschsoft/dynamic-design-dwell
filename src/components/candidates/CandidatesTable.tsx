@@ -114,10 +114,11 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates }) => {
           <TableRow>
             <TableHead className="w-12">
               <Checkbox 
-                checked={isAllSelected} 
-                indeterminate={isSomeSelected && !isAllSelected}
-                onCheckedChange={handleSelectAllChange} 
+                checked={isAllSelected}
+                onCheckedChange={handleSelectAllChange}
                 aria-label="Zaznacz wszystkich kandydatów"
+                data-state={isSomeSelected ? "indeterminate" : isAllSelected ? "checked" : "unchecked"}
+                className={isSomeSelected ? "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:opacity-100" : ""}
               />
             </TableHead>
             <TableHead>Nazwa</TableHead>

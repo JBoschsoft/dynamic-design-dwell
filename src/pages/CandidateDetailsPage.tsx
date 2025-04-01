@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
+import { Users, Briefcase, CheckCircle2 } from 'lucide-react';
 
 const CandidateDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +26,56 @@ const CandidateDetailsPage: React.FC = () => {
   
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">{fullName}</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">{fullName}</h1>
+        
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                <span>Przypisz właściciela</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="space-y-2">
+                <h4 className="font-medium">Wybierz właściciela</h4>
+                <p className="text-xs text-muted-foreground">To be implemented</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Briefcase className="h-4 w-4" />
+                <span>Dodaj do kampanii</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="space-y-2">
+                <h4 className="font-medium">Wybierz kampanię</h4>
+                <p className="text-xs text-muted-foreground">To be implemented</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Rozpocznij screening</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="space-y-2">
+                <h4 className="font-medium">Wybierz workflow</h4>
+                <p className="text-xs text-muted-foreground">To be implemented</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
       
       <div className="flex flex-col space-y-6">
         <Card>
