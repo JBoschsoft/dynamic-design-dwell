@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input, Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui';
 import { Search, Filter, UserPlus, X, Briefcase, Users, Calendar, Eye } from 'lucide-react';
