@@ -1,13 +1,11 @@
-
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { mockCandidates } from '@/components/candidates/mockData';
 import { formatDate } from '@/components/candidates/utils';
 
 const CandidateDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   
   // Find the candidate from the mock data
   const candidate = mockCandidates.find(c => c.id === id);
@@ -28,7 +26,7 @@ const CandidateDetailsPage: React.FC = () => {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">{fullName}</h1>
       
-      <div className="grid grid-cols-1 gap-6">
+      <div className="flex flex-col space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Informacje podstawowe</CardTitle>

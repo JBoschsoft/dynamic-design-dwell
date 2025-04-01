@@ -16,13 +16,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Badge,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
+  Badge
 } from '@/components/ui';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { mockCandidates } from '@/components/candidates/mockData';
@@ -41,33 +35,16 @@ const DashboardHeader = () => {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
-      {isCandidateDetailsPage ? (
-        <div className="flex items-center">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard/candidates">Kandydaci</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{fullName}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center ml-4">
+      <div></div>
+      
+      <div className="flex items-center gap-3">
+        {isCandidateDetailsPage && (
+          <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center mr-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Powrót
           </Button>
-        </div>
-      ) : (
-        <div></div>
-      )}
-      
-      <div className="flex items-center gap-3">
+        )}
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative rounded-full border-0 hover:bg-gray-100">

@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +12,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { 
   LayoutDashboard, 
@@ -30,6 +34,7 @@ import {
   Database,
   Trash2,
   ChevronDown,
+  User,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { Button } from '@/components/ui';
@@ -41,18 +46,22 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
+import { mockCandidates } from '@/components/candidates/mockData';
 
 const DashboardSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  const isSettingsActive = () => {
-    return location.pathname.startsWith('/dashboard/settings');
-  };
+  const isCandidatePath = location.pathname.startsWith('/dashboard/candidates');
+  const isSpecificCandidate = location.pathname.includes('/dashboard/candidates/') && id;
+  
+  const currentCandidate = isSpecificCandidate ? 
+    mockCandidates.find(c => c.id === id) : null;
 
   const handleLogout = async () => {
     try {
@@ -120,12 +129,36 @@ const DashboardSidebar = () => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive('/dashboard/candidates')}>
-                  <Link to="/dashboard/candidates">
-                    <Users />
-                    <span>Kandydaci</span>
-                  </Link>
-                </SidebarMenuButton>
+                <Accordion type="single" collapsible className="w-full border-none">
+                  <AccordionItem value="candidates" className="border-none">
+                    <AccordionTrigger className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                      <div className={`flex items-center gap-2 flex-1 text-left ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground' : ''}`}>
+                        <Users className="h-4 w-4" />
+                        <span>Kandydaci</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-8 pr-2 pt-1 pb-0">
+                      <div className="flex flex-col space-y-1">
+                        <Link 
+                          to="/dashboard/candidates"
+                          className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${isActive('/dashboard/candidates') ? 'bg-sidebar-accent/50 font-medium' : ''}`}
+                        >
+                          <span>Wszyscy kandydaci</span>
+                        </Link>
+                        
+                        {isSpecificCandidate && currentCandidate && (
+                          <Link 
+                            to={`/dashboard/candidates/${id}`}
+                            className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md bg-sidebar-accent/50 font-medium"
+                          >
+                            <User className="h-3 w-3" />
+                            <span className="truncate">{`${currentCandidate.firstName} ${currentCandidate.lastName}`}</span>
+                          </Link>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
