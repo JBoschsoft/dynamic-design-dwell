@@ -33,6 +33,10 @@ const CandidatesPage = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Lista kandydaci</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Kandydaci
+            Zarządzaj kandydatami, importuj z różnych źródeł i analizuj aplikacje.
+          </p>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
