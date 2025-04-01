@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -129,7 +128,12 @@ const DashboardSidebar = () => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <Accordion type="single" collapsible className="w-full border-none">
+                <Accordion 
+                  type="single" 
+                  collapsible 
+                  className="w-full border-none" 
+                  defaultValue={isCandidatePath ? "candidates" : undefined}
+                >
                   <AccordionItem value="candidates" className="border-none">
                     <AccordionTrigger className="flex items-center gap-2 w-full px-2 py-2 rounded-md hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
                       <div className={`flex items-center gap-2 flex-1 text-left ${isCandidatePath ? 'font-medium text-sidebar-accent-foreground' : ''}`}>

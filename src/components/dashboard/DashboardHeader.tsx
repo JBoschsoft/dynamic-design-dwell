@@ -35,16 +35,16 @@ const DashboardHeader = () => {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
-      <div></div>
+      {isCandidateDetailsPage && (
+        <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center mr-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Powrót
+        </Button>
+      )}
+      
+      <div className="flex-1"></div>
       
       <div className="flex items-center gap-3">
-        {isCandidateDetailsPage && (
-          <Button variant="ghost" onClick={() => navigate('/dashboard/candidates')} className="flex items-center mr-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Powrót
-          </Button>
-        )}
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative rounded-full border-0 hover:bg-gray-100">
