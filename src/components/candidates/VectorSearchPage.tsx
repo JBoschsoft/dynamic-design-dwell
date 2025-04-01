@@ -12,6 +12,9 @@ const VectorSearchPage = () => {
     isSearching,
     searchResults,
     selectedCandidates,
+    currentPage,
+    pageSize,
+    lastViewedCandidateId,
     campaignName,
     setCampaignName,
     campaignDescription,
@@ -22,7 +25,9 @@ const VectorSearchPage = () => {
     deselectAllCandidates,
     areAllSelected,
     createCampaign,
-    navigateToCandidateProfile
+    navigateToCandidateProfile,
+    handlePageChange,
+    handlePageSizeChange
   } = useVectorSearch();
 
   return (
@@ -61,6 +66,11 @@ const VectorSearchPage = () => {
         selectAllCandidates={selectAllCandidates}
         deselectAllCandidates={deselectAllCandidates}
         areAllSelected={areAllSelected}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        lastViewedCandidateId={lastViewedCandidateId}
+        handlePageChange={handlePageChange}
+        handlePageSizeChange={handlePageSizeChange}
       />
     </div>
   );
