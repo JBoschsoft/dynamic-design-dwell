@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
@@ -38,7 +37,6 @@ const CandidateDetailsPage: React.FC = () => {
   
   useEffect(() => {
     window.scrollTo(0, 0);
-    // Console log to help debug the state
     console.log('CandidateDetailsPage location state:', location.state);
   }, []);
   
@@ -123,20 +121,6 @@ const CandidateDetailsPage: React.FC = () => {
   const handleViewCV = () => {
     console.log('Viewing CV for', fullName);
     window.open('#', '_blank');
-  };
-
-  const handleBackClick = () => {
-    if (location.state && location.state.returnPath) {
-      console.log('Returning to:', location.state.returnPath);
-      navigate(location.state.returnPath, {
-        state: { 
-          from: 'candidateProfile',
-          returnedAt: new Date().getTime() // Add timestamp to ensure state change
-        }
-      });
-    } else {
-      navigate('/dashboard/candidates');
-    }
   };
 
   return (
@@ -436,10 +420,6 @@ const CandidateDetailsPage: React.FC = () => {
           </Card>
         </div>
       </div>
-      
-      <Button variant="outline" size="sm" className="mt-6" onClick={handleBackClick}>
-        Wróć do listy kandydatów
-      </Button>
     </div>
   );
 };
