@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -19,9 +20,12 @@ import {
   Button,
   Popover,
   PopoverContent,
-  PopoverTrigger
+  PopoverTrigger,
+  Input,
+  Textarea
 } from '@/components/ui';
-import { Users, Briefcase } from 'lucide-react';
+import { Users, Briefcase, Plus } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandidates }) => {
   const navigate = useNavigate();
@@ -37,6 +41,10 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
       return [];
     }
   });
+  
+  // Campaign creation state
+  const [newCampaignName, setNewCampaignName] = useState("");
+  const [newCampaignDescription, setNewCampaignDescription] = useState("");
   
   // Save to localStorage whenever selection changes
   useEffect(() => {
@@ -68,6 +76,28 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
       setSelectedCandidates([]);
     }
   };
+  
+  const handleCreateNewCampaign = () => {
+    if (!newCampaignName.trim()) {
+      toast({
+        title: "Błąd",
+        description: "Nazwa kampanii jest wymagana",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Here you would make an API call to create the campaign
+    // For now, we'll just show a success toast
+    toast({
+      title: "Sukces",
+      description: `Utworzono nową kampanię "${newCampaignName}" z ${selectedCandidates.length} kandydatami`
+    });
+    
+    // Reset form
+    setNewCampaignName("");
+    setNewCampaignDescription("");
+  };
 
   const areAllCurrentPageCandidatesSelected = 
     candidates.length > 0 && 
@@ -92,7 +122,6 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
           </span>
           
           <div className="flex items-center gap-2 ml-4">
-            
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -104,6 +133,51 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
                 <div className="space-y-2">
                   <h4 className="font-medium">Wybierz kampanię</h4>
                   <p className="text-xs text-muted-foreground">To be implemented</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Plus className="h-4 w-4" />
+                  <span>Utwórz nową kampanię</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72">
+                <div className="space-y-4">
+                  <h4 className="font-medium">Utwórz nową kampanię</h4>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-name" className="text-sm font-medium">
+                      Nazwa kampanii
+                    </label>
+                    <Input 
+                      id="campaign-name"
+                      value={newCampaignName}
+                      onChange={(e) => setNewCampaignName(e.target.value)}
+                      placeholder="Wprowadź nazwę kampanii"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-description" className="text-sm font-medium">
+                      Opis kampanii
+                    </label>
+                    <Textarea 
+                      id="campaign-description"
+                      value={newCampaignDescription}
+                      onChange={(e) => setNewCampaignDescription(e.target.value)}
+                      placeholder="Wprowadź opis kampanii"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="pt-2">
+                    <Button onClick={handleCreateNewCampaign} className="w-full">
+                      Utwórz kampanię
+                    </Button>
+                  </div>
                 </div>
               </PopoverContent>
             </Popover>
