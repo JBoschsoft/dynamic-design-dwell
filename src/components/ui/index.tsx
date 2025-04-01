@@ -30,6 +30,7 @@ export { Drawer, DrawerPortal, DrawerOverlay, DrawerTrigger, DrawerClose, Drawer
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion";
 export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
 export { Badge } from "./badge";
+export { Separator } from "./separator";
 export { 
   DropdownMenu,
   DropdownMenuTrigger,
