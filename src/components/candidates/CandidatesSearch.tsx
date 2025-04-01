@@ -56,7 +56,7 @@ const CandidatesSearch: React.FC<CandidatesSearchProps> = ({
     
     toast({
       title: "Kandydat dodany",
-      description: `${newCandidate.name} został dodany do systemu.`,
+      description: `${newCandidate.firstName} ${newCandidate.lastName} został dodany do systemu.`,
     });
     
     // Navigate to candidate details page (to be implemented)

@@ -4,7 +4,8 @@ import { Candidate } from './types';
 export const mockCandidates: Candidate[] = [
   { 
     id: '1', 
-    name: 'Anna Nowak', 
+    firstName: 'Anna',
+    lastName: 'Nowak', 
     email: 'anna.nowak@example.com', 
     phone: '+48 123 456 789',
     stage: 'Nowy', 
@@ -13,7 +14,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '2', 
-    name: 'Jan Kowalski', 
+    firstName: 'Jan',
+    lastName: 'Kowalski', 
     email: 'jan.kowalski@example.com', 
     phone: '+48 234 567 890',
     stage: 'Screening', 
@@ -22,7 +24,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '3', 
-    name: 'Katarzyna Wiśniewska', 
+    firstName: 'Katarzyna',
+    lastName: 'Wiśniewska', 
     email: 'k.wisniewska@example.com', 
     phone: '+48 345 678 901',
     stage: 'Screening', 
@@ -31,7 +34,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '4', 
-    name: 'Piotr Dąbrowski', 
+    firstName: 'Piotr',
+    lastName: 'Dąbrowski', 
     email: 'piotr.dabrowski@example.com', 
     phone: '+48 456 789 012',
     stage: 'Wywiad', 
@@ -40,7 +44,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '5', 
-    name: 'Magdalena Lewandowska', 
+    firstName: 'Magdalena',
+    lastName: 'Lewandowska', 
     email: 'm.lewandowska@example.com', 
     phone: '+48 567 890 123',
     stage: 'Wywiad', 
@@ -49,7 +54,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '6', 
-    name: 'Tomasz Wójcik', 
+    firstName: 'Tomasz',
+    lastName: 'Wójcik', 
     email: 'tomasz.wojcik@example.com', 
     phone: '+48 678 901 234',
     stage: 'Oferta', 
@@ -58,7 +64,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '7', 
-    name: 'Aleksandra Kamińska', 
+    firstName: 'Aleksandra',
+    lastName: 'Kamińska', 
     email: 'a.kaminska@example.com', 
     phone: '+48 789 012 345',
     stage: 'Zatrudniony', 
@@ -67,7 +74,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '8', 
-    name: 'Michał Zieliński', 
+    firstName: 'Michał',
+    lastName: 'Zieliński', 
     email: 'michal.zielinski@example.com', 
     phone: '+48 890 123 456',
     stage: 'Odrzucony', 
@@ -76,7 +84,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '9', 
-    name: 'Natalia Szymańska', 
+    firstName: 'Natalia',
+    lastName: 'Szymańska', 
     email: 'n.szymanska@example.com', 
     phone: '+48 901 234 567',
     stage: 'Nowy', 
@@ -85,7 +94,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '10', 
-    name: 'Jakub Woźniak', 
+    firstName: 'Jakub',
+    lastName: 'Woźniak', 
     email: 'jakub.wozniak@example.com', 
     phone: '+48 012 345 678',
     stage: 'Nowy', 
@@ -94,7 +104,8 @@ export const mockCandidates: Candidate[] = [
   },
   { 
     id: '11', 
-    name: 'Karolina Jankowska', 
+    firstName: 'Karolina',
+    lastName: 'Jankowska', 
     email: 'k.jankowska@example.com', 
     phone: '+48 987 654 321',
     stage: 'Screening', 
