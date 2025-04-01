@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Button,
   CommandDialog,
@@ -9,32 +9,22 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Search, 
-  PlusCircle, 
+  ArrowLeft, 
   Settings, 
   LogOut, 
-  PlusSquare, 
-  User, 
-  HelpCircle, 
-  FileText,
-  UserRound,
-  Bell,
-  Keyboard,
-  ArrowLeft
+  HelpCircle,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -101,15 +91,6 @@ const DashboardHeader = () => {
           </kbd>
         </Button>
         
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="rounded-full"
-          aria-label="Powiadomienia"
-        >
-          <Bell className="h-5 w-5" />
-        </Button>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
@@ -144,11 +125,6 @@ const DashboardHeader = () => {
                 <HelpCircle className="mr-2 h-4 w-4" />
                 <span>Pomoc i dokumentacja</span>
               </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setOpen(true)}>
-              <Keyboard className="mr-2 h-4 w-4" />
-              <span>Skróty klawiszowe</span>
-              <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
