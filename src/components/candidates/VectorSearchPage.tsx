@@ -18,6 +18,9 @@ const VectorSearchPage = () => {
     setCampaignDescription,
     handleSearch,
     toggleCandidateSelection,
+    selectAllCandidates,
+    deselectAllCandidates,
+    areAllSelected,
     createCampaign,
     navigateToCandidateProfile
   } = useVectorSearch();
@@ -55,6 +58,9 @@ const VectorSearchPage = () => {
         selectedCandidates={selectedCandidates}
         toggleCandidateSelection={toggleCandidateSelection}
         navigateToCandidateProfile={navigateToCandidateProfile}
+        selectAllCandidates={selectAllCandidates}
+        deselectAllCandidates={deselectAllCandidates}
+        areAllSelected={areAllSelected}
       />
     </div>
   );

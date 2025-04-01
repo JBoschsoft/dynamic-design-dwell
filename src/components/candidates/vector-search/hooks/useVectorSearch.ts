@@ -40,6 +40,7 @@ export const useVectorSearch = () => {
     try {
       const results = await performVectorSearch(searchQuery);
       setSearchResults(results);
+      setSelectedCandidates([]); // Clear selections when new search is performed
     } catch (error) {
       toast({
         title: "Błąd wyszukiwania",
@@ -58,6 +59,20 @@ export const useVectorSearch = () => {
         : [...prev, id]
     );
   };
+  
+  // New functions for select all functionality
+  const selectAllCandidates = () => {
+    const allIds = searchResults.map(candidate => candidate.id);
+    setSelectedCandidates(allIds);
+  };
+  
+  const deselectAllCandidates = () => {
+    setSelectedCandidates([]);
+  };
+  
+  // Check if all candidates are selected
+  const areAllSelected = searchResults.length > 0 && 
+    selectedCandidates.length === searchResults.length;
 
   const createCampaign = async () => {
     if (!validateCampaignData(campaignName, selectedCandidates)) {
@@ -102,6 +117,9 @@ export const useVectorSearch = () => {
     setCampaignDescription,
     handleSearch,
     toggleCandidateSelection,
+    selectAllCandidates,
+    deselectAllCandidates,
+    areAllSelected,
     createCampaign,
     navigateToCandidateProfile
   };

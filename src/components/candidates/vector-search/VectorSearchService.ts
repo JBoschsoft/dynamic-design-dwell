@@ -11,15 +11,37 @@ interface Candidate {
 export const performVectorSearch = async (searchQuery: string): Promise<Candidate[]> => {
   return new Promise((resolve) => {
     // This would be replaced with an actual API call to a vector search endpoint
-    // For now, we'll simulate results
+    // For now, we'll simulate results with more data to demonstrate pagination
     setTimeout(() => {
-      const mockResults = [
-        { id: '1', name: 'Jan Kowalski', relevance: 0.92, skills: ['React', 'TypeScript', 'Node.js'] },
-        { id: '2', name: 'Anna Nowak', relevance: 0.87, skills: ['JavaScript', 'React', 'CSS'] },
-        { id: '3', name: 'Piotr Wiśniewski', relevance: 0.84, skills: ['React', 'Redux', 'GraphQL'] },
-        { id: '4', name: 'Karolina Wójcik', relevance: 0.79, skills: ['React', 'NextJS', 'Tailwind'] },
-        { id: '5', name: 'Tomasz Kowalczyk', relevance: 0.75, skills: ['Angular', 'TypeScript', 'RxJS'] },
+      // Generate 45 mock results to demonstrate pagination
+      const mockResults: Candidate[] = [];
+      const skillSets = [
+        ['React', 'TypeScript', 'Node.js'],
+        ['JavaScript', 'React', 'CSS'],
+        ['React', 'Redux', 'GraphQL'],
+        ['React', 'NextJS', 'Tailwind'],
+        ['Angular', 'TypeScript', 'RxJS'],
+        ['Vue.js', 'JavaScript', 'Vuex'],
+        ['PHP', 'Laravel', 'MySQL'],
+        ['Python', 'Django', 'PostgreSQL'],
+        ['Java', 'Spring', 'Hibernate']
       ];
+      
+      const firstNames = ['Jan', 'Anna', 'Piotr', 'Karolina', 'Tomasz', 'Magdalena', 'Paweł', 'Alicja', 'Michał'];
+      const lastNames = ['Kowalski', 'Nowak', 'Wiśniewski', 'Wójcik', 'Kowalczyk', 'Kamińska', 'Lewandowski', 'Zielińska', 'Szymański'];
+      
+      for (let i = 1; i <= 45; i++) {
+        const firstNameIndex = Math.floor(Math.random() * firstNames.length);
+        const lastNameIndex = Math.floor(Math.random() * lastNames.length);
+        const skillSetIndex = Math.floor(Math.random() * skillSets.length);
+        
+        mockResults.push({
+          id: i.toString(),
+          name: `${firstNames[firstNameIndex]} ${lastNames[lastNameIndex]}`,
+          relevance: 0.95 - (i * 0.01), // Decreasing relevance
+          skills: skillSets[skillSetIndex]
+        });
+      }
       
       resolve(mockResults);
       
