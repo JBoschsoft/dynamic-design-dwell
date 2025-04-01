@@ -42,6 +42,11 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
     navigate('/dashboard');
   };
   
+  // Updated to properly call the onNext function
+  const handleNextStep = () => {
+    onNext();
+  };
+  
   return (
     <div className="bg-white p-6 sm:p-8 rounded-xl shadow-md w-full max-w-2xl">
       <div className="flex items-center justify-center mb-6">
@@ -100,14 +105,19 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
         
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
           <p className="text-center text-sm text-gray-600">
-            Dziękujemy za dokonanie płatności. Teraz możesz przejść do korzystania z platformy.
+            Dziękujemy za dokonanie płatności. Teraz możesz przejść do kolejnego kroku konfiguracji.
           </p>
         </div>
       </div>
       
-      <div className="mt-8">
-        <Button onClick={handleGoToDashboard} className="w-full bg-primary hover:bg-primary/90">
-          Przejdź do panelu głównego <ArrowRight className="ml-2 h-4 w-4" />
+      <div className="mt-8 space-y-4">
+        {/* Use a button that calls onNext to proceed to step 4 */}
+        <Button onClick={handleNextStep} className="w-full bg-primary hover:bg-primary/90">
+          Przejdź do następnego kroku <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+        
+        <Button onClick={handleGoToDashboard} variant="outline" className="w-full">
+          Pomiń i przejdź do panelu głównego
         </Button>
       </div>
     </div>

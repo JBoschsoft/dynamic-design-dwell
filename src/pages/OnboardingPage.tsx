@@ -184,7 +184,10 @@ const OnboardingPage = () => {
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
+      // Fix: Explicitly navigate to step 4 when leaving the success screen
       setCurrentStep(4);
+      // Update URL with the new step (optional)
+      navigate(`/onboarding?step=4`, { replace: true });
     } else if (currentStep === 4) {
       setCurrentStep(5);
     } else if (currentStep === 5) {
