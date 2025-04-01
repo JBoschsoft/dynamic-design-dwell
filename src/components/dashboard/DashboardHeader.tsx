@@ -25,16 +25,15 @@ import {
   Search, 
   PlusCircle, 
   Settings, 
-  CreditCard, 
   LogOut, 
   PlusSquare, 
   User, 
   HelpCircle, 
-  Command, 
   FileText,
   UserRound,
   Bell,
-  Keyboard
+  Keyboard,
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -78,7 +77,17 @@ const DashboardHeader = () => {
 
   return (
     <header className="flex items-center h-16 px-4 border-b shrink-0 md:px-6">
-      <SidebarTrigger />
+      <div className="flex items-center gap-4">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate(-1)}
+          className="rounded-full"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <SidebarTrigger />
+      </div>
       
       <div className="flex items-center ml-auto gap-4">
         <Button variant="outline" size="sm" className="h-9 md:flex items-center gap-1" onClick={() => setOpen(true)}>
