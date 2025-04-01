@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Table, 
@@ -22,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui';
-import { Users, Briefcase, CheckCircle2 } from 'lucide-react';
+import { Users, Briefcase } from 'lucide-react';
 
 const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandidates }) => {
   const navigate = useNavigate();
@@ -42,7 +41,6 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
 
   const handleSelectAllChange = (isChecked: boolean) => {
     if (isChecked) {
-      // If allCandidates is provided, use it to select all candidates across all pages
       const idsToSelect = allCandidates ? allCandidates.map(candidate => candidate.id) : candidates.map(candidate => candidate.id);
       setSelectedCandidates(idsToSelect);
     } else {
@@ -50,20 +48,16 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
     }
   };
 
-  // Check if all visible candidates are selected
   const areAllCurrentPageCandidatesSelected = 
     candidates.length > 0 && 
     candidates.every(candidate => selectedCandidates.includes(candidate.id));
   
-  // Check if all candidates across all pages are selected
   const areAllCandidatesSelected = allCandidates
     ? allCandidates.length > 0 && selectedCandidates.length === allCandidates.length
     : areAllCurrentPageCandidatesSelected;
     
-  // Check if some but not all candidates are selected
   const areSomeCandidatesSelected = selectedCandidates.length > 0 && !areAllCandidatesSelected;
 
-  // Custom class for the indeterminate state
   const indeterminateClass = areSomeCandidatesSelected 
     ? "data-[state=indeterminate]:bg-primary/50 data-[state=indeterminate]:opacity-100" 
     : "";
@@ -102,21 +96,6 @@ const CandidatesTable: React.FC<CandidateTableProps> = ({ candidates, allCandida
               <PopoverContent className="w-56">
                 <div className="space-y-2">
                   <h4 className="font-medium">Wybierz kampanię</h4>
-                  <p className="text-xs text-muted-foreground">To be implemented</p>
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Rozpocznij screening</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56">
-                <div className="space-y-2">
-                  <h4 className="font-medium">Wybierz workflow</h4>
                   <p className="text-xs text-muted-foreground">To be implemented</p>
                 </div>
               </PopoverContent>
