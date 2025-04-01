@@ -119,14 +119,6 @@ const DashboardHeader = () => {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleProfileClick}>
-                <UserRound className="mr-2 h-4 w-4" />
-                <span>Profil firmy</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/dashboard/settings?section=billing')}>
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>Płatności</span>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Ustawienia</span>
