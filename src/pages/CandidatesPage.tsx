@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import CandidatesList from '@/components/candidates/CandidatesList';
 import CandidatesImport from '@/components/candidates/CandidatesImport';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { useLocation } from 'react-router-dom';
 
@@ -33,19 +33,12 @@ const CandidatesPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Kandydaci</h1>
-          <p className="text-muted-foreground">
-            Zarządzaj kandydatami, importuj z różnych źródeł i analizuj aplikacje.
-          </p>
         </div>
-        {/* Vector search button removed */}
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Lista kandydatów</CardTitle>
-          <CardDescription>
-            Przeglądaj, filtruj i zarządzaj wszystkimi kandydatami w systemie.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
