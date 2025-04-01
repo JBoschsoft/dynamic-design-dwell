@@ -1,155 +1,210 @@
 
-import React from 'react';
-import { 
-  Bell, 
-  MessageSquare, 
-  User as UserIcon,
-  Settings,
-  HelpCircle,
-  LogOut,
-  ArrowLeft
-} from 'lucide-react';
-import { 
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
   Button,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
-  Badge
 } from '@/components/ui';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { mockCandidates } from '@/components/candidates/mockData';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  Search, 
+  PlusCircle, 
+  Settings, 
+  CreditCard, 
+  LogOut, 
+  PlusSquare, 
+  User, 
+  HelpCircle, 
+  Command, 
+  FileText,
+  UserRound,
+  Bell,
+  Keyboard
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { SidebarToggle } from '@/components/ui/sidebar';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const DashboardHeader = () => {
-  const location = useLocation();
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  
-  const isCandidateDetailsPage = location.pathname.includes('/dashboard/candidates/') && id;
-  
-  const candidate = isCandidateDetailsPage ? 
-    mockCandidates.find(c => c.id === id) : null;
-  
-  const fullName = candidate ? `${candidate.firstName} ${candidate.lastName}` : '';
+  const { toast } = useToast();
 
-  const handleBackClick = () => {
-    // Check if we have state information about where to return
-    if (location.state && location.state.returnPath) {
-      // Store that we're returning to the previous page
-      console.log('Navigating back to:', location.state.returnPath);
-      
-      // Navigate with replace: true to avoid adding to history stack
-      navigate(location.state.returnPath, {
-        replace: true,
-        state: { 
-          from: 'candidateProfile',
-          returnedAt: new Date().getTime() // Add timestamp to ensure state change
-        }
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Wylogowano pomyślnie",
+        description: "Zostałeś wylogowany z systemu.",
       });
-    } else {
-      // Default fallback to the candidates list
-      navigate('/dashboard/candidates', { replace: true });
+      navigate('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Błąd wylogowania",
+        description: "Nie udało się wylogować. Spróbuj ponownie.",
+        variant: "destructive",
+      });
     }
   };
 
+  const handleProfileClick = () => {
+    navigate('/dashboard/settings?section=company-profile');
+  };
+
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-6">
-      {isCandidateDetailsPage && (
-        <Button variant="ghost" onClick={handleBackClick} className="flex items-center mr-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Powrót
+    <header className="flex items-center h-16 px-4 border-b shrink-0 md:px-6">
+      <SidebarToggle />
+      
+      <div className="flex items-center ml-auto gap-4">
+        <Button variant="outline" size="sm" className="h-9 md:flex items-center gap-1" onClick={() => setOpen(true)}>
+          <Search className="h-4 w-4" />
+          <span className="hidden md:inline">Szukaj</span>
+          <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium opacity-100 md:flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
         </Button>
-      )}
-      
-      <div className="flex-1"></div>
-      
-      <div className="flex items-center gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="relative rounded-full border-0 hover:bg-gray-100">
-              <Bell className="h-5 w-5 text-gray-600" />
-              <Badge className="absolute -right-1 -top-1 h-5 w-5 p-0 text-[10px] flex items-center justify-center">
-                3
-              </Badge>
-              <span className="sr-only">Powiadomienia</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="py-2 text-base">Powiadomienia</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="max-h-80 overflow-auto">
-              {[1, 2, 3].map((i) => (
-                <DropdownMenuItem key={i} className="cursor-pointer p-4 hover:bg-gray-50">
-                  <div className="flex items-start gap-3 text-sm">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <MessageSquare className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="grid gap-1">
-                      <p className="font-medium">Nowa wiadomość</p>
-                      <p className="line-clamp-1 text-xs text-muted-foreground">
-                        Otrzymałeś nową wiadomość od kandydata Jan Nowak
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {i === 1 ? "5 minut temu" : i === 2 ? "30 minut temu" : "2 godziny temu"}
-                      </p>
-                    </div>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="cursor-pointer justify-center py-2 font-medium text-primary hover:bg-gray-50">
-              <Link to="/dashboard/notifications">
-                Zobacz wszystkie
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="rounded-full"
+          aria-label="Powiadomienia"
+        >
+          <Bell className="h-5 w-5" />
+        </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="border-0 rounded-full p-2 hover:bg-gray-100">
-              <UserIcon className="h-6 w-6 text-gray-600" />
-              <span className="sr-only">Profil użytkownika</span>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="/placeholder.svg" alt="Avatar" />
+                <AvatarFallback>JK</AvatarFallback>
+              </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-48">
-            <div className="flex items-center gap-2 p-2">
-              <UserIcon className="h-10 w-10 text-gray-600" />
-              <div>
-                <p className="font-medium text-sm">Jan Kowalski</p>
-                <p className="text-xs text-muted-foreground">jan.kowalski@example.com</p>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">Jan Kowalski</p>
+                <p className="text-xs leading-none text-muted-foreground">jan.kowalski@example.com</p>
               </div>
-            </div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="py-2 cursor-pointer hover:bg-gray-50">
-              <Link to="/dashboard/profile">
-                <UserIcon className="mr-2 h-4 w-4" />
-                <span>Profil</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="py-2 cursor-pointer hover:bg-gray-50">
-              <Link to="/dashboard/settings">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={handleProfileClick}>
+                <UserRound className="mr-2 h-4 w-4" />
+                <span>Profil firmy</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/dashboard/settings?section=billing')}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>Płatności</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Ustawienia</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="py-2 cursor-pointer hover:bg-gray-50">
-              <Link to="/dashboard/help">
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a
+                href="/dokumentacja"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center"
+              >
                 <HelpCircle className="mr-2 h-4 w-4" />
-                <span>Pomoc</span>
-              </Link>
+                <span>Pomoc i dokumentacja</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOpen(true)}>
+              <Keyboard className="mr-2 h-4 w-4" />
+              <span>Skróty klawiszowe</span>
+              <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="py-2 cursor-pointer hover:bg-gray-50 text-red-600 hover:text-red-700">
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Wyloguj</span>
+              <span>Wyloguj się</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Wyszukaj..." />
+        <CommandList>
+          <CommandEmpty>Nie znaleziono wyników.</CommandEmpty>
+          <CommandGroup heading="Kandydaci">
+            <CommandItem onSelect={() => navigate('/dashboard/candidates')}>
+              <User className="mr-2 h-4 w-4" />
+              <span>Lista kandydatów</span>
+            </CommandItem>
+            <CommandItem onSelect={() => navigate('/dashboard/candidates/search')}>
+              <Search className="mr-2 h-4 w-4" />
+              <span>Wyszukiwanie kandydatów</span>
+            </CommandItem>
+            <CommandItem onSelect={() => navigate('/dashboard/candidates?tab=import')}>
+              <PlusSquare className="mr-2 h-4 w-4" />
+              <span>Import kandydatów</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Kampanie">
+            <CommandItem onSelect={() => navigate('/dashboard/campaigns')}>
+              <FileText className="mr-2 h-4 w-4" />
+              <span>Wszystkie kampanie</span>
+            </CommandItem>
+            <CommandItem>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              <span>Nowa kampania</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading="Ustawienia">
+            <CommandItem onSelect={() => navigate('/dashboard/settings?section=company-profile')}>
+              <UserRound className="mr-2 h-4 w-4" />
+              <span>Profil firmy</span>
+            </CommandItem>
+            <CommandItem onSelect={() => navigate('/dashboard/settings?section=team')}>
+              <User className="mr-2 h-4 w-4" />
+              <span>Zespół</span>
+            </CommandItem>
+            <CommandItem onSelect={() => navigate('/dashboard/settings?section=billing')}>
+              <CreditCard className="mr-2 h-4 w-4" />
+              <span>Płatności</span>
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </header>
   );
 };
