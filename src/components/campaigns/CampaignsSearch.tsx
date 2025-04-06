@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CampaignsSearchProps } from './types';
 import { 
   Input, 
@@ -21,10 +22,14 @@ const CampaignsSearch: React.FC<CampaignsSearchProps> = ({
   onCampaignAdded
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const handleCampaignCreated = () => {
+  const handleCampaignCreated = (campaignId: string) => {
     setDialogOpen(false);
     onCampaignAdded();
+    
+    // Navigate to the campaign details page
+    navigate(`/dashboard/campaigns/${campaignId}`);
   };
 
   return (

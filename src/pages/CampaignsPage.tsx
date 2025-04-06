@@ -6,7 +6,9 @@ import { Toaster } from '@/components/ui/toaster';
 
 const CampaignsPage = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  return <div className="space-y-6">
+  
+  return (
+    <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Kampanie rekrutacyjne</CardTitle>
@@ -20,6 +22,8 @@ const CampaignsPage = () => {
       </Card>
       
       <Toaster />
-    </div>;
+    </div>
+  );
 };
+
 export default CampaignsPage;

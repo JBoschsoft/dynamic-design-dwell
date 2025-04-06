@@ -40,7 +40,7 @@ const formSchema = z.object({
 
 interface CampaignFormProps {
   initialData?: Partial<CampaignFormValues>;
-  onSubmit: () => void;
+  onSubmit: (campaignId: string) => void;
   onCancel: () => void;
 }
 
@@ -79,8 +79,12 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
     };
     
     console.log('Form submitted with values:', formData);
+    
     // Here we would typically save to backend
-    onSubmit();
+    // For now, create a mock ID and return it
+    const mockCampaignId = `campaign-${Date.now()}`;
+    
+    onSubmit(mockCampaignId);
   };
 
   // Handle requirements fields
