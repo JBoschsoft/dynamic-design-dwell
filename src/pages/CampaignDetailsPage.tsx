@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockCampaigns } from '@/components/campaigns/mockData';
@@ -76,6 +77,10 @@ const CampaignDetailsPage = () => {
       </div>
     );
   }
+
+  const handleEditCampaign = () => {
+    navigate(`/dashboard/campaigns/edit/${campaign.id}`);
+  };
   
   const getStatusBadge = (status: Campaign['status']) => {
     switch(status) {
@@ -110,7 +115,7 @@ const CampaignDetailsPage = () => {
           </p>
         </div>
         
-        <Button>
+        <Button onClick={handleEditCampaign}>
           <Edit className="mr-2 h-4 w-4" />
           Edytuj kampanię
         </Button>

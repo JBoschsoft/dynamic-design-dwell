@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CampaignsTableProps, Campaign } from './types';
 import {
@@ -16,7 +16,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui';
-import { MoreVertical, Edit, Trash2, Copy, Eye, Archive } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -27,6 +37,8 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
   onDeleteCampaign
 }) => {
   const navigate = useNavigate();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
   
   const getStatusBadge = (status: Campaign['status']) => {
     switch(status) {
@@ -51,10 +63,18 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
   const handleViewCampaign = (id: string) => {
     navigate(`/dashboard/campaigns/${id}`);
   };
+
+  const handleDeleteClick = (id: string) => {
+    setCampaignToDelete(id);
+    setDeleteDialogOpen(true);
+  };
   
-  const handleDuplicateCampaign = (id: string) => {
-    // Implementation will be added later
-    console.log('Duplicate campaign:', id);
+  const confirmDelete = () => {
+    if (campaignToDelete) {
+      onDeleteCampaign(campaignToDelete);
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
+    }
   };
 
   if (campaigns.length === 0) {
@@ -70,83 +90,95 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nazwa kampanii</TableHead>
-            <TableHead>Stanowisko</TableHead>
-            <TableHead>Właściciel kampanii</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Data rozpoczęcia</TableHead>
-            <TableHead>Data zakończenia</TableHead>
-            <TableHead>Lokalizacja</TableHead>
-            <TableHead className="text-center">Kandydaci</TableHead>
-            <TableHead className="w-[80px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {campaigns.map((campaign) => (
-            <TableRow 
-              key={campaign.id}
-              className="cursor-pointer"
-              onClick={() => handleViewCampaign(campaign.id)}
-            >
-              <TableCell className="font-medium">{campaign.name}</TableCell>
-              <TableCell>{campaign.position}</TableCell>
-              <TableCell>{campaign.owner || 'Nie przypisano'}</TableCell>
-              <TableCell>{getStatusBadge(campaign.status)}</TableCell>
-              <TableCell>{formatDate(campaign.startDate)}</TableCell>
-              <TableCell>{formatDate(campaign.endDate)}</TableCell>
-              <TableCell>{campaign.location}</TableCell>
-              <TableCell className="text-center">{campaign.candidatesCount}</TableCell>
-              <TableCell className="text-right p-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewCampaign(campaign.id);
-                    }}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      <span>Szczegóły</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      onEditCampaign(campaign.id);
-                    }}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      <span>Edytuj</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => {
-                      e.stopPropagation();
-                      handleDuplicateCampaign(campaign.id);
-                    }}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      <span>Duplikuj</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      className="text-destructive focus:text-destructive" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteCampaign(campaign.id);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Usuń</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nazwa kampanii</TableHead>
+              <TableHead>Stanowisko</TableHead>
+              <TableHead>Właściciel kampanii</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Data rozpoczęcia</TableHead>
+              <TableHead>Data zakończenia</TableHead>
+              <TableHead>Lokalizacja</TableHead>
+              <TableHead className="text-center">Kandydaci</TableHead>
+              <TableHead className="w-[80px]"></TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {campaigns.map((campaign) => (
+              <TableRow 
+                key={campaign.id}
+                className="cursor-pointer"
+                onClick={() => handleViewCampaign(campaign.id)}
+              >
+                <TableCell className="font-medium">{campaign.name}</TableCell>
+                <TableCell>{campaign.position}</TableCell>
+                <TableCell>{campaign.owner || 'Nie przypisano'}</TableCell>
+                <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                <TableCell>{formatDate(campaign.startDate)}</TableCell>
+                <TableCell>{formatDate(campaign.endDate)}</TableCell>
+                <TableCell>{campaign.location}</TableCell>
+                <TableCell className="text-center">{campaign.candidatesCount}</TableCell>
+                <TableCell className="text-right p-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewCampaign(campaign.id);
+                      }}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        <span>Szczegóły</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        onEditCampaign(campaign.id);
+                      }}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        <span>Edytuj</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(campaign.id);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Usuń</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Potwierdzenie usunięcia</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć tę kampanię? Tej operacji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
