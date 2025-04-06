@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Card,
@@ -56,12 +57,11 @@ const CampaignStatusCard: React.FC<CampaignStatusCardProps> = ({ campaign, candi
         </div>
         <div className="flex justify-between items-center">
           <div className="text-sm font-medium">Hiring Manager</div>
-          <div>
-            <div className="text-sm">{campaign.owner || 'Nie przypisano'}</div>
-            <div className="text-xs text-muted-foreground">
-              {campaign.ownerEmail || 'Brak adresu email'}
-            </div>
-          </div>
+          <div className="text-sm">{campaign.owner || 'Nie przypisano'}</div>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="text-sm font-medium">Hiring Manager Email</div>
+          <div className="text-sm">{campaign.ownerEmail || 'Brak adresu email'}</div>
         </div>
         <div className="flex justify-between items-center">
           <div className="text-sm font-medium">Data utworzenia</div>
