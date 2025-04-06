@@ -15,6 +15,7 @@ import {
   TabsTrigger,
   Badge,
   Separator,
+  useToast
 } from '@/components/ui';
 import { 
   Edit, 
@@ -34,20 +35,28 @@ const CampaignDetailsPage = () => {
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
-    // Simulate API call to fetch campaign details
     const fetchCampaign = () => {
       setLoading(true);
       setTimeout(() => {
         const foundCampaign = mockCampaigns.find(c => c.id === id);
-        setCampaign(foundCampaign || null);
+        if (foundCampaign) {
+          setCampaign(foundCampaign);
+        } else {
+          toast({
+            title: "Kampania nie znaleziona",
+            description: "Nie mogliśmy znaleźć szukanej kampanii",
+            variant: "destructive"
+          });
+        }
         setLoading(false);
       }, 300);
     };
     
     fetchCampaign();
-  }, [id]);
+  }, [id, toast]);
   
   if (loading) {
     return (

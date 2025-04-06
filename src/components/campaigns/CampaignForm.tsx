@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { CalendarIcon, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { mockCampaigns } from './mockData';
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'Nazwa kampanii musi mieć min. 3 znaki' }),
@@ -80,11 +81,29 @@ const CampaignForm: React.FC<CampaignFormProps> = ({
     
     console.log('Form submitted with values:', formData);
     
-    // Here we would typically save to backend
-    // For now, create a mock ID and return it
-    const mockCampaignId = `campaign-${Date.now()}`;
+    // Create a new campaign object
+    const campaignId = `campaign-${Date.now()}`;
+    const newCampaign = {
+      id: campaignId,
+      name: formData.name,
+      position: formData.position,
+      department: formData.department,
+      location: formData.location,
+      startDate: formData.startDate.toISOString(),
+      endDate: formData.endDate ? formData.endDate.toISOString() : null,
+      status: formData.status,
+      description: formData.description,
+      requirements: formData.requirements,
+      responsibilities: formData.responsibilities,
+      candidatesCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
     
-    onSubmit(mockCampaignId);
+    // Add the new campaign to the mockCampaigns array
+    mockCampaigns.unshift(newCampaign);
+    
+    onSubmit(campaignId);
   };
 
   // Handle requirements fields

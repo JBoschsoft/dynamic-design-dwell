@@ -1,7 +1,6 @@
-
 import { Campaign } from './types';
 
-export const mockCampaigns: Campaign[] = [
+export let mockCampaigns: Campaign[] = [
   {
     id: '1',
     name: 'Frontend Developer Recruitment',
