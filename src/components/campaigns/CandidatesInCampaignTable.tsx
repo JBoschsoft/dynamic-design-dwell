@@ -10,7 +10,7 @@ import {
   TableRow,
   Button
 } from '@/components/ui';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
