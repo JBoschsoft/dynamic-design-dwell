@@ -15,8 +15,8 @@ import {
   TabsTrigger,
   Badge,
   Separator,
-  useToast
 } from '@/components/ui';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Edit, 
   Users, 
