@@ -1,10 +1,10 @@
-
 export interface Campaign {
   id: string;
   name: string;
   position: string;
   department: string;
   owner?: string; 
+  ownerEmail?: string;
   status: 'active' | 'draft' | 'closed' | 'paused';
   startDate: string;
   endDate: string | null;

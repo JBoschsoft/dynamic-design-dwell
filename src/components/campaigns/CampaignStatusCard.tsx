@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Card,
@@ -7,7 +6,7 @@ import {
   CardTitle,
   Badge
 } from '@/components/ui';
-import { Users, Mail } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Campaign } from '@/components/campaigns/types';
 import { format, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -57,9 +56,11 @@ const CampaignStatusCard: React.FC<CampaignStatusCardProps> = ({ campaign, candi
         </div>
         <div className="flex justify-between items-center">
           <div className="text-sm font-medium">Hiring Manager</div>
-          <div className="flex items-center text-sm">
-            <Mail className="h-4 w-4 mr-1 text-muted-foreground" />
-            <span>{campaign.owner || 'Nie przypisano'}</span>
+          <div>
+            <div className="text-sm">{campaign.owner || 'Nie przypisano'}</div>
+            <div className="text-xs text-muted-foreground">
+              {campaign.ownerEmail || 'Brak adresu email'}
+            </div>
           </div>
         </div>
         <div className="flex justify-between items-center">
