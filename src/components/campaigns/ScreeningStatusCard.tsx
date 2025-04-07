@@ -1,47 +1,33 @@
-
 import React from 'react';
-import { 
-  Card,
-  CardHeader,
-  CardContent,
-  CardTitle,
-  Badge
-} from '@/components/ui';
+import { Card, CardHeader, CardContent, CardTitle, Badge } from '@/components/ui';
 import { Users, Calendar, Zap, Clock } from 'lucide-react';
 import { Campaign } from '@/components/campaigns/types';
-
 interface ScreeningStatusCardProps {
   campaign: Campaign;
   screeningCandidatesCount: number;
   candidatesWithManagerCount: number;
   tokensUsed: number;
 }
-
-const ScreeningStatusCard: React.FC<ScreeningStatusCardProps> = ({ 
-  campaign, 
-  screeningCandidatesCount, 
-  candidatesWithManagerCount, 
-  tokensUsed 
+const ScreeningStatusCard: React.FC<ScreeningStatusCardProps> = ({
+  campaign,
+  screeningCandidatesCount,
+  candidatesWithManagerCount,
+  tokensUsed
 }) => {
   // Determine if screenings are currently active
   const isScreeningActive = campaign.status === 'active' && screeningCandidatesCount > 0;
-  
   const getScreeningStatusBadge = () => {
     if (campaign.status !== 'active') {
       return <Badge variant="secondary">Wstrzymane</Badge>;
     }
-    
     if (screeningCandidatesCount > 0) {
       return <Badge className="bg-green-500">W trakcie</Badge>;
     }
-    
     return <Badge variant="outline">Nie rozpoczęto</Badge>;
   };
-  
-  return (
-    <Card>
+  return <Card>
       <CardHeader>
-        <CardTitle>Screening</CardTitle>
+        <CardTitle>Status Screeningow</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex justify-between items-center">
@@ -70,8 +56,6 @@ const ScreeningStatusCard: React.FC<ScreeningStatusCardProps> = ({
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default ScreeningStatusCard;
