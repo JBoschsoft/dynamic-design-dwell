@@ -10,11 +10,36 @@ export interface Candidate {
   // Additional candidate fields
   jobTitle?: string;
   linkedin?: string;
+  linkedinData?: LinkedinProfileData;
   experience?: string;
   education?: string;
   salary?: string;
   availability?: string;
   notes?: string;
+}
+
+export interface LinkedinProfileData {
+  profileUrl?: string;
+  headline?: string;
+  summary?: string;
+  experience?: LinkedinExperience[];
+  education?: LinkedinEducation[];
+  skills?: string[];
+  lastUpdated?: Date;
+}
+
+export interface LinkedinExperience {
+  title: string;
+  company: string;
+  duration: string;
+  description?: string;
+}
+
+export interface LinkedinEducation {
+  school: string;
+  degree?: string;
+  fieldOfStudy?: string;
+  duration?: string;
 }
 
 export interface CandidatesListProps {
@@ -37,7 +62,6 @@ export interface PaginationControlsProps {
   onPageSizeChange: (value: string) => void;
 }
 
-// New interfaces for the refactored components
 export interface CandidatesImportProps {
   onImportSuccess?: () => void;
 }
@@ -66,7 +90,6 @@ export interface ImportATSProps {
   onAtsProjectIdChange: (id: string) => void;
 }
 
-// Updated types for the candidate form
 export interface CandidateFormProps {
   onSubmit: (candidate: Omit<Candidate, 'id'>) => void;
   isOpen: boolean;

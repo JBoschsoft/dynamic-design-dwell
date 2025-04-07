@@ -7,6 +7,10 @@ import { formatDate } from '@/components/candidates/utils';
 import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import EditableBasicInfo from '@/components/candidates/EditableBasicInfo';
+import LinkedinSearch from '@/components/candidates/LinkedinSearch';
+import LinkedinProfileDisplay from '@/components/candidates/LinkedinProfileData';
+import { LinkedinProfileData } from '@/components/candidates/types';
 
 interface NoteEntry {
   id: string;
@@ -28,6 +32,8 @@ const CandidateDetailsPage: React.FC = () => {
     }
   ]);
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [linkedinData, setLinkedinData] = useState<LinkedinProfileData | null>(null);
+  const [candidate, setCandidate] = useState(mockCandidates.find(c => c.id === id));
   
   const form = useForm<{ noteText: string }>({
     defaultValues: {
@@ -43,8 +49,6 @@ const CandidateDetailsPage: React.FC = () => {
   const returnPath = location.state?.returnPath || '/dashboard/candidates';
   const fromSource = location.state?.from || '';
   
-  const candidate = mockCandidates.find(c => c.id === id);
-  
   if (!candidate) {
     return (
       <div className="p-6">
@@ -56,49 +60,25 @@ const CandidateDetailsPage: React.FC = () => {
   
   const fullName = `${candidate.firstName} ${candidate.lastName}`;
 
-  const candidateHistory = [
-    {
-      id: 1,
-      type: 'import',
-      title: 'Dodano do systemu',
-      description: 'Kandydat został zaimportowany do systemu',
-      date: candidate.appliedAt,
-      icon: Clock
-    },
-    {
-      id: 2,
-      type: 'campaign',
-      title: 'Dodano do kampanii',
-      description: 'Dodano do kampanii "Frontend Developer"',
-      date: new Date(candidate.appliedAt.getTime() + 2 * 24 * 60 * 60 * 1000),
-      icon: Briefcase
-    },
-    {
-      id: 3,
-      type: 'screening',
-      title: 'Wstępna rozmowa telefoniczna',
-      description: 'Wynik: Pozytywny. Kandydat wykazał zainteresowanie ofertą.',
-      date: new Date(candidate.appliedAt.getTime() + 5 * 24 * 60 * 60 * 1000),
-      icon: Phone
-    },
-    {
-      id: 4,
-      type: 'interview',
-      title: 'Rozmowa techniczna',
-      description: 'Wynik: Pozytywny. Kandydat ma odpowiednie umiejętności techniczne.',
-      date: new Date(candidate.appliedAt.getTime() + 10 * 24 * 60 * 60 * 1000),
-      icon: Calendar
-    },
-    {
-      id: 5,
-      type: 'feedback',
-      title: 'Informacja zwrotna',
-      description: 'Wysłano informację zwrotną z decyzją pozytywną.',
-      date: new Date(candidate.appliedAt.getTime() + 15 * 24 * 60 * 60 * 1000),
-      icon: MessageSquare
-    }
-  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const handleUpdateCandidate = (updatedData: Partial<typeof candidate>) => {
+    setCandidate(prev => {
+      if (!prev) return prev;
+      return { ...prev, ...updatedData };
+    });
+    // In a real application, you would save this to your backend
+    console.log('Updated candidate data:', { ...candidate, ...updatedData });
+  };
   
+  const handleLinkedinDataFetched = (data: LinkedinProfileData) => {
+    setLinkedinData(data);
+    // Optionally update candidate data with LinkedIn info
+    handleUpdateCandidate({
+      linkedin: data.profileUrl,
+      jobTitle: data.headline,
+      // Add other fields as needed
+    });
+  };
+
   const handleAddNote = (data: { noteText: string }) => {
     if (data.noteText.trim()) {
       const newNote: NoteEntry = {
@@ -129,8 +109,6 @@ const CandidateDetailsPage: React.FC = () => {
         <h1 className="text-2xl font-bold">{fullName}</h1>
         
         <div className="flex items-center gap-2">
-          
-          
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -145,8 +123,6 @@ const CandidateDetailsPage: React.FC = () => {
               </div>
             </PopoverContent>
           </Popover>
-          
-          
         </div>
       </div>
       
@@ -156,36 +132,11 @@ const CandidateDetailsPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Informacje podstawowe</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p>{candidate.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Telefon</p>
-                <p>{candidate.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Status</p>
-                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1
-                  ${candidate.stage === 'Nowy' ? 'bg-blue-100 text-blue-800' : ''}
-                  ${candidate.stage === 'Screening' ? 'bg-purple-100 text-purple-800' : ''}
-                  ${candidate.stage === 'Wywiad' ? 'bg-amber-100 text-amber-800' : ''}
-                  ${candidate.stage === 'Oferta' ? 'bg-green-100 text-green-800' : ''}
-                  ${candidate.stage === 'Zatrudniony' ? 'bg-emerald-100 text-emerald-800' : ''}
-                  ${candidate.stage === 'Odrzucony' ? 'bg-red-100 text-red-800' : ''}
-                `}>
-                  {candidate.stage}
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Źródło</p>
-                <p>{candidate.source}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Data aplikacji</p>
-                <p>{formatDate(candidate.appliedAt)}</p>
-              </div>
+            <CardContent>
+              <EditableBasicInfo 
+                candidate={candidate} 
+                onUpdate={handleUpdateCandidate}
+              />
             </CardContent>
           </Card>
           
@@ -234,6 +185,19 @@ const CandidateDetailsPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+          
+          <LinkedinSearch onDataFetched={handleLinkedinDataFetched} />
+          
+          {linkedinData && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Dane z LinkedIn</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LinkedinProfileDisplay data={linkedinData} />
+              </CardContent>
+            </Card>
+          )}
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
