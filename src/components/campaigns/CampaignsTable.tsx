@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CampaignsTableProps, Campaign } from './types';
@@ -123,7 +122,7 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
     // Here you would make an API call to update the campaigns statuses
     toast({
       title: "Status zaktualizowany",
-      description: `Zmieniono status ${selectedCampaigns.length} kampanii na "${getStatusLabel(newStatus)}"`
+      description: `Zmieniono status ${selectedCampaigns.length} kampanii`
     });
     
     // Clear selection after action
@@ -187,21 +186,21 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <span>Zmień status</span>
+                      Zmień status
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[180px]">
                     <DropdownMenuItem onClick={() => handleChangeStatus('active')}>
-                      {getStatusBadge('active')} <span className="ml-2">Aktywna</span>
+                      {getStatusBadge('active')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleChangeStatus('paused')}>
-                      {getStatusBadge('paused')} <span className="ml-2">Wstrzymana</span>
+                      {getStatusBadge('paused')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleChangeStatus('draft')}>
-                      {getStatusBadge('draft')} <span className="ml-2">Szkic</span>
+                      {getStatusBadge('draft')}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleChangeStatus('closed')}>
-                      {getStatusBadge('closed')} <span className="ml-2">Zakończona</span>
+                      {getStatusBadge('closed')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -317,4 +316,3 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
 };
 
 export default CampaignsTable;
-
