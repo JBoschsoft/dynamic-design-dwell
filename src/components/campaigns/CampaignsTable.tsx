@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CampaignsTableProps, Campaign } from './types';
@@ -8,31 +9,12 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  Badge,
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Checkbox,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
 } from '@/components/ui';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { pl } from 'date-fns/locale';
-import { useToast } from '@/hooks/use-toast';
+import StatusBadge from './StatusBadge';
+import BulkActions from './BulkActions';
+import CampaignActions from './CampaignActions';
+import DeleteCampaignDialog from './DeleteCampaignDialog';
+import { formatDate, SelectAllCheckbox, CampaignCheckbox } from './CampaignsTableHelpers';
 
 const CampaignsTable: React.FC<CampaignsTableProps> = ({ 
   campaigns, 
@@ -41,7 +23,7 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
   onDeleteCampaign
 }) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
   
@@ -60,26 +42,6 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
   useEffect(() => {
     localStorage.setItem('selectedCampaigns', JSON.stringify(selectedCampaigns));
   }, [selectedCampaigns]);
-  
-  const getStatusBadge = (status: Campaign['status']) => {
-    switch(status) {
-      case 'active':
-        return <Badge className="bg-green-500">Aktywna</Badge>;
-      case 'draft':
-        return <Badge variant="outline">Szkic</Badge>;
-      case 'closed':
-        return <Badge variant="secondary">Zakończona</Badge>;
-      case 'paused':
-        return <Badge variant="destructive">Wstrzymana</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-  
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '–';
-    return format(parseISO(dateString), 'd MMM yyyy', { locale: pl });
-  };
   
   const handleViewCampaign = (id: string) => {
     navigate(`/dashboard/campaigns/${id}`);
@@ -115,31 +77,6 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
     }
   };
   
-  // New function to handle mass status change
-  const handleChangeStatus = (newStatus: Campaign['status']) => {
-    if (selectedCampaigns.length === 0) return;
-    
-    // Here you would make an API call to update the campaigns statuses
-    toast({
-      title: "Status zaktualizowany",
-      description: `Zmieniono status ${selectedCampaigns.length} kampanii`
-    });
-    
-    // Clear selection after action
-    setSelectedCampaigns([]);
-  };
-  
-  // Helper function to get status label in Polish
-  const getStatusLabel = (status: Campaign['status']): string => {
-    switch(status) {
-      case 'active': return 'Aktywna';
-      case 'draft': return 'Szkic';
-      case 'closed': return 'Zakończona';
-      case 'paused': return 'Wstrzymana';
-      default: return status;
-    }
-  };
-
   const areAllCurrentPageCampaignsSelected = 
     campaigns.length > 0 && 
     campaigns.every(campaign => selectedCampaigns.includes(campaign.id));
@@ -182,29 +119,10 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
             )}
             
             {selectedCampaigns.length > 0 && (
-              <div className="flex items-center gap-2 ml-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      Zmień status
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[180px]">
-                    <DropdownMenuItem onClick={() => handleChangeStatus('active')}>
-                      {getStatusBadge('active')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleChangeStatus('paused')}>
-                      {getStatusBadge('paused')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleChangeStatus('draft')}>
-                      {getStatusBadge('draft')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleChangeStatus('closed')}>
-                      {getStatusBadge('closed')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <BulkActions 
+                selectedCampaigns={selectedCampaigns} 
+                setSelectedCampaigns={setSelectedCampaigns} 
+              />
             )}
           </div>
         </div>
@@ -213,12 +131,11 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
-                <Checkbox 
+                <SelectAllCheckbox
                   checked={areAllCampaignsSelected}
-                  onCheckedChange={handleSelectAllChange}
-                  aria-label="Zaznacz wszystkie kampanie"
-                  data-state={areSomeCampaignsSelected ? "indeterminate" : areAllCampaignsSelected ? "checked" : "unchecked"}
-                  className={indeterminateClass}
+                  indeterminate={areSomeCampaignsSelected}
+                  onChange={handleSelectAllChange}
+                  indeterminateClass={indeterminateClass}
                 />
               </TableHead>
               <TableHead>Nazwa kampanii</TableHead>
@@ -240,54 +157,26 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
                 onClick={() => handleViewCampaign(campaign.id)}
               >
                 <TableCell className="w-12" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox 
-                    checked={selectedCampaigns.includes(campaign.id)}
-                    onCheckedChange={(checked) => handleCheckboxChange(campaign.id, !!checked)}
-                    aria-label={`Zaznacz kampanię ${campaign.name}`}
+                  <CampaignCheckbox
+                    campaignId={campaign.id}
+                    isSelected={selectedCampaigns.includes(campaign.id)}
+                    onSelectionChange={handleCheckboxChange}
                   />
                 </TableCell>
                 <TableCell className="font-medium">{campaign.name}</TableCell>
                 <TableCell>{campaign.position}</TableCell>
                 <TableCell>{campaign.owner || 'Nie przypisano'}</TableCell>
-                <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                <TableCell><StatusBadge status={campaign.status} /></TableCell>
                 <TableCell>{formatDate(campaign.startDate)}</TableCell>
                 <TableCell>{formatDate(campaign.endDate)}</TableCell>
                 <TableCell>{campaign.location}</TableCell>
                 <TableCell className="text-center">{campaign.candidatesCount}</TableCell>
                 <TableCell className="text-right p-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewCampaign(campaign.id);
-                      }}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>Szczegóły</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        onEditCampaign(campaign.id);
-                      }}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        <span>Edytuj</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(campaign.id);
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Usuń</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <CampaignActions
+                    campaignId={campaign.id}
+                    onEditCampaign={onEditCampaign}
+                    onDeleteClick={handleDeleteClick}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -295,22 +184,11 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
         </Table>
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Potwierdzenie usunięcia</AlertDialogTitle>
-            <AlertDialogDescription>
-              Czy na pewno chcesz usunąć tę kampanię? Tej operacji nie można cofnąć.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Usuń
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteCampaignDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirmDelete={confirmDelete}
+      />
     </>
   );
 };
