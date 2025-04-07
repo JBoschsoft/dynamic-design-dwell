@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockCampaigns } from '@/components/campaigns/mockData';
@@ -21,6 +20,7 @@ import CandidatesInCampaignTable from '@/components/campaigns/CandidatesInCampai
 import PhoneScreeningsTable from '@/components/campaigns/PhoneScreeningsTable';
 import ScreeningSettings from '@/components/campaigns/ScreeningSettings';
 import RecruitmentTeam from '@/components/campaigns/RecruitmentTeam';
+import EditCampaignDialog from '@/components/campaigns/EditCampaignDialog';
 
 // Mock data for candidates in this campaign
 const mockCandidates = [
@@ -103,6 +103,7 @@ const CampaignDetailsPage = () => {
   const [candidates, setCandidates] = useState(mockCandidates);
   const [phoneScreenings, setPhoneScreenings] = useState(mockPhoneScreenings);
   const [screeningSettings, setScreeningSettings] = useState(mockScreeningSettings);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -146,7 +147,15 @@ const CampaignDetailsPage = () => {
   }
 
   const handleEditCampaign = () => {
-    navigate(`/dashboard/campaigns/edit/${campaign.id}`);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveCampaign = (updatedCampaign: Campaign) => {
+    const campaignIndex = mockCampaigns.findIndex(c => c.id === campaign?.id);
+    if (campaignIndex !== -1) {
+      mockCampaigns[campaignIndex] = updatedCampaign;
+      setCampaign(updatedCampaign);
+    }
   };
 
   const handleAddCandidate = () => {
@@ -249,6 +258,15 @@ const CampaignDetailsPage = () => {
           </Tabs>
         </CardContent>
       </Card>
+      
+      {campaign && (
+        <EditCampaignDialog
+          campaign={campaign}
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onSave={handleSaveCampaign}
+        />
+      )}
     </div>
   );
 };
