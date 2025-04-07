@@ -1,16 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger, Textarea, Form, FormField, FormItem, FormControl } from '@/components/ui';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { mockCandidates } from '@/components/candidates/mockData';
-import { formatDate } from '@/components/candidates/utils';
-import { Users, Briefcase, CheckCircle2, FileText, Clock, Phone, Calendar, MessageSquare, Pen, Download, Eye } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Users, Briefcase, Phone, Calendar, FileText } from 'lucide-react';
 import EditableBasicInfo from '@/components/candidates/EditableBasicInfo';
 import LinkedinSearch from '@/components/candidates/LinkedinSearch';
 import LinkedinProfileDisplay from '@/components/candidates/LinkedinProfileData';
 import { LinkedinProfileData, CandidateHistoryEvent } from '@/components/candidates/types';
+import CandidateHistory from '@/components/candidates/CandidateHistory';
+import CandidateNotes from '@/components/candidates/CandidateNotes';
+import CandidateCV from '@/components/candidates/CandidateCV';
+import ProfessionalDetails from '@/components/candidates/ProfessionalDetails';
 
 interface NoteEntry {
   id: string;
@@ -31,10 +32,10 @@ const CandidateDetailsPage: React.FC = () => {
       createdBy: 'Anna Kowalska'
     }
   ]);
-  const [isAddingNote, setIsAddingNote] = useState(false);
   const [linkedinData, setLinkedinData] = useState<LinkedinProfileData | null>(null);
   const [candidate, setCandidate] = useState(mockCandidates.find(c => c.id === id));
   
+  // Define candidate history
   const candidateHistory: CandidateHistoryEvent[] = [
     {
       id: '1',
@@ -65,12 +66,6 @@ const CandidateDetailsPage: React.FC = () => {
       icon: FileText
     }
   ];
-  
-  const form = useForm<{ noteText: string }>({
-    defaultValues: {
-      noteText: ''
-    }
-  });
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -110,19 +105,15 @@ const CandidateDetailsPage: React.FC = () => {
     });
   };
 
-  const handleAddNote = (data: { noteText: string }) => {
-    if (data.noteText.trim()) {
-      const newNote: NoteEntry = {
-        id: Date.now().toString(),
-        text: data.noteText,
-        createdAt: new Date(),
-        createdBy: 'Jan Nowak'
-      };
-      
-      setNotes([newNote, ...notes]);
-      setIsAddingNote(false);
-      form.reset();
-    }
+  const handleAddNote = (noteText: string) => {
+    const newNote: NoteEntry = {
+      id: Date.now().toString(),
+      text: noteText,
+      createdAt: new Date(),
+      createdBy: 'Jan Nowak'
+    };
+    
+    setNotes([newNote, ...notes]);
   };
 
   const handleDownloadCV = () => {
@@ -171,51 +162,7 @@ const CandidateDetailsPage: React.FC = () => {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader>
-              <CardTitle>Szczegóły zawodowe</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {candidate.jobTitle && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Stanowisko</p>
-                  <p>{candidate.jobTitle}</p>
-                </div>
-              )}
-              {candidate.experience && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Doświadczenie</p>
-                  <p>{candidate.experience}</p>
-                </div>
-              )}
-              {candidate.education && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Wykształcenie</p>
-                  <p>{candidate.education}</p>
-                </div>
-              )}
-              {candidate.salary && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Oczekiwane wynagrodzenie</p>
-                  <p>{candidate.salary}</p>
-                </div>
-              )}
-              {candidate.availability && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Dostępność</p>
-                  <p>{candidate.availability}</p>
-                </div>
-              )}
-              {candidate.linkedin && (
-                <div>
-                  <p className="text-sm text-muted-foreground">LinkedIn</p>
-                  <a href={candidate.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                    {candidate.linkedin}
-                  </a>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ProfessionalDetails candidate={candidate} />
           
           <LinkedinSearch onDataFetched={handleLinkedinDataFetched} />
           
@@ -230,163 +177,18 @@ const CandidateDetailsPage: React.FC = () => {
             </Card>
           )}
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Notatki</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={() => setIsAddingNote(true)}
-              >
-                <Pen className="h-4 w-4" />
-                <span>Dodaj notatkę</span>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isAddingNote && (
-                <div className="mb-6 border rounded-md p-4 bg-muted/30">
-                  <form onSubmit={form.handleSubmit(handleAddNote)}>
-                    <div className="mb-3">
-                      <Textarea
-                        placeholder="Wpisz notatkę..."
-                        className="w-full min-h-[100px]"
-                        {...form.register('noteText')}
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setIsAddingNote(false);
-                          form.reset();
-                        }}
-                      >
-                        Anuluj
-                      </Button>
-                      <Button type="submit" size="sm">
-                        Zapisz
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-              )}
-              
-              {notes.length > 0 ? (
-                <div className="space-y-4">
-                  {notes.map((note) => (
-                    <div key={note.id} className="border rounded-md p-4">
-                      <p className="whitespace-pre-wrap mb-3">{note.text}</p>
-                      <div className="text-xs text-muted-foreground flex justify-between">
-                        <span>{note.createdBy}</span>
-                        <span>{formatDate(note.createdAt)} {note.createdAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground italic">Brak notatek</p>
-              )}
-            </CardContent>
-          </Card>
+          <CandidateNotes notes={notes} onAddNote={handleAddNote} />
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>CV / Resume</CardTitle>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center gap-1"
-                  onClick={handleViewCV}
-                >
-                  <Eye className="h-4 w-4" />
-                  <span>Wyświetl CV</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center gap-1"
-                  onClick={handleDownloadCV}
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Pobierz CV</span>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-md p-4 bg-muted/50">
-                <div className="flex flex-col sm:flex-row gap-4 items-start">
-                  <div className="bg-gray-100 rounded-md w-full sm:w-40 h-52 flex items-center justify-center border">
-                    <FileText className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium mb-2">CV - {fullName}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Przesłane {formatDate(candidate.appliedAt)}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="text-sm">
-                        <span className="font-medium">Format:</span> PDF
-                      </div>
-                      <div className="text-sm">
-                        <span className="font-medium">Rozmiar:</span> 1.2 MB
-                      </div>
-                      <div className="text-sm">
-                        <span className="font-medium">Język:</span> Polski
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 pt-6 border-t">
-                  <h4 className="font-medium mb-2">Kluczowe umiejętności z CV</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {['Zarządzanie zespołem', 'Excel', 'Analiza danych', 'Prezentacje', 'Negocjacje', 'Obsługa klienta'].map((skill, index) => (
-                      <div key={index} className="bg-secondary px-3 py-1 rounded-full text-xs">
-                        {skill}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <CandidateCV 
+            fullName={fullName} 
+            appliedAt={candidate.appliedAt}
+            onViewCV={handleViewCV}
+            onDownloadCV={handleDownloadCV}
+          />
         </div>
         
         <div className="w-full md:w-80 lg:w-96 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historia kandydata</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-8">
-                {candidateHistory.map((event, index) => (
-                  <div key={event.id} className="relative pl-8">
-                    {index < candidateHistory.length - 1 && (
-                      <div className="absolute left-3.5 top-8 bottom-0 w-px bg-border" />
-                    )}
-                    
-                    <div className="absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border bg-background">
-                      <event.icon className="h-4 w-4 text-primary" />
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium">{event.title}</h4>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {event.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(event.date)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <CandidateHistory history={candidateHistory} />
         </div>
       </div>
     </div>
