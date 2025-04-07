@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Edit } from 'lucide-react';
 import CampaignInfo from '@/components/campaigns/CampaignInfo';
 import CampaignStatusCard from '@/components/campaigns/CampaignStatusCard';
+import ScreeningStatusCard from '@/components/campaigns/ScreeningStatusCard';
 import CandidatesInCampaignTable from '@/components/campaigns/CandidatesInCampaignTable';
 import PhoneScreeningsTable from '@/components/campaigns/PhoneScreeningsTable';
 import ScreeningSettings from '@/components/campaigns/ScreeningSettings';
@@ -92,7 +93,7 @@ const mockScreeningSettings = {
     'Jakie znasz technologie związane z tym stanowiskiem?'
   ],
   automaticReminders: true,
-  reminderTime: 24, // hours before screening
+  reminderTime: 24, // hours before screening,
 };
 
 const CampaignDetailsPage = () => {
@@ -105,6 +106,11 @@ const CampaignDetailsPage = () => {
   const [screeningSettings, setScreeningSettings] = useState(mockScreeningSettings);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Mock data for screening stats
+  const [screeningCandidatesCount] = useState(2);
+  const [candidatesWithManagerCount] = useState(1);
+  const [tokensUsed] = useState(150);
   
   useEffect(() => {
     const fetchCampaign = () => {
@@ -213,6 +219,12 @@ const CampaignDetailsPage = () => {
           <CampaignStatusCard 
             campaign={campaign} 
             candidatesCount={candidates.length} 
+          />
+          <ScreeningStatusCard
+            campaign={campaign}
+            screeningCandidatesCount={screeningCandidatesCount}
+            candidatesWithManagerCount={candidatesWithManagerCount}
+            tokensUsed={tokensUsed}
           />
         </div>
       </div>
