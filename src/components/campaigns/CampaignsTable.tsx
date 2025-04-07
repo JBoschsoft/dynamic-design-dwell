@@ -19,8 +19,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Input,
-  Textarea
 } from '@/components/ui';
 import {
   AlertDialog,
@@ -32,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreVertical, Edit, Trash2, Eye, Plus } from 'lucide-react';
+import { MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -58,10 +56,6 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
       return [];
     }
   });
-
-  // New campaign creation state
-  const [newFolderName, setNewFolderName] = useState("");
-  const [newFolderDescription, setNewFolderDescription] = useState("");
   
   // Save to localStorage whenever selection changes
   useEffect(() => {
@@ -122,25 +116,29 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
     }
   };
   
-  const handleCreateNewFolder = () => {
-    if (!newFolderName.trim()) {
-      toast({
-        title: "Błąd",
-        description: "Nazwa folderu jest wymagana",
-        variant: "destructive"
-      });
-      return;
-    }
+  // New function to handle mass status change
+  const handleChangeStatus = (newStatus: Campaign['status']) => {
+    if (selectedCampaigns.length === 0) return;
     
-    // Here you would make an API call to create the folder
+    // Here you would make an API call to update the campaigns statuses
     toast({
-      title: "Sukces",
-      description: `Utworzono nowy folder "${newFolderName}" z ${selectedCampaigns.length} kampaniami`
+      title: "Status zaktualizowany",
+      description: `Zmieniono status ${selectedCampaigns.length} kampanii na "${getStatusLabel(newStatus)}"`
     });
     
-    // Reset form
-    setNewFolderName("");
-    setNewFolderDescription("");
+    // Clear selection after action
+    setSelectedCampaigns([]);
+  };
+  
+  // Helper function to get status label in Polish
+  const getStatusLabel = (status: Campaign['status']): string => {
+    switch(status) {
+      case 'active': return 'Aktywna';
+      case 'draft': return 'Szkic';
+      case 'closed': return 'Zakończona';
+      case 'paused': return 'Wstrzymana';
+      default: return status;
+    }
   };
 
   const areAllCurrentPageCampaignsSelected = 
@@ -186,50 +184,27 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
             
             {selectedCampaigns.length > 0 && (
               <div className="flex items-center gap-2 ml-4">
-                <Popover>
-                  <PopoverTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <Plus className="h-4 w-4" />
-                      <span>Utwórz folder</span>
+                      <span>Zmień status</span>
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72">
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Utwórz nowy folder</h4>
-                      
-                      <div className="space-y-2">
-                        <label htmlFor="folder-name" className="text-sm font-medium">
-                          Nazwa folderu
-                        </label>
-                        <Input 
-                          id="folder-name"
-                          value={newFolderName}
-                          onChange={(e) => setNewFolderName(e.target.value)}
-                          placeholder="Wprowadź nazwę folderu"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label htmlFor="folder-description" className="text-sm font-medium">
-                          Opis folderu
-                        </label>
-                        <Textarea 
-                          id="folder-description"
-                          value={newFolderDescription}
-                          onChange={(e) => setNewFolderDescription(e.target.value)}
-                          placeholder="Wprowadź opis folderu"
-                          rows={3}
-                        />
-                      </div>
-                      
-                      <div className="pt-2">
-                        <Button onClick={handleCreateNewFolder} className="w-full">
-                          Utwórz folder
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[180px]">
+                    <DropdownMenuItem onClick={() => handleChangeStatus('active')}>
+                      {getStatusBadge('active')} <span className="ml-2">Aktywna</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleChangeStatus('paused')}>
+                      {getStatusBadge('paused')} <span className="ml-2">Wstrzymana</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleChangeStatus('draft')}>
+                      {getStatusBadge('draft')} <span className="ml-2">Szkic</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleChangeStatus('closed')}>
+                      {getStatusBadge('closed')} <span className="ml-2">Zakończona</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -342,3 +317,4 @@ const CampaignsTable: React.FC<CampaignsTableProps> = ({
 };
 
 export default CampaignsTable;
+
