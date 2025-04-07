@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import EditableBasicInfo from '@/components/candidates/EditableBasicInfo';
 import LinkedinSearch from '@/components/candidates/LinkedinSearch';
 import LinkedinProfileDisplay from '@/components/candidates/LinkedinProfileData';
-import { LinkedinProfileData } from '@/components/candidates/types';
+import { LinkedinProfileData, CandidateHistoryEvent } from '@/components/candidates/types';
 
 interface NoteEntry {
   id: string;
@@ -34,6 +34,37 @@ const CandidateDetailsPage: React.FC = () => {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [linkedinData, setLinkedinData] = useState<LinkedinProfileData | null>(null);
   const [candidate, setCandidate] = useState(mockCandidates.find(c => c.id === id));
+  
+  const candidateHistory: CandidateHistoryEvent[] = [
+    {
+      id: '1',
+      title: 'Aplikacja złożona',
+      description: 'Kandydat złożył aplikację',
+      date: candidate?.appliedAt || new Date(),
+      icon: Users
+    },
+    {
+      id: '2',
+      title: 'Screening telefoniczny',
+      description: 'Pozytywny wynik screeningu',
+      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      icon: Phone
+    },
+    {
+      id: '3',
+      title: 'Rozmowa kwalifikacyjna',
+      description: 'Zaplanowana rozmowa z zespołem',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      icon: Calendar
+    },
+    {
+      id: '4',
+      title: 'Zadanie testowe',
+      description: 'Zadanie zostało przesłane do kandydata',
+      date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+      icon: FileText
+    }
+  ];
   
   const form = useForm<{ noteText: string }>({
     defaultValues: {

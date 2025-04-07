@@ -1,3 +1,4 @@
+
 export interface Candidate {
   id: string;
   firstName: string;
@@ -102,4 +103,12 @@ export interface CandidateFormValues {
   email: string;
   phone: string;
   stage: Candidate['stage'];
+}
+
+export interface CandidateHistoryEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: Date;
+  icon: React.FC<{ className?: string }>;
 }
