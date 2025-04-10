@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -209,7 +208,6 @@ const LoginPage = () => {
     );
   }
 
-  // If the user was redirected from verification and is a new user, show a special message
   const wasVerified = state?.isNewUser === true;
   
   return (

@@ -109,6 +109,7 @@ const SignupPage = () => {
           data: {
             is_new_user: true
           },
+          // Make sure we add the full origin and type parameter to the redirect URL
           emailRedirectTo: `${window.location.origin}/verification?type=signup`
         }
       });
