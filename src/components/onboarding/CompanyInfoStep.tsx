@@ -98,6 +98,15 @@ const countries = [
   { code: "us", name: "United States", flag: "🇺🇸" }
 ];
 
+// Define company size options as a constant
+const companySizeOptions = [
+  { value: "1-10", label: "1-10 pracowników" },
+  { value: "11-50", label: "11-50 pracowników" },
+  { value: "51-200", label: "51-200 pracowników" },
+  { value: "201-500", label: "201-500 pracowników" },
+  { value: "501+", label: "Ponad 500 pracowników" }
+];
+
 const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   companyName,
   setCompanyName,
@@ -122,7 +131,7 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
   const [industrySearchQuery, setIndustrySearchQuery] = useState("");
   
-  // Fix: Ensure we always have an array to iterate over by using a fallback empty array
+  // Fix: Ensure we always have arrays to iterate over
   const filteredCountries = countrySearchQuery 
     ? countries.filter(country => 
         country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
@@ -212,8 +221,9 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                     onValueChange={setIndustrySearchQuery}
                   />
                   <CommandEmpty>Nie znaleziono pasujących branż.</CommandEmpty>
+                  {/* Fix: Add a check to ensure the filtered list exists */}
                   <CommandGroup className="max-h-[300px] overflow-y-auto">
-                    {filteredIndustries.map((ind) => (
+                    {filteredIndustries?.map((ind) => (
                       <CommandItem
                         key={ind}
                         value={ind}
@@ -266,66 +276,23 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
               <PopoverContent className="w-full p-0" align="start">
                 <Command>
                   <CommandGroup>
-                    <CommandItem onSelect={() => {
-                      setCompanySize("1-10");
-                      setCompanySizeOpen(false);
-                    }}>
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          companySize === "1-10" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      1-10 pracowników
-                    </CommandItem>
-                    <CommandItem onSelect={() => {
-                      setCompanySize("11-50");
-                      setCompanySizeOpen(false);
-                    }}>
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          companySize === "11-50" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      11-50 pracowników
-                    </CommandItem>
-                    <CommandItem onSelect={() => {
-                      setCompanySize("51-200");
-                      setCompanySizeOpen(false);
-                    }}>
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          companySize === "51-200" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      51-200 pracowników
-                    </CommandItem>
-                    <CommandItem onSelect={() => {
-                      setCompanySize("201-500");
-                      setCompanySizeOpen(false);
-                    }}>
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          companySize === "201-500" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      201-500 pracowników
-                    </CommandItem>
-                    <CommandItem onSelect={() => {
-                      setCompanySize("501+");
-                      setCompanySizeOpen(false);
-                    }}>
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          companySize === "501+" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      Ponad 500 pracowników
-                    </CommandItem>
+                    {companySizeOptions.map((option) => (
+                      <CommandItem 
+                        key={option.value}
+                        onSelect={() => {
+                          setCompanySize(option.value);
+                          setCompanySizeOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            companySize === option.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {option.label}
+                      </CommandItem>
+                    ))}
                   </CommandGroup>
                 </Command>
               </PopoverContent>
@@ -365,8 +332,9 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                       onValueChange={setCountrySearchQuery}
                     />
                     <CommandEmpty>Nie znaleziono pasującego kraju.</CommandEmpty>
+                    {/* Fix: Ensure we're providing a non-null array */}
                     <CommandGroup className="max-h-[300px] overflow-y-auto">
-                      {filteredCountries.map((country) => (
+                      {Array.isArray(filteredCountries) && filteredCountries.map((country) => (
                         <CommandItem
                           key={country.code}
                           value={country.code}
