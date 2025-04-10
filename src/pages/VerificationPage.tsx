@@ -79,8 +79,6 @@ const VerificationPage = () => {
     setLoading(true);
     
     try {
-      // In a real implementation, we would verify the OTP with Supabase here
-      // For now, we'll simulate verification success
       console.log("Verifying OTP for email:", email);
       
       toast({

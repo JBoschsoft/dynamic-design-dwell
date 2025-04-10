@@ -5,13 +5,13 @@ import {
   Input,
   Label,
   Card, CardContent, CardHeader, CardTitle, CardDescription,
-  FileText, CheckCircle2, Building2, ArrowRight, Loader2, Search,
-  Command, CommandInput, CommandEmpty, CommandGroup, CommandItem
+  FileText, CheckCircle2, Building2, ArrowRight, Loader2
 } from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import 'react-phone-input-2/lib/style.css';
 
 interface CompanyInfoStepProps {
@@ -126,27 +126,6 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   loading
 }) => {
   const [open, setOpen] = useState(false);
-  const [industryOpen, setIndustryOpen] = useState(false);
-  const [companySizeOpen, setCompanySizeOpen] = useState(false);
-  const [countrySearchQuery, setCountrySearchQuery] = useState("");
-  const [industrySearchQuery, setIndustrySearchQuery] = useState("");
-  
-  // Make sure filteredCountries is always an array (never undefined)
-  const filteredCountries = Array.isArray(countries) ? 
-    (countrySearchQuery 
-      ? countries.filter(country => 
-          country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
-          country.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
-      : countries) 
-    : [];
-
-  // Make sure filteredIndustries is always an array (never undefined)
-  const filteredIndustries = Array.isArray(industries) ? 
-    (industrySearchQuery
-      ? industries.filter(ind => 
-          ind.toLowerCase().includes(industrySearchQuery.toLowerCase()))
-      : industries) 
-    : [];
   
   const handleNextStep = () => {
     if (!companyName || !industry || !companySize || !phoneNumber) {
@@ -205,102 +184,34 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
           
           <div className="space-y-2">
             <Label htmlFor="industry">Branża</Label>
-            <Popover open={industryOpen} onOpenChange={setIndustryOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={industryOpen}
-                  aria-label="Select industry"
-                  className="w-full justify-between bg-white focus:border-primary"
-                >
-                  {industry ? industry : "Wybierz branżę"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command>
-                  <CommandInput 
-                    placeholder="Szukaj branży..." 
-                    value={industrySearchQuery}
-                    onValueChange={setIndustrySearchQuery}
-                  />
-                  <CommandEmpty>Nie znaleziono pasujących branż.</CommandEmpty>
-                  <CommandGroup className="max-h-[300px] overflow-y-auto">
-                    {filteredIndustries.map((ind) => (
-                      <CommandItem
-                        key={ind}
-                        value={ind}
-                        onSelect={() => {
-                          setIndustry(ind);
-                          setIndustryOpen(false);
-                          setIndustrySearchQuery("");
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            industry === ind ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {ind}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select value={industry} onValueChange={setIndustry}>
+              <SelectTrigger className="w-full bg-white focus:border-primary">
+                <SelectValue placeholder="Wybierz branżę" />
+              </SelectTrigger>
+              <SelectContent>
+                {industries.map((ind) => (
+                  <SelectItem key={ind} value={ind}>
+                    {ind}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="company-size">Wielkość firmy</Label>
-            <Popover open={companySizeOpen} onOpenChange={setCompanySizeOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={companySizeOpen}
-                  aria-label="Select company size"
-                  className="w-full justify-between bg-white focus:border-primary"
-                >
-                  {companySize ? (
-                    companySize === "1-10" 
-                      ? "1-10 pracowników" 
-                      : companySize === "11-50"
-                        ? "11-50 pracowników"
-                        : companySize === "51-200"
-                          ? "51-200 pracowników"
-                          : companySize === "201-500"
-                            ? "201-500 pracowników"
-                            : "Ponad 500 pracowników"
-                  ) : "Wybierz wielkość firmy"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command>
-                  <CommandGroup>
-                    {Array.isArray(companySizeOptions) && companySizeOptions.map((option) => (
-                      <CommandItem 
-                        key={option.value}
-                        onSelect={() => {
-                          setCompanySize(option.value);
-                          setCompanySizeOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            companySize === option.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {option.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select value={companySize} onValueChange={setCompanySize}>
+              <SelectTrigger className="w-full bg-white focus:border-primary">
+                <SelectValue placeholder="Wybierz wielkość firmy" />
+              </SelectTrigger>
+              <SelectContent>
+                {companySizeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
@@ -329,36 +240,27 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
-                  <Command>
-                    <CommandInput 
-                      placeholder="Szukaj kraju..." 
-                      value={countrySearchQuery}
-                      onValueChange={setCountrySearchQuery}
-                    />
-                    <CommandEmpty>Nie znaleziono pasującego kraju.</CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-y-auto">
-                      {filteredCountries.map((country) => (
-                        <CommandItem
-                          key={country.code}
-                          value={country.code}
-                          onSelect={() => {
-                            setCountryCode(country.code);
-                            setOpen(false);
-                            setCountrySearchQuery("");
-                          }}
-                        >
-                          <span className="mr-2">{country.flag}</span>
-                          <span>{country.name}</span>
-                          <Check
-                            className={cn(
-                              "ml-auto h-4 w-4",
-                              countryCode === country.code ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
+                  <div className="max-h-[300px] overflow-y-auto py-1">
+                    {countries.map((country) => (
+                      <div
+                        key={country.code}
+                        className={cn(
+                          "flex items-center px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-100",
+                          countryCode === country.code && "bg-primary/10"
+                        )}
+                        onClick={() => {
+                          setCountryCode(country.code);
+                          setOpen(false);
+                        }}
+                      >
+                        <span className="mr-2">{country.flag}</span>
+                        <span>{country.name}</span>
+                        {countryCode === country.code && (
+                          <Check className="ml-auto h-4 w-4" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </PopoverContent>
               </Popover>
               <Input 
