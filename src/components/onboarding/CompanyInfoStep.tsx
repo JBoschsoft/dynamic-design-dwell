@@ -128,11 +128,39 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   const [open, setOpen] = useState(false);
   
   const handleNextStep = () => {
-    if (!companyName || !industry || !companySize || !phoneNumber) {
+    // Perform client-side validation before submitting
+    if (!companyName.trim()) {
       toast({
         variant: "destructive",
-        title: "Uzupełnij wszystkie pola",
-        description: "Wypełnij wszystkie wymagane informacje o firmie."
+        title: "Brak nazwy firmy",
+        description: "Wprowadź nazwę swojej firmy."
+      });
+      return;
+    }
+
+    if (!industry) {
+      toast({
+        variant: "destructive",
+        title: "Brak wybranej branży",
+        description: "Wybierz branżę swojej firmy."
+      });
+      return;
+    }
+
+    if (!companySize) {
+      toast({
+        variant: "destructive",
+        title: "Brak wybranego rozmiaru firmy",
+        description: "Wybierz wielkość swojej firmy."
+      });
+      return;
+    }
+
+    if (!phoneNumber.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Brak numeru telefonu",
+        description: "Wprowadź numer telefonu."
       });
       return;
     }
@@ -144,6 +172,7 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
       return;
     }
     
+    // All validations passed, proceed to next step
     onNext();
   };
   

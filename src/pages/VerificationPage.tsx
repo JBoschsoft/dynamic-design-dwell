@@ -81,6 +81,15 @@ const VerificationPage = () => {
     try {
       console.log("Verifying OTP for email:", email);
       
+      // Implement actual OTP verification with Supabase
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'signup'
+      });
+      
+      if (error) throw error;
+      
       toast({
         title: "Weryfikacja udana",
         description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
