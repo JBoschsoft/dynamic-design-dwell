@@ -18,6 +18,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Starting check-email function");
+    
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -30,7 +32,9 @@ serve(async (req) => {
     }
 
     // Get the request body
-    const { email } = await req.json() as CheckEmailRequest;
+    const requestData = await req.json();
+    const { email } = requestData as CheckEmailRequest;
+    console.log("Checking email:", email);
 
     if (!email) {
       throw new Error("Email is required");
@@ -43,8 +47,11 @@ serve(async (req) => {
     );
 
     if (error) {
+      console.error("Error checking email:", error);
       throw new Error(`Error checking email: ${error.message}`);
     }
+
+    console.log("Email exists:", exists);
 
     return new Response(
       JSON.stringify({ 

@@ -22,6 +22,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Starting create-workspace function");
+    
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
@@ -44,11 +46,17 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
+      console.error("User error:", userError);
       throw new Error("Invalid user token");
     }
 
+    console.log("User authenticated:", user.id);
+
     // Parse the request body
-    const { companyName, industry, companySize, phoneNumber, countryCode } = await req.json() as CreateWorkspaceRequest;
+    const requestData = await req.json();
+    console.log("Request data:", JSON.stringify(requestData));
+    
+    const { companyName, industry, companySize, phoneNumber, countryCode } = requestData as CreateWorkspaceRequest;
 
     // Create a connection using the service role key (needed for writing to profiles table)
     const serviceRoleClient = createClient(
@@ -56,7 +64,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Start a transaction
+    // Start a transaction by first creating workspace
+    console.log("Creating workspace");
     const { data: workspaceData, error: workspaceError } = await serviceRoleClient
       .from("workspaces")
       .insert({
@@ -68,10 +77,14 @@ serve(async (req) => {
       .single();
 
     if (workspaceError || !workspaceData) {
+      console.error("Workspace creation error:", workspaceError);
       throw new Error(`Error creating workspace: ${workspaceError?.message || "Unknown error"}`);
     }
 
+    console.log("Workspace created:", workspaceData.id);
+
     // Create profile record
+    console.log("Creating profile for user:", user.id);
     const { error: profileError } = await serviceRoleClient
       .from("profiles")
       .insert({
@@ -81,10 +94,14 @@ serve(async (req) => {
       });
 
     if (profileError) {
+      console.error("Profile creation error:", profileError);
       throw new Error(`Error creating profile: ${profileError.message}`);
     }
 
+    console.log("Profile created successfully");
+
     // Create workspace member record with super_admin role
+    console.log("Creating workspace member with super_admin role");
     const { error: memberError } = await serviceRoleClient
       .from("workspace_members")
       .insert({
@@ -94,8 +111,11 @@ serve(async (req) => {
       });
 
     if (memberError) {
+      console.error("Workspace member creation error:", memberError);
       throw new Error(`Error creating workspace member: ${memberError.message}`);
     }
+
+    console.log("Workspace member created successfully");
 
     // Return the workspace id
     return new Response(
