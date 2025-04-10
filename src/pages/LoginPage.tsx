@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,12 @@ const LoginPage = () => {
   const isNewUser = state?.isNewUser || false;
 
   useEffect(() => {
+    console.log("Login page loaded with state:", state);
+    console.log("isNewUser from state:", isNewUser);
+    console.log("returnTo from state:", returnTo);
+  }, [state, isNewUser, returnTo]);
+
+  useEffect(() => {
     const checkAuth = async () => {
       setAuthChecking(true);
       try {
@@ -35,14 +40,12 @@ const LoginPage = () => {
           console.log("User already logged in, session:", session);
           console.log("User metadata:", session.user.user_metadata);
           
-          // First check state from navigation (for verified users coming from verification page)
           if (isNewUser) {
             console.log("New user flag in navigation state, redirecting to onboarding");
             navigate('/onboarding', { replace: true });
             return;
           }
           
-          // Then check metadata
           const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
           
           if (isNewUserMeta) {
@@ -63,12 +66,15 @@ const LoginPage = () => {
     };
     
     checkAuth();
+  }, [navigate, returnTo, isNewUser]);
+
+  useEffect(() => {
+    console.log("Setting up auth state listener in LoginPage");
     
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed in LoginPage:", event, "Session exists:", !!session);
       
       if (session) {
-        // First check state from navigation (for verified users coming from verification page)
         if (isNewUser) {
           console.log("New user flag in navigation state, redirecting to onboarding after auth change");
           toast({
@@ -79,7 +85,6 @@ const LoginPage = () => {
           return;
         }
         
-        // Then check metadata
         const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
         console.log("Is new user according to metadata:", isNewUserMeta);
         
@@ -120,9 +125,6 @@ const LoginPage = () => {
       }
       
       console.log("Login successful, checking if new user:", data?.user?.user_metadata?.is_new_user);
-      
-      // Let the auth state change listener handle navigation
-      // This is intentionally empty - navigation will happen via the listener
       
     } catch (error: any) {
       toast({

@@ -33,6 +33,8 @@ const VerificationPage = () => {
   // Check if verification has already happened via URL parameters
   useEffect(() => {
     const checkVerificationStatus = async () => {
+      console.log("Checking verification status with search params:", Object.fromEntries(searchParams.entries()));
+      
       // Check if there's a type=recovery or type=signup in the URL (Supabase callback)
       const type = searchParams.get('type');
       
@@ -42,6 +44,7 @@ const VerificationPage = () => {
         
         // If this is a signup, mark as new user
         if (type === 'signup') {
+          console.log("Setting isNewUser to true based on URL param");
           setIsNewUser(true);
         }
         
@@ -60,6 +63,8 @@ const VerificationPage = () => {
             
             if (updateError) {
               console.error("Error updating user metadata:", updateError);
+            } else {
+              console.log("Updated user metadata with is_new_user flag");
             }
             
             console.log("New user signup confirmed, redirecting to onboarding");
@@ -71,7 +76,8 @@ const VerificationPage = () => {
             // Force navigation to onboarding with small delay to ensure metadata is saved
             setTimeout(() => {
               navigate('/onboarding', { replace: true });
-            }, 500);
+            }, 300);
+            return;
           } else {
             // For password recovery or other auth flows
             toast({
@@ -79,7 +85,8 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane."
             });
             
-            setTimeout(() => navigate('/dashboard', { replace: true }), 500);
+            setTimeout(() => navigate('/dashboard', { replace: true }), 300);
+            return;
           }
         } else {
           console.log("User is verified but not logged in");
@@ -103,7 +110,8 @@ const VerificationPage = () => {
             } else {
               navigate('/login');
             }
-          }, 500);
+          }, 300);
+          return;
         }
       }
     };
@@ -119,7 +127,7 @@ const VerificationPage = () => {
       console.log("Auth state changed in VerificationPage:", event, "Session exists:", !!session);
       
       // Only handle sign-in events - we don't want to interfere with other flows
-      if (event === 'SIGNED_IN' && session) {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         // Check if this is a new user verification flow
         const signupType = searchParams.get('type');
         const isNewUserFlow = signupType === 'signup' || isNewUser;
@@ -135,6 +143,8 @@ const VerificationPage = () => {
             
             if (error) {
               console.error("Error updating user metadata:", error);
+            } else {
+              console.log("Successfully updated user metadata with is_new_user flag");
             }
             
             toast({
@@ -254,10 +264,10 @@ const VerificationPage = () => {
         
         if (session) {
           // New user - Redirect to onboarding page after successful verification
-          navigate('/onboarding');
+          navigate('/onboarding', { replace: true });
         } else {
           // Redirect to login if not authenticated
-          navigate('/login', { state: { returnTo: '/onboarding' } });
+          navigate('/login', { state: { returnTo: '/onboarding', isNewUser: true } });
         }
       }
     } catch (error: any) {

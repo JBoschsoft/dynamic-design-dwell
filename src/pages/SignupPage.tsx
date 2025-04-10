@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -106,12 +105,11 @@ const SignupPage = () => {
         email,
         password,
         options: {
-          // The critical part - include the type=signup parameter
-          emailRedirectTo: `${window.location.origin}/verification?type=signup`,
           data: {
             is_new_user: true,
             email_verification_sent: true
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/verification?type=signup`
         }
       });
       
@@ -126,7 +124,6 @@ const SignupPage = () => {
         description: "Wysłaliśmy link potwierdzający na Twój adres email. Sprawdź swoją skrzynkę, aby dokończyć rejestrację."
       });
       
-      // Navigate to verification page which will handle the flow
       navigate('/verification');
     } catch (error: any) {
       toast({
