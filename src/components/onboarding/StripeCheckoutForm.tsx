@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -37,10 +36,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   
-  // Always get a fresh payment intent when the dialog opens
   useEffect(() => {
     if (open) {
-      // Reset state when dialog opens
       setClientSecret(null);
       setIntentId(null);
       setError(null);
@@ -60,7 +57,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     try {
       console.log(`Fetching ${paymentType} payment intent for ${tokenAmount[0]} tokens`);
       
-      // Call Supabase Edge Function to create a payment intent
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: paymentType,
@@ -93,7 +89,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } catch (error: any) {
       console.error('Error fetching payment intent:', error);
       
-      // Check if it's a network connection error
       if (error.message?.includes('Failed to fetch') || 
           error.message?.includes('Network Error') ||
           error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
@@ -117,7 +112,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   
   const updateTokenBalance = async (amount: number) => {
     try {
-      // Get the current user's workspace
       const { data: memberData, error: memberError } = await supabase
         .from('workspace_members')
         .select('workspace_id')
@@ -129,15 +123,18 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         return;
       }
       
-      // Get current token balance
       const { data: workspaceData, error: workspaceError } = await supabase
         .from('workspaces')
-        .select('token_balance')
+        .select('*')
         .eq('id', memberData.workspace_id)
         .single();
       
-      // Update the token balance
-      const currentBalance = workspaceData?.token_balance || 0;
+      if (workspaceError) {
+        console.error("Error fetching workspace data:", workspaceError);
+        return;
+      }
+      
+      const currentBalance = workspaceData?.token_balance ?? 0;
       const newBalance = currentBalance + amount;
       
       const { error: updateError } = await supabase
@@ -161,7 +158,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     try {
       console.log("Creating initial charge with payment method:", paymentMethodId);
       
-      // Call the edge function to create an initial charge for subscription users
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: 'subscription',
@@ -182,10 +178,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       console.log("Initial charge created:", data);
       
-      // Update token balance in database
       await updateTokenBalance(tokenAmount[0]);
       
-      // Handle successful payment
       if (onSuccess) {
         onSuccess(paymentType, tokenAmount[0]);
       }
@@ -232,10 +226,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // Clear the card element state before confirmation
       cardElement.update({});
       
-      // Confirm payment/setup based on payment type
       let result;
       
       if (paymentType === 'one-time') {
@@ -256,12 +248,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         console.log("Payment result:", result);
         
-        // Check the payment status
         if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-          // Update token balance in database
           await updateTokenBalance(tokenAmount[0]);
           
-          // Handle successful payment
           if (onSuccess) {
             onSuccess(paymentType, tokenAmount[0]);
           }
@@ -282,7 +271,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error("Brak klucza klienta dla subskrypcji");
         }
         
-        // Confirm the setup intent with the card element
         console.log("Confirming subscription setup with card element");
         result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
@@ -296,7 +284,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         console.log("Setup result:", result);
         
-        // For subscription, we need to now create an initial charge with the stored payment method
         const setupResult = result.setupIntent;
         
         if (setupResult && setupResult.payment_method) {
@@ -309,23 +296,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } catch (error: any) {
       console.error('Payment error:', error);
       
-      // Check if the error is due to an expired or invalid setup/payment intent
       const intentExpiredError = 
         error.message?.includes("No such setupintent") || 
         error.message?.includes("No such payment_intent") ||
         error.message?.includes("expired");
       
       if (intentExpiredError && retryCount < 3) {
-        // Get a new intent and increment retry count
         setRetryCount(prev => prev + 1);
         setError("Sesja płatności wygasła - odświeżamy dane płatności, spróbuj ponownie za chwilę.");
         
-        // Reset the card input
         if (cardElement) {
           cardElement.clear();
         }
         
-        // Get a new payment intent
         await fetchPaymentIntent();
       } else {
         setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
@@ -336,7 +319,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
         });
         
-        // Reset the form if there's an error
         if (cardElement) {
           cardElement.clear();
         }

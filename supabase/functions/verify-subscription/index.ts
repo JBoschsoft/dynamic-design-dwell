@@ -85,7 +85,7 @@ serve(async (req) => {
     }
 
     const stripeCustomerId = workspaceData.stripe_customer_id;
-    const tokenBalance = workspaceData.token_balance || 0;
+    const tokenBalance = workspaceData.token_balance ?? 0;
     
     // If no Stripe customer ID exists yet, there are no payments
     if (!stripeCustomerId) {

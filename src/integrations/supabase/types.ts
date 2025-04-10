@@ -114,6 +114,7 @@ export type Database = {
           industry: string
           name: string
           stripe_customer_id: string | null
+          token_balance: number | null
         }
         Insert: {
           company_size: string
@@ -122,6 +123,7 @@ export type Database = {
           industry: string
           name: string
           stripe_customer_id?: string | null
+          token_balance?: number | null
         }
         Update: {
           company_size?: string
@@ -130,6 +132,7 @@ export type Database = {
           industry?: string
           name?: string
           stripe_customer_id?: string | null
+          token_balance?: number | null
         }
         Relationships: []
       }
