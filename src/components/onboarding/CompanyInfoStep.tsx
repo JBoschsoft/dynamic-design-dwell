@@ -131,17 +131,22 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
   const [industrySearchQuery, setIndustrySearchQuery] = useState("");
   
-  // Fix: Ensure we always have arrays to iterate over
-  const filteredCountries = countrySearchQuery 
-    ? countries.filter(country => 
-        country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
-        country.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
-    : countries;
+  // Make sure filteredCountries is always an array (never undefined)
+  const filteredCountries = Array.isArray(countries) ? 
+    (countrySearchQuery 
+      ? countries.filter(country => 
+          country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
+          country.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
+      : countries) 
+    : [];
 
-  const filteredIndustries = industrySearchQuery
-    ? industries.filter(ind => 
-        ind.toLowerCase().includes(industrySearchQuery.toLowerCase()))
-    : industries;
+  // Make sure filteredIndustries is always an array (never undefined)
+  const filteredIndustries = Array.isArray(industries) ? 
+    (industrySearchQuery
+      ? industries.filter(ind => 
+          ind.toLowerCase().includes(industrySearchQuery.toLowerCase()))
+      : industries) 
+    : [];
   
   const handleNextStep = () => {
     if (!companyName || !industry || !companySize || !phoneNumber) {
@@ -221,9 +226,8 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                     onValueChange={setIndustrySearchQuery}
                   />
                   <CommandEmpty>Nie znaleziono pasujących branż.</CommandEmpty>
-                  {/* Fix: Add a check to ensure the filtered list exists */}
                   <CommandGroup className="max-h-[300px] overflow-y-auto">
-                    {filteredIndustries?.map((ind) => (
+                    {filteredIndustries.map((ind) => (
                       <CommandItem
                         key={ind}
                         value={ind}
@@ -276,7 +280,7 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
               <PopoverContent className="w-full p-0" align="start">
                 <Command>
                   <CommandGroup>
-                    {companySizeOptions.map((option) => (
+                    {Array.isArray(companySizeOptions) && companySizeOptions.map((option) => (
                       <CommandItem 
                         key={option.value}
                         onSelect={() => {
@@ -332,9 +336,8 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                       onValueChange={setCountrySearchQuery}
                     />
                     <CommandEmpty>Nie znaleziono pasującego kraju.</CommandEmpty>
-                    {/* Fix: Ensure we're providing a non-null array */}
                     <CommandGroup className="max-h-[300px] overflow-y-auto">
-                      {Array.isArray(filteredCountries) && filteredCountries.map((country) => (
+                      {filteredCountries.map((country) => (
                         <CommandItem
                           key={country.code}
                           value={country.code}
