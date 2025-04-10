@@ -115,6 +115,46 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
+  const updateTokenBalance = async (amount: number) => {
+    try {
+      // Get the current user's workspace
+      const { data: memberData, error: memberError } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+        .single();
+      
+      if (memberError || !memberData?.workspace_id) {
+        console.error("Error finding workspace:", memberError);
+        return;
+      }
+      
+      // Get current token balance
+      const { data: workspaceData, error: workspaceError } = await supabase
+        .from('workspaces')
+        .select('token_balance')
+        .eq('id', memberData.workspace_id)
+        .single();
+      
+      // Update the token balance
+      const currentBalance = workspaceData?.token_balance || 0;
+      const newBalance = currentBalance + amount;
+      
+      const { error: updateError } = await supabase
+        .from('workspaces')
+        .update({ token_balance: newBalance })
+        .eq('id', memberData.workspace_id);
+      
+      if (updateError) {
+        console.error("Error updating token balance:", updateError);
+      } else {
+        console.log(`Token balance updated from ${currentBalance} to ${newBalance}`);
+      }
+    } catch (error) {
+      console.error("Error updating token balance:", error);
+    }
+  };
+  
   const createInitialCharge = async (paymentMethodId: string) => {
     setProcessingSetupConfirmation(true);
     
@@ -141,6 +181,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       }
       
       console.log("Initial charge created:", data);
+      
+      // Update token balance in database
+      await updateTokenBalance(tokenAmount[0]);
       
       // Handle successful payment
       if (onSuccess) {
@@ -215,6 +258,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         // Check the payment status
         if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+          // Update token balance in database
+          await updateTokenBalance(tokenAmount[0]);
+          
           // Handle successful payment
           if (onSuccess) {
             onSuccess(paymentType, tokenAmount[0]);

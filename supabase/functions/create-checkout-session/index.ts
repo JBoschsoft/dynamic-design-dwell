@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.170.0/http/server.ts";
 import Stripe from 'https://esm.sh/stripe@14.21.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,12 +26,55 @@ serve(async (req) => {
       throw new Error('STRIPE_SECRET_KEY is not configured in Edge Function secrets');
     }
     
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase credentials not configured in Edge Function secrets');
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
     console.log("Initializing Stripe API connection...");
     const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
       httpClient: Stripe.createFetchHttpClient(),
       maxNetworkRetries: 3, // Add retries for network issues
     });
+    
+    // Extract user information from auth header
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      
+      if (userError) {
+        console.error("Error getting user from token:", userError);
+      } else if (userData && userData.user) {
+        userId = userData.user.id;
+        console.log("User ID from token:", userId);
+      }
+    }
+    
+    // Get the user's workspace ID if they're logged in
+    let workspaceId = null;
+    if (userId) {
+      const { data: memberData, error: memberError } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', userId)
+        .single();
+      
+      if (memberError) {
+        console.error("Error getting workspace:", memberError);
+      } else if (memberData) {
+        workspaceId = memberData.workspace_id;
+        console.log("Found workspace ID:", workspaceId);
+      }
+    }
     
     // Calculate token price based on quantity (implement discounts)
     const getTokenPrice = (amount: number): number => {
@@ -50,6 +94,8 @@ serve(async (req) => {
         
         // Find or create a customer to attach the payment method to
         let customer;
+        let isNewCustomer = false;
+        
         if (customerId) {
           console.log("Retrieving existing customer:", customerId);
           customer = await stripe.customers.retrieve(customerId);
@@ -61,9 +107,11 @@ serve(async (req) => {
             metadata: {
               autoRecharge: "true",
               rechargeThreshold: "10",
-              rechargeAmount: tokenAmount.toString()
+              rechargeAmount: tokenAmount.toString(),
+              userId: userId || undefined
             }
           });
+          isNewCustomer = true;
         }
         
         // Attach the payment method to the customer if not already
@@ -97,11 +145,29 @@ serve(async (req) => {
             tokenAmount: tokenAmount.toString(),
             unitPrice: unitPrice.toString(),
             paymentType: "subscription-initial",
-            autoRecharge: "true"
+            autoRecharge: "true",
+            workspaceId: workspaceId || undefined
           },
         });
         
         console.log("Initial subscription charge created:", paymentIntent.id);
+        
+        // Update workspace table with Stripe customer ID if this is a new customer
+        if (workspaceId && (isNewCustomer || customerId !== customer.id)) {
+          const { error: updateError } = await supabase
+            .from('workspaces')
+            .update({ 
+              stripe_customer_id: customer.id,
+              token_balance: tokenAmount 
+            })
+            .eq('id', workspaceId);
+          
+          if (updateError) {
+            console.error("Error updating workspace with Stripe customer ID:", updateError);
+          } else {
+            console.log("Updated workspace with Stripe customer ID and token balance");
+          }
+        }
         
         return new Response(
           JSON.stringify({
@@ -127,16 +193,70 @@ serve(async (req) => {
     // Create a payment intent or setup intent based on payment type
     if (paymentType === 'one-time') {
       console.log("Creating one-time payment intent for", tokenAmount, "tokens");
+      
+      // Find existing Stripe customer ID for this workspace if available
+      let stripeCustomerId = null;
+      
+      if (workspaceId) {
+        const { data: workspaceData, error: workspaceError } = await supabase
+          .from('workspaces')
+          .select('stripe_customer_id')
+          .eq('id', workspaceId)
+          .single();
+        
+        if (!workspaceError && workspaceData && workspaceData.stripe_customer_id) {
+          stripeCustomerId = workspaceData.stripe_customer_id;
+          console.log("Found existing Stripe customer ID:", stripeCustomerId);
+        }
+      }
+      
+      // If no Stripe customer ID exists, create one
+      if (!stripeCustomerId && userId) {
+        // Get user email to create customer
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+        
+        if (!userError && userData && userData.user?.email) {
+          console.log("Creating new Stripe customer for user email:", userData.user.email);
+          
+          const customer = await stripe.customers.create({
+            email: userData.user.email,
+            metadata: {
+              userId: userId,
+              workspaceId: workspaceId || undefined
+            }
+          });
+          
+          stripeCustomerId = customer.id;
+          
+          // Update workspace with new Stripe customer ID
+          if (workspaceId) {
+            const { error: updateError } = await supabase
+              .from('workspaces')
+              .update({ stripe_customer_id: stripeCustomerId })
+              .eq('id', workspaceId);
+            
+            if (updateError) {
+              console.error("Error updating workspace with Stripe customer ID:", updateError);
+            } else {
+              console.log("Updated workspace with new Stripe customer ID");
+            }
+          }
+        }
+      }
+      
       // Create a payment intent for one-time payments
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount * 100, // amount in cents
         currency: 'pln',
+        customer: stripeCustomerId || undefined,
         payment_method_types: ['card'],
         metadata: {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
           paymentType,
-          autoRecharge: "false"
+          autoRecharge: "false",
+          workspaceId: workspaceId || undefined,
+          userId: userId || undefined
         }
       });
       
@@ -167,7 +287,9 @@ serve(async (req) => {
           paymentType,
           autoRecharge: "true",
           rechargeThreshold: "10",
-          rechargeAmount: tokenAmount.toString()
+          rechargeAmount: tokenAmount.toString(),
+          workspaceId: workspaceId || undefined,
+          userId: userId || undefined
         },
         // Set to off_session to allow future off-session payments
         usage: 'off_session',

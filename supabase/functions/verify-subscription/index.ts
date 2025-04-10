@@ -25,10 +25,10 @@ serve(async (req) => {
       throw new Error('No authorization header provided');
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_ANON_KEY') || '',
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // Extract the token from the Authorization header
     const token = authHeader.replace('Bearer ', '');
@@ -40,18 +40,16 @@ serve(async (req) => {
       throw new Error('Invalid or expired token');
     }
 
-    const email = userData.user.email;
-    if (!email) {
-      throw new Error('No email found for user');
-    }
+    const userId = userData.user.id;
 
-    // Get customer by email
-    const { data: customers } = await stripe.customers.list({
-      email: email,
-      limit: 1,
-    });
-
-    if (customers.length === 0) {
+    // Get the workspace for this user
+    const { data: memberData, error: memberError } = await supabaseClient
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', userId)
+      .single();
+    
+    if (memberError || !memberData?.workspace_id) {
       return new Response(
         JSON.stringify({ 
           hasSubscription: false,
@@ -65,18 +63,55 @@ serve(async (req) => {
       );
     }
 
-    const customerId = customers[0].id;
+    // Get workspace details including token balance and stripe customer ID
+    const { data: workspaceData, error: workspaceError } = await supabaseClient
+      .from('workspaces')
+      .select('stripe_customer_id, token_balance')
+      .eq('id', memberData.workspace_id)
+      .single();
+    
+    if (workspaceError || !workspaceData) {
+      return new Response(
+        JSON.stringify({ 
+          hasSubscription: false,
+          hasOneTimePurchase: false,
+          tokenBalance: 0
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
+    const stripeCustomerId = workspaceData.stripe_customer_id;
+    const tokenBalance = workspaceData.token_balance || 0;
+    
+    // If no Stripe customer ID exists yet, there are no payments
+    if (!stripeCustomerId) {
+      return new Response(
+        JSON.stringify({ 
+          hasSubscription: false,
+          hasOneTimePurchase: false,
+          tokenBalance: tokenBalance
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
 
     // Check for active subscriptions
     const { data: subscriptions } = await stripe.subscriptions.list({
-      customer: customerId,
+      customer: stripeCustomerId,
       status: 'active',
       limit: 100,
     });
 
     // Check for completed one-time payments
     const { data: charges } = await stripe.charges.list({
-      customer: customerId,
+      customer: stripeCustomerId,
       limit: 100,
     });
 
@@ -84,15 +119,13 @@ serve(async (req) => {
       charge.status === 'succeeded' && !charge.invoice // exclude subscription charges (they have invoice field)
     );
 
-    // In a real application, you would calculate the token balance based on purchases and usage
-    // For this example, we're just returning a dummy balance
-    const dummyTokenBalance = subscriptions.length > 0 ? 100 : (successfulCharges.length * 50);
-
     return new Response(
       JSON.stringify({ 
         hasSubscription: subscriptions.length > 0,
         hasOneTimePurchase: successfulCharges.length > 0,
-        tokenBalance: dummyTokenBalance
+        tokenBalance: tokenBalance,
+        customerExists: true,
+        customerId: stripeCustomerId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
