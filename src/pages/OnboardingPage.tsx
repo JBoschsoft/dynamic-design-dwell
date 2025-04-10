@@ -28,26 +28,27 @@ const OnboardingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
+  // Company information state
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [countryCode, setCountryCode] = useState('pl'); // Default to Poland
   
+  // Legal agreements state
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [currentAgreement, setCurrentAgreement] = useState<'tos' | 'privacy' | 'msa'>('tos');
   const [tosAgreed, setTosAgreed] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [msaAgreed, setMsaAgreed] = useState(false);
   
+  // Payment state
   const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('subscription');
   const [tokenAmount, setTokenAmount] = useState([50]);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
-  
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
   
   // Stripe configuration
@@ -141,8 +142,48 @@ const OnboardingPage = () => {
     setCheckoutDialogOpen(true);
   };
   
-  const proceedToPayment = async () => {
-    setCheckoutDialogOpen(true);
+  const skipPayment = async () => {
+    // Update token balance without payment
+    try {
+      setPaymentLoading(true);
+      
+      const { data: memberData } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+        .single();
+          
+      if (memberData?.workspace_id) {
+        // Add starter tokens (5)
+        await supabase
+          .from('workspaces')
+          .update({ 
+            token_balance: 5,
+            balance_auto_topup: false
+          })
+          .eq('id', memberData.workspace_id);
+          
+        toast({
+          title: "Pominięto płatność",
+          description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
+        });
+      }
+      
+      setPaymentSuccess(true);
+      setTimeout(() => {
+        setCurrentStep(3);
+      }, 500);
+      
+    } catch (error) {
+      console.error("Error updating token balance:", error);
+      toast({
+        variant: "destructive",
+        title: "Błąd",
+        description: "Nie udało się przyznać startowych tokenów. Spróbuj ponownie."
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
   };
   
   const handleNextStep = async () => {
@@ -197,7 +238,6 @@ const OnboardingPage = () => {
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      // Fix: Explicitly navigate to step 4 when leaving the success screen
       setCurrentStep(4);
       // Update URL with the new step
       navigate(`/onboarding?step=4`, { replace: true });
@@ -223,41 +263,7 @@ const OnboardingPage = () => {
   
   const handleConfirmOneTimePayment = () => {
     setConfirmDialogOpen(false);
-    proceedToPayment();
-  };
-  
-  const skipPayment = () => {
-    // Update token balance without payment
-    const updateTokenBalance = async () => {
-      try {
-        const { data: memberData } = await supabase
-          .from('workspace_members')
-          .select('workspace_id')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
-          .single();
-          
-        if (memberData?.workspace_id) {
-          // Add starter tokens (5)
-          await supabase
-            .from('workspaces')
-            .update({ 
-              token_balance: 5,
-              balance_auto_topup: false
-            })
-            .eq('id', memberData.workspace_id);
-            
-          toast({
-            title: "Pominięto płatność",
-            description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
-          });
-        }
-      } catch (error) {
-        console.error("Error updating token balance:", error);
-      }
-    };
-    
-    updateTokenBalance();
-    setCurrentStep(3);
+    handleOpenCheckout();
   };
   
   return (

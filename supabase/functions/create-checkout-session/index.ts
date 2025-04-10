@@ -123,9 +123,12 @@ serve(async (req) => {
           await stripe.paymentMethods.attach(paymentMethodId, {
             customer: customer.id,
           });
-        } catch (error) {
-          console.log("Payment method already attached or error:", error);
-          // Continue if the error is because it's already attached
+        } catch (error: any) {
+          // Only continue if the error is because it's already attached
+          if (!error.message?.includes("already been attached")) {
+            throw error;
+          }
+          console.log("Payment method already attached");
         }
         
         // Set as the default payment method
@@ -188,8 +191,24 @@ serve(async (req) => {
             status: 200
           }
         );
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error creating initial subscription charge:", error);
+        
+        // Handle specific Stripe errors that might need special responses
+        if (error.type === 'StripeCardError') {
+          return new Response(
+            JSON.stringify({ 
+              error: error.message,
+              code: error.code,
+              decline_code: error.decline_code
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400
+            }
+          );
+        }
+        
         throw error;
       }
     }
@@ -335,7 +354,7 @@ serve(async (req) => {
         }
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating checkout session:", error);
     
     return new Response(

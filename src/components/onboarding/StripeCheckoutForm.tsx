@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
@@ -9,7 +8,6 @@ import {
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -164,8 +162,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         return;
       }
       
-      // Default to 5 if no current balance exists
-      const currentBalance = workspaceData?.token_balance ?? 5;
+      // Default to 0 if no current balance exists
+      const currentBalance = workspaceData?.token_balance ?? 0;
       const newBalance = currentBalance + amount;
       
       console.log(`Updating token balance: Current=${currentBalance}, Adding=${amount}, New=${newBalance}`);
