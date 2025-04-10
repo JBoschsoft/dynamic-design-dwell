@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -30,15 +31,17 @@ const LoginPage = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          console.log("User already logged in, redirecting to:", returnTo);
+          console.log("User already logged in, session:", session);
+          console.log("User metadata:", session.user.user_metadata);
           
           // Check if this was a newly verified user
-          const { email_verified, is_new_user } = session.user.user_metadata || {};
+          const isNewUser = session.user.user_metadata?.is_new_user === true;
           
-          if (email_verified && is_new_user) {
+          if (isNewUser) {
             console.log("New verified user, redirecting to onboarding");
             navigate('/onboarding');
           } else {
+            console.log("Existing user, redirecting to:", returnTo);
             navigate(returnTo);
           }
         }
@@ -53,11 +56,12 @@ const LoginPage = () => {
     
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, "Session exists:", !!session);
+      console.log("Auth state changed in LoginPage:", event, "Session exists:", !!session);
       
       if (session) {
         // If we receive a new session, check if this is a new user
-        const { is_new_user } = session.user.user_metadata || {};
+        const isNewUser = session.user.user_metadata?.is_new_user === true;
+        console.log("Is new user according to metadata:", isNewUser);
         
         toast({
           title: "Zalogowano pomyślnie",
@@ -65,9 +69,11 @@ const LoginPage = () => {
         });
         
         // Direct new verified users to onboarding
-        if (is_new_user) {
+        if (isNewUser) {
+          console.log("New user, navigating to onboarding");
           navigate('/onboarding');
         } else {
+          console.log("Existing user, navigating to:", returnTo);
           navigate(returnTo);
         }
       }

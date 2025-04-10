@@ -45,10 +45,13 @@ const VerificationPage = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          console.log("User is authenticated after verification");
+          console.log("User is authenticated after verification", session.user);
           
           // Check if this is a new user who has just confirmed their email
-          if (type === 'signup') {
+          const isNewSignup = type === 'signup';
+          const isNewUserMetadata = session.user.user_metadata?.is_new_user === true;
+          
+          if (isNewSignup && isNewUserMetadata) {
             console.log("New user signup confirmed, redirecting to onboarding");
             setIsNewUser(true);
             
@@ -57,8 +60,11 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
             });
             
-            // Redirect to onboarding after a short delay
-            setTimeout(() => navigate('/onboarding'), 1500);
+            // Add a delay to make sure toast is shown before redirect
+            setTimeout(() => {
+              console.log("Redirecting to onboarding...");
+              navigate('/onboarding');
+            }, 1500);
           } else {
             // For password recovery or other auth flows
             toast({
@@ -82,6 +88,34 @@ const VerificationPage = () => {
     
     checkVerificationStatus();
   }, [searchParams, navigate]);
+  
+  // Set up auth state change listener
+  useEffect(() => {
+    console.log("Setting up auth state listener in VerificationPage");
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed in VerificationPage:", event, "Session exists:", !!session);
+      
+      if (event === 'SIGNED_IN' && session) {
+        const isNewUserMetadata = session.user.user_metadata?.is_new_user === true;
+        console.log("Is new user according to metadata:", isNewUserMetadata);
+        
+        if (isNewUserMetadata) {
+          console.log("New user signed in, redirecting to onboarding");
+          toast({
+            title: "Logowanie udane",
+            description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
+          });
+          
+          setTimeout(() => navigate('/onboarding'), 1000);
+        }
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
   
   useEffect(() => {
     const invitation = searchParams.get('invitation');

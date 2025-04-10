@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -103,13 +104,14 @@ const SignupPage = () => {
     
     try {
       // Try to sign up the user with Supabase
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/verification`,
           data: {
-            is_new_user: true
+            is_new_user: true,
+            email_verification_sent: true
           }
         }
       });
@@ -117,6 +119,8 @@ const SignupPage = () => {
       if (error) {
         throw error;
       }
+      
+      console.log("Signup successful:", data);
       
       toast({
         title: "Rejestracja udana",
