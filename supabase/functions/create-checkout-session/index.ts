@@ -66,7 +66,7 @@ serve(async (req) => {
         .from('workspace_members')
         .select('workspace_id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       if (memberError) {
         console.error("Error getting workspace:", memberError);
@@ -206,7 +206,7 @@ serve(async (req) => {
           .from('workspaces')
           .select('stripe_customer_id')
           .eq('id', workspaceId)
-          .single();
+          .maybeSingle();
         
         if (!workspaceError && workspaceData && workspaceData.stripe_customer_id) {
           stripeCustomerId = workspaceData.stripe_customer_id;
@@ -251,24 +251,22 @@ serve(async (req) => {
         }
       }
       
-      // Set an expiration time for the payment intent (5 minutes)
-      const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
-      
-      // Create a payment intent for one-time payments with a short expiration
+      // Create a payment intent for one-time payments
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount * 100, // amount in cents
         currency: 'pln',
         customer: stripeCustomerId || undefined,
         payment_method_types: ['card'],
+        // Remove expiresAt and any timer related functionality
         metadata: {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
           paymentType,
           autoRecharge: "false",
           workspaceId: workspaceId || undefined,
-          userId: userId || undefined,
-          expiresAt: expiresAt.toString()
-        }
+          userId: userId || undefined
+        },
+        // Don't set a short expiration time
       });
       
       console.log("Payment intent created successfully:", paymentIntent.id);
@@ -281,7 +279,7 @@ serve(async (req) => {
           unitPrice,
           totalPrice: totalAmount,
           id: paymentIntent.id,
-          expiresAt
+          customerId: stripeCustomerId
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -309,6 +307,20 @@ serve(async (req) => {
       
       console.log("Setup intent created successfully:", setupIntent.id);
       
+      // If we have a workspaceId, get the customer ID
+      let existingCustomerId = null;
+      if (workspaceId) {
+        const { data: workspaceData, error: workspaceError } = await supabase
+          .from('workspaces')
+          .select('stripe_customer_id')
+          .eq('id', workspaceId)
+          .maybeSingle();
+        
+        if (!workspaceError && workspaceData && workspaceData.stripe_customer_id) {
+          existingCustomerId = workspaceData.stripe_customer_id;
+        }
+      }
+      
       return new Response(
         JSON.stringify({
           clientSecret: setupIntent.client_secret,
@@ -316,7 +328,8 @@ serve(async (req) => {
           amount: tokenAmount,
           unitPrice,
           totalPrice: totalAmount,
-          id: setupIntent.id
+          id: setupIntent.id,
+          customerId: existingCustomerId
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

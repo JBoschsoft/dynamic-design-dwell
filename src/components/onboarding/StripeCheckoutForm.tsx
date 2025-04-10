@@ -38,6 +38,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   
   // Reset form when dialog is opened
   useEffect(() => {
@@ -49,6 +50,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setRetryCount(0);
       setProcessingSetupConfirmation(false);
       setConnectionError(false);
+      setCustomerId(null);
       
       fetchPaymentIntent();
     }
@@ -104,6 +106,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setClientSecret(data.clientSecret);
         setIntentId(data.id);
         setIntentTimestamp(Date.now()); // Store when we got this intent
+        
+        // Store customer ID if received
+        if (data.customerId) {
+          setCustomerId(data.customerId);
+          console.log("Customer ID received:", data.customerId);
+        }
       } else {
         throw new Error("Nie otrzymano klucza klienta od serwera płatności");
       }
@@ -164,13 +172,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       const { error: updateError } = await supabase
         .from('workspaces')
-        .update({ token_balance: newBalance })
+        .update({ 
+          token_balance: newBalance,
+          balance_auto_topup: paymentType === 'subscription'
+        })
         .eq('id', memberData.workspace_id);
       
       if (updateError) {
         console.error("Error updating token balance:", updateError);
       } else {
         console.log(`Token balance updated from ${currentBalance} to ${newBalance}`);
+        console.log(`Auto-topup set to ${paymentType === 'subscription'}`);
       }
     } catch (error) {
       console.error("Error updating token balance:", error);
@@ -187,7 +199,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         body: {
           paymentType: 'subscription',
           tokenAmount: tokenAmount[0],
-          paymentMethodId
+          paymentMethodId,
+          customerId // Pass the customerId if we have it
         }
       });
       
@@ -273,9 +286,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
         
         console.log("Confirming one-time payment with card element");
+
+        // Important: For one-time payments, we're using confirmCardPayment
         result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
+            billing_details: {}, // Add empty billing details to meet API requirements
           }
         });
         
@@ -318,6 +334,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
+            billing_details: {}, // Add empty billing details to meet API requirements
           }
         });
         
