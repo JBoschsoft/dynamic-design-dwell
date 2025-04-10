@@ -42,26 +42,6 @@ serve(async (req) => {
       supabaseServiceRoleKey
     );
 
-    // Get the authorization header from the request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      console.error("Missing Authorization header");
-      throw new Error("Authorization header is required");
-    }
-
-    // Get the user from the auth header
-    const token = authHeader.replace("Bearer ", "");
-    console.log("Attempting to get user with token");
-    
-    const { data: { user }, error: userError } = await serviceRoleClient.auth.getUser(token);
-
-    if (userError || !user) {
-      console.error("User authentication error:", userError || "No user found");
-      throw new Error(`Authentication failed: ${userError?.message || "Invalid token"}`);
-    }
-
-    console.log("User authenticated:", user.id);
-
     // Parse the request body
     let requestData;
     try {
@@ -86,6 +66,25 @@ serve(async (req) => {
       throw new Error("Missing required fields in request");
     }
 
+    // Get the authorization header from the request
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("Missing Authorization header");
+      throw new Error("Authorization header is required");
+    }
+
+    // Get the user from the auth header
+    const token = authHeader.replace("Bearer ", "");
+    console.log("Attempting to get user with token");
+    
+    const { data: { user }, error: userError } = await serviceRoleClient.auth.getUser(token);
+
+    if (userError || !user) {
+      console.error("User authentication error:", userError || "No user found");
+      throw new Error(`Authentication failed: ${userError?.message || "Invalid token"}`);
+    }
+
+    console.log("User authenticated:", user.id);
     console.log("Creating workspace using database function");
     
     // Use the database function to create workspace, profile, and member in a transaction

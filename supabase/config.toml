@@ -18,7 +18,7 @@ port = 54323
 enabled = true
 
 [functions.create-workspace]
-verify_jwt = true
+verify_jwt = false
 
 [functions.update-workspace-payment]
 verify_jwt = true
