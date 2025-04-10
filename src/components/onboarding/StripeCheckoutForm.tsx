@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Button, Label, Loader2, Card, CardContent
+  Button, Label, Loader2, Card, CardContent, Alert, AlertCircle
 } from "@/components/ui";
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
@@ -35,6 +35,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [intentId, setIntentId] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
   
   // Always get a fresh payment intent when the dialog opens
   useEffect(() => {
@@ -45,6 +46,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setError(null);
       setRetryCount(0);
       setProcessingSetupConfirmation(false);
+      setConnectionError(false);
       
       fetchPaymentIntent();
     }
@@ -53,8 +55,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const fetchPaymentIntent = async () => {
     setLoading(true);
     setError(null);
+    setConnectionError(false);
     
     try {
+      console.log(`Fetching ${paymentType} payment intent for ${tokenAmount[0]} tokens`);
+      
       // Call Supabase Edge Function to create a payment intent
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
@@ -63,10 +68,22 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw new Error(`Error invoking payment function: ${error.message}`);
+      }
+      
+      if (!data) {
+        throw new Error("No data received from payment service");
+      }
+      
+      if (data?.error) {
+        console.error("Payment service error:", data.error);
+        throw new Error(data.error);
+      }
       
       if (data?.clientSecret) {
-        console.log("Received new client secret:", data.clientSecret);
+        console.log("Received new client secret:", data.clientSecret.substring(0, 10) + "...");
         console.log("Intent ID:", data.id);
         setClientSecret(data.clientSecret);
         setIntentId(data.id);
@@ -75,12 +92,23 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       }
     } catch (error: any) {
       console.error('Error fetching payment intent:', error);
-      setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
+      
+      // Check if it's a network connection error
+      if (error.message?.includes('Failed to fetch') || 
+          error.message?.includes('Network Error') ||
+          error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
+        setConnectionError(true);
+        setError('Błąd połączenia z systemem płatności. Proszę sprawdzić połączenie internetowe lub wyłączyć blokady (np. adblock).');
+      } else {
+        setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
+      }
       
       toast({
         variant: "destructive",
         title: "Błąd inicjalizacji płatności",
-        description: error.message || "Nie można nawiązać połączenia z systemem płatności. Spróbuj ponownie.",
+        description: connectionError 
+          ? "Problem z połączeniem do systemu płatności. Sprawdź połączenie internetowe lub wyłącz adblock."
+          : (error.message || "Nie można nawiązać połączenia z systemem płatności. Spróbuj ponownie."),
       });
     } finally {
       setLoading(false);
@@ -91,6 +119,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setProcessingSetupConfirmation(true);
     
     try {
+      console.log("Creating initial charge with payment method:", paymentMethodId);
+      
       // Call the edge function to create an initial charge for subscription users
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
@@ -100,7 +130,15 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw new Error(`Error processing payment: ${error.message}`);
+      }
+      
+      if (data?.error) {
+        console.error("Payment service error:", data.error);
+        throw new Error(data.error);
+      }
       
       console.log("Initial charge created:", data);
       
@@ -136,6 +174,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     e.preventDefault();
     
     if (!stripe || !elements) {
+      setError("Stripe nie został załadowany. Odśwież stronę i spróbuj ponownie.");
       return;
     }
     
@@ -161,6 +200,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error("Brak klucza klienta dla płatności");
         }
         
+        console.log("Confirming one-time payment with card element");
         result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -197,6 +237,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
         
         // Confirm the setup intent with the card element
+        console.log("Confirming subscription setup with card element");
         result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -291,6 +332,25 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               </div>
             </CardContent>
           </Card>
+          
+          {connectionError && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 mr-2 mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Problem z połączeniem do systemu płatności</h3>
+                  <p className="text-sm mt-1">
+                    Wygląda na to, że połączenie do systemu płatności jest blokowane. Proszę:
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>Wyłączyć wszelkie blokady reklam (AdBlock, uBlock itp.)</li>
+                      <li>Sprawdzić połączenie internetowe</li>
+                      <li>Spróbować w trybie prywatnym/incognito</li>
+                    </ul>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label>Dane karty płatniczej</Label>

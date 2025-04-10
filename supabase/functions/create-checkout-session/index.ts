@@ -20,8 +20,16 @@ serve(async (req) => {
     console.log("Received request with:", { paymentType, tokenAmount, paymentMethodId, customerId });
     
     // Initialize Stripe with secret key from environment variables
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured in Edge Function secrets');
+    }
+    
+    console.log("Initializing Stripe API connection...");
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
+      httpClient: Stripe.createFetchHttpClient(),
+      maxNetworkRetries: 3, // Add retries for network issues
     });
     
     // Calculate token price based on quantity (implement discounts)
@@ -38,12 +46,16 @@ serve(async (req) => {
     // If we already have a paymentMethodId from a setup intent confirmation
     if (paymentMethodId && paymentType === 'subscription') {
       try {
+        console.log("Processing subscription with payment method:", paymentMethodId);
+        
         // Find or create a customer to attach the payment method to
         let customer;
         if (customerId) {
+          console.log("Retrieving existing customer:", customerId);
           customer = await stripe.customers.retrieve(customerId);
         } else {
           // Create a new customer with the payment method
+          console.log("Creating new customer with payment method:", paymentMethodId);
           customer = await stripe.customers.create({
             payment_method: paymentMethodId,
             metadata: {
@@ -56,6 +68,7 @@ serve(async (req) => {
         
         // Attach the payment method to the customer if not already
         try {
+          console.log("Attaching payment method to customer");
           await stripe.paymentMethods.attach(paymentMethodId, {
             customer: customer.id,
           });
@@ -72,6 +85,7 @@ serve(async (req) => {
         });
         
         // Create a payment intent for the initial charge
+        console.log("Creating payment intent for initial charge");
         const paymentIntent = await stripe.paymentIntents.create({
           amount: totalAmount * 100, // amount in cents
           currency: 'pln',
@@ -112,6 +126,7 @@ serve(async (req) => {
     
     // Create a payment intent or setup intent based on payment type
     if (paymentType === 'one-time') {
+      console.log("Creating one-time payment intent for", tokenAmount, "tokens");
       // Create a payment intent for one-time payments
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount * 100, // amount in cents
@@ -142,6 +157,7 @@ serve(async (req) => {
         }
       );
     } else {
+      console.log("Creating setup intent for subscription payments");
       // Create a setup intent for subscription payments to securely collect card details
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],
@@ -178,7 +194,10 @@ serve(async (req) => {
     console.error("Error creating checkout session:", error);
     
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ 
+        error: error.message || 'Internal server error',
+        errorDetail: error.stack || 'No stack trace available'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
