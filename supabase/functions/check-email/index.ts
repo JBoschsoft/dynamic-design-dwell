@@ -34,12 +34,6 @@ serve(async (req) => {
       supabaseServiceRoleKey,
     );
 
-    // Get the authorization header from the request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Authorization header is required");
-    }
-
     // Get the request body
     let requestData;
     try {
@@ -57,7 +51,7 @@ serve(async (req) => {
     }
 
     // Check if email already exists using secure function
-    const { data: exists, error } = await supabaseClient.rpc(
+    const { data, error } = await supabaseClient.rpc(
       'check_email_exists',
       { email_to_check: email }
     );
@@ -67,11 +61,11 @@ serve(async (req) => {
       throw new Error(`Error checking email: ${error.message}`);
     }
 
-    console.log("Email exists:", exists);
+    console.log("Email exists:", data);
 
     return new Response(
       JSON.stringify({ 
-        exists: Boolean(exists),
+        exists: Boolean(data),
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },

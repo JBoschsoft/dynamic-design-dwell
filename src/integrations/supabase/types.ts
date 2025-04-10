@@ -9,7 +9,127 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          country_code: string | null
+          created_at: string | null
+          id: string
+          phone_number: string | null
+        }
+        Insert: {
+          country_code?: string | null
+          created_at?: string | null
+          id: string
+          phone_number?: string | null
+        }
+        Update: {
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          phone_number?: string | null
+        }
+        Relationships: []
+      }
+      workspace_invitations: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          inviter_id: string | null
+          role: string
+          status: string
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          inviter_id?: string | null
+          role: string
+          status?: string
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          inviter_id?: string | null
+          role?: string
+          status?: string
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invitations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          id: string
+          joined_at: string | null
+          role: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          role: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          role?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          company_size: string
+          created_at: string | null
+          id: string
+          industry: string
+          name: string
+          stripe_customer_id: string | null
+        }
+        Insert: {
+          company_size: string
+          created_at?: string | null
+          id?: string
+          industry: string
+          name: string
+          stripe_customer_id?: string | null
+        }
+        Update: {
+          company_size?: string
+          created_at?: string | null
+          id?: string
+          industry?: string
+          name?: string
+          stripe_customer_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
