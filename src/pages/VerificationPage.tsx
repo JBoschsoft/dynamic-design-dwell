@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -46,120 +47,37 @@ const VerificationPage = () => {
         if (type === 'signup') {
           console.log("Setting isNewUser to true based on URL param");
           setIsNewUser(true);
-        }
-        
-        // Check if the user is already logged in
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          console.log("User is authenticated after verification", session.user);
           
-          // For signup flows, ensure the is_new_user flag is set in metadata
-          if (type === 'signup') {
-            // Update user metadata to ensure is_new_user flag is set
-            const { error: updateError } = await supabase.auth.updateUser({
-              data: { is_new_user: true }
-            });
-            
-            if (updateError) {
-              console.error("Error updating user metadata:", updateError);
-            } else {
-              console.log("Updated user metadata with is_new_user flag");
-            }
-            
-            console.log("New user signup confirmed, redirecting to onboarding");
-            toast({
-              title: "Weryfikacja udana",
-              description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
-            });
-            
-            // Redirect to onboarding immediately
-            navigate('/onboarding', { replace: true });
-            return;
-          } else {
-            // For password recovery or other auth flows
-            toast({
-              title: "Weryfikacja udana",
-              description: "Twoje konto zostało pomyślnie zweryfikowane."
-            });
-            
-            navigate('/dashboard', { replace: true });
-            return;
-          }
-        } else {
-          console.log("User is verified but not logged in");
-          // If verified but not logged in, direct to login with special params
-          
+          // Redirect directly to onboarding with a flag indicating this is a new user
           toast({
             title: "Weryfikacja udana",
-            description: "Zaloguj się, aby kontynuować."
+            description: "Twoje konto zostało pomyślnie zweryfikowane. Przejdź do logowania, aby skonfigurować swój profil."
           });
           
-          // For signup, redirect to login with state indicating this is a new user
-          if (type === 'signup') {
-            navigate('/login', { 
-              state: { 
-                returnTo: '/onboarding',
-                isNewUser: true 
-              }
-            });
-          } else {
-            navigate('/login');
-          }
+          navigate('/login', { 
+            replace: true, 
+            state: { 
+              isNewUser: true,
+              returnTo: '/onboarding'
+            }
+          });
+          return;
+        } else {
+          // For password recovery or other auth flows
+          toast({
+            title: "Weryfikacja udana",
+            description: "Twoje konto zostało pomyślnie zweryfikowane."
+          });
+          
+          navigate('/login', { replace: true });
+          return;
         }
       }
     };
     
     checkVerificationStatus();
   }, [searchParams, navigate]);
-  
-  // Set up auth state change listener
-  useEffect(() => {
-    console.log("Setting up auth state listener in VerificationPage");
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed in VerificationPage:", event, "Session exists:", !!session);
-      
-      // Only handle sign-in events - we don't want to interfere with other flows
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-        // Check if this is a new user verification flow
-        const signupType = searchParams.get('type');
-        const isNewUserFlow = signupType === 'signup' || isNewUser;
-        
-        if (isNewUserFlow) {
-          console.log("New user signed in within verification page, updating metadata and redirecting");
-          
-          // Update user metadata to ensure is_new_user flag is set
-          (async () => {
-            const { error } = await supabase.auth.updateUser({
-              data: { is_new_user: true }
-            });
-            
-            if (error) {
-              console.error("Error updating user metadata:", error);
-            } else {
-              console.log("Successfully updated user metadata with is_new_user flag");
-            }
-            
-            toast({
-              title: "Logowanie udane",
-              description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
-            });
-            
-            navigate('/onboarding', { replace: true });
-          })();
-        } else {
-          // For existing users
-          navigate('/dashboard', { replace: true });
-        }
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate, searchParams, isNewUser]);
-  
+
   useEffect(() => {
     const invitation = searchParams.get('invitation');
     if (invitation) {
@@ -180,8 +98,14 @@ const VerificationPage = () => {
         description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
       });
       
-      // Immediately redirect to onboarding for new users
-      navigate('/onboarding', { replace: true });
+      // Redirect to login with new user state for onboarding
+      navigate('/login', { 
+        replace: true, 
+        state: { 
+          isNewUser: true,
+          returnTo: '/onboarding'
+        }
+      });
       
     } catch (error: any) {
       toast({
@@ -218,7 +142,7 @@ const VerificationPage = () => {
           </h2>
           <p className="mt-2 text-gray-600">
             {isNewUser 
-              ? "Przekierowujemy Cię do procesu konfiguracji konta..." 
+              ? "Przekierowujemy Cię do strony logowania..." 
               : "Przekierowujemy Cię do strony logowania..."}
           </p>
           <div className="mt-6">

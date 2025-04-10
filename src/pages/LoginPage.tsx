@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -40,10 +41,17 @@ const LoginPage = () => {
           console.log("User already logged in, session:", session);
           console.log("User metadata:", session.user.user_metadata);
           
+          // Look for is_new_user flag in user metadata
           const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
           
           if (isNewUserMeta || isNewUser) {
             console.log("New user detected, redirecting to onboarding");
+            
+            // Update user metadata to ensure is_new_user flag is set
+            await supabase.auth.updateUser({
+              data: { is_new_user: true }
+            });
+            
             navigate('/onboarding', { replace: true });
           } else {
             console.log("Existing user, redirecting to:", returnTo);
@@ -72,11 +80,20 @@ const LoginPage = () => {
         
         if (shouldGoToOnboarding) {
           console.log("New user signed in, navigating to onboarding");
-          toast({
-            title: "Zalogowano pomyślnie",
-            description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
-          });
-          navigate('/onboarding', { replace: true });
+          
+          // Update user metadata to ensure is_new_user flag is set
+          (async () => {
+            await supabase.auth.updateUser({
+              data: { is_new_user: true }
+            });
+            
+            toast({
+              title: "Zalogowano pomyślnie",
+              description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
+            });
+            
+            navigate('/onboarding', { replace: true });
+          })();
         } else {
           console.log("Existing user signed in, navigating to:", returnTo);
           toast({
@@ -109,6 +126,8 @@ const LoginPage = () => {
       
       console.log("Login successful, checking if new user:", data?.user?.user_metadata?.is_new_user);
       
+      // Let the auth state listener handle the redirection
+      
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -121,11 +140,22 @@ const LoginPage = () => {
 
   const handleGoogleLogin = async () => {
     try {
+      let redirectOptions = {};
+      
+      // If this is a new user, we need to pass that information through to the redirect
+      if (isNewUser) {
+        redirectOptions = {
+          redirectTo: `${window.location.origin}/onboarding`,
+        };
+      } else {
+        redirectOptions = {
+          redirectTo: `${window.location.origin}${returnTo}`,
+        };
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}${returnTo}`,
-        },
+        options: redirectOptions,
       });
       
       if (error) throw error;
@@ -140,11 +170,22 @@ const LoginPage = () => {
 
   const handleMicrosoftLogin = async () => {
     try {
+      let redirectOptions = {};
+      
+      // If this is a new user, we need to pass that information through to the redirect
+      if (isNewUser) {
+        redirectOptions = {
+          redirectTo: `${window.location.origin}/onboarding`,
+        };
+      } else {
+        redirectOptions = {
+          redirectTo: `${window.location.origin}${returnTo}`,
+        };
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'azure',
-        options: {
-          redirectTo: `${window.location.origin}${returnTo}`,
-        },
+        options: redirectOptions,
       });
       
       if (error) throw error;
@@ -167,14 +208,22 @@ const LoginPage = () => {
       </div>
     );
   }
+
+  // If the user was redirected from verification and is a new user, show a special message
+  const wasVerified = state?.isNewUser === true;
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Zaloguj się do konta
+            {wasVerified ? "Weryfikacja udana! Zaloguj się" : "Zaloguj się do konta"}
           </h2>
+          {wasVerified && (
+            <p className="mt-2 text-center text-sm text-green-600">
+              Twoje konto zostało pomyślnie zweryfikowane. Zaloguj się, aby kontynuować konfigurację.
+            </p>
+          )}
           <p className="mt-2 text-center text-sm text-gray-600">
             Lub{' '}
             <Link to="/signup" className="font-medium text-primary hover:text-primary/80">
