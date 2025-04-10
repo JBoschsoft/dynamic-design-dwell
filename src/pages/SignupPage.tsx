@@ -39,7 +39,11 @@ const SignupPage = () => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate('/onboarding');
+        if (session.user.user_metadata?.is_new_user === true) {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
       }
     };
     
@@ -100,7 +104,7 @@ const SignupPage = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/verification`,
+          emailRedirectTo: `${window.location.origin}/verification?type=signup`,
           data: {
             is_new_user: true,
             email_verification_sent: true

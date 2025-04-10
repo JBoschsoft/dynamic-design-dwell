@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ const LoginPage = () => {
   const state = location.state as LocationState;
   const returnTo = state?.returnTo || '/dashboard';
 
-  // Check if we're already authenticated
   useEffect(() => {
     const checkAuth = async () => {
       setAuthChecking(true);
@@ -34,16 +32,16 @@ const LoginPage = () => {
           console.log("User already logged in, session:", session);
           console.log("User metadata:", session.user.user_metadata);
           
-          // Check if this was a newly verified user
           const isNewUser = session.user.user_metadata?.is_new_user === true;
           
           if (isNewUser) {
             console.log("New verified user, redirecting to onboarding");
-            // Navigate directly to onboarding, don't wait
             navigate('/onboarding');
+            return;
           } else {
             console.log("Existing user, redirecting to:", returnTo);
             navigate(returnTo);
+            return;
           }
         }
       } catch (error) {
@@ -55,12 +53,10 @@ const LoginPage = () => {
     
     checkAuth();
     
-    // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed in LoginPage:", event, "Session exists:", !!session);
       
       if (session) {
-        // If we receive a new session, check if this is a new user
         const isNewUser = session.user.user_metadata?.is_new_user === true;
         console.log("Is new user according to metadata:", isNewUser);
         
@@ -69,13 +65,14 @@ const LoginPage = () => {
           description: "Zostałeś automatycznie zalogowany."
         });
         
-        // Direct new verified users to onboarding immediately
         if (isNewUser) {
           console.log("New user, navigating to onboarding");
           navigate('/onboarding');
+          return;
         } else {
           console.log("Existing user, navigating to:", returnTo);
           navigate(returnTo);
+          return;
         }
       }
     });
@@ -104,14 +101,14 @@ const LoginPage = () => {
         description: "Zostałeś poprawnie zalogowany.",
       });
       
-      // Navigation will be handled by the auth state change listener
+      navigate(returnTo);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Błąd logowania",
         description: error.message || "Wystąpił błąd podczas logowania. Spróbuj ponownie."
       });
-      setLoading(false); // Only set loading to false on error, success is handled by auth state change
+      setLoading(false);
     }
   };
 
@@ -153,7 +150,6 @@ const LoginPage = () => {
     }
   };
 
-  // Show loading while checking authentication
   if (authChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

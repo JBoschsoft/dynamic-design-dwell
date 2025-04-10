@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -62,7 +61,9 @@ const VerificationPage = () => {
             });
             
             // Direct navigation to onboarding without delay
-            navigate('/onboarding');
+            setTimeout(() => {
+              navigate('/onboarding');
+            }, 0);
           } else {
             // For password recovery or other auth flows
             toast({
@@ -109,11 +110,13 @@ const VerificationPage = () => {
             description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
           });
           
-          // Direct navigation to onboarding
+          // Direct navigation to onboarding without using a timeout
           navigate('/onboarding');
+          return;
         } else {
           // For existing users
           navigate('/dashboard');
+          return;
         }
       }
     });
