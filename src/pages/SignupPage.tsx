@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -38,6 +37,19 @@ const SignupPage = () => {
     
     setPasswordStrength(strength);
   }, [password]);
+
+  // Check if the user is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // User is already logged in, redirect to onboarding or dashboard
+        navigate('/onboarding');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   // Prevent copy paste for password fields
   const preventCopyPaste = (e: React.ClipboardEvent) => {
@@ -96,6 +108,9 @@ const SignupPage = () => {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/verification`,
+          data: {
+            is_new_user: true
+          }
         }
       });
       
@@ -247,8 +262,6 @@ const SignupPage = () => {
                 </p>
               )}
             </div>
-
-            {/* Removed the terms and privacy policy checkbox div here */}
           </div>
 
           <Button

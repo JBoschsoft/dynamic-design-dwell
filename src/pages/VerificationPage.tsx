@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,7 @@ const VerificationPage = () => {
   const [loading, setLoading] = useState(false);
   const [invitationId, setInvitationId] = useState<string | null>(null);
   const [verificationComplete, setVerificationComplete] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
@@ -46,13 +46,28 @@ const VerificationPage = () => {
         
         if (session) {
           console.log("User is authenticated after verification");
-          toast({
-            title: "Weryfikacja udana",
-            description: "Twoje konto zostało pomyślnie zweryfikowane."
-          });
           
-          // Redirect to onboarding after a short delay
-          setTimeout(() => navigate('/onboarding'), 1500);
+          // Check if this is a new user who has just confirmed their email
+          if (type === 'signup') {
+            console.log("New user signup confirmed, redirecting to onboarding");
+            setIsNewUser(true);
+            
+            toast({
+              title: "Weryfikacja udana",
+              description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
+            });
+            
+            // Redirect to onboarding after a short delay
+            setTimeout(() => navigate('/onboarding'), 1500);
+          } else {
+            // For password recovery or other auth flows
+            toast({
+              title: "Weryfikacja udana",
+              description: "Twoje konto zostało pomyślnie zweryfikowane."
+            });
+            
+            setTimeout(() => navigate('/dashboard'), 1500);
+          }
         } else {
           console.log("User is verified but not logged in");
           // If verified but not logged in, redirect to login
@@ -89,6 +104,7 @@ const VerificationPage = () => {
       });
       
       setVerificationComplete(true);
+      setIsNewUser(true);
       
       // If this was from an invitation, we need to accept the invitation
       if (invitationId) {
@@ -164,7 +180,7 @@ const VerificationPage = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          // Redirect to onboarding page after successful verification
+          // New user - Redirect to onboarding page after successful verification
           setTimeout(() => navigate('/onboarding'), 2000);
         } else {
           // Redirect to login if not authenticated
@@ -205,7 +221,9 @@ const VerificationPage = () => {
             Weryfikacja zakończona
           </h2>
           <p className="mt-2 text-gray-600">
-            Przekierowujemy Cię do następnego kroku...
+            {isNewUser 
+              ? "Przekierowujemy Cię do procesu konfiguracji konta..." 
+              : "Przekierowujemy Cię do strony logowania..."}
           </p>
           <div className="mt-6">
             <div className="animate-pulse rounded-full h-2 bg-primary mx-auto"></div>

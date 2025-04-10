@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,16 @@ const LoginPage = () => {
         
         if (session) {
           console.log("User already logged in, redirecting to:", returnTo);
-          navigate(returnTo);
+          
+          // Check if this was a newly verified user
+          const { email_verified, is_new_user } = session.user.user_metadata || {};
+          
+          if (email_verified && is_new_user) {
+            console.log("New verified user, redirecting to onboarding");
+            navigate('/onboarding');
+          } else {
+            navigate(returnTo);
+          }
         }
       } catch (error) {
         console.error("Error checking authentication:", error);
@@ -48,13 +56,20 @@ const LoginPage = () => {
       console.log("Auth state changed:", event, "Session exists:", !!session);
       
       if (session) {
-        // If we receive a new session, navigate to returnTo path
+        // If we receive a new session, check if this is a new user
+        const { is_new_user } = session.user.user_metadata || {};
+        
         toast({
           title: "Zalogowano pomyślnie",
           description: "Zostałeś automatycznie zalogowany."
         });
         
-        navigate(returnTo);
+        // Direct new verified users to onboarding
+        if (is_new_user) {
+          navigate('/onboarding');
+        } else {
+          navigate(returnTo);
+        }
       }
     });
     
@@ -82,7 +97,7 @@ const LoginPage = () => {
         description: "Zostałeś poprawnie zalogowany.",
       });
       
-      // Navigate to the return URL or homepage (navigation will be handled by the auth state change listener)
+      // Navigation will be handled by the auth state change listener
     } catch (error: any) {
       toast({
         variant: "destructive",
