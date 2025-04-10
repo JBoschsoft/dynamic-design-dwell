@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -30,6 +31,8 @@ const OnboardingPage = () => {
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('pl'); // Default to Poland
   
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [currentAgreement, setCurrentAgreement] = useState<'tos' | 'privacy' | 'msa'>('tos');
@@ -144,7 +147,7 @@ const OnboardingPage = () => {
   
   const handleNextStep = async () => {
     if (currentStep === 1) {
-      if (!companyName || !industry || !companySize) {
+      if (!companyName || !industry || !companySize || !phoneNumber) {
         toast({
           variant: "destructive",
           title: "Uzupełnij wszystkie pola",
@@ -162,7 +165,18 @@ const OnboardingPage = () => {
       setLoading(true);
       
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Call Supabase function to create workspace with admin
+        const { data, error } = await supabase.rpc('create_workspace_with_admin', {
+          workspace_name: companyName,
+          workspace_industry: industry,
+          workspace_company_size: companySize,
+          user_phone_number: phoneNumber,
+          user_country_code: countryCode
+        });
+        
+        if (error) throw error;
+        
+        console.log("Workspace created with ID:", data);
         
         toast({
           title: "Dane firmy zapisane",
@@ -225,6 +239,10 @@ const OnboardingPage = () => {
             setIndustry={setIndustry}
             companySize={companySize}
             setCompanySize={setCompanySize}
+            phoneNumber={phoneNumber}
+            setPhoneNumber={setPhoneNumber}
+            countryCode={countryCode}
+            setCountryCode={setCountryCode}
             tosAgreed={tosAgreed}
             privacyAgreed={privacyAgreed}
             msaAgreed={msaAgreed}

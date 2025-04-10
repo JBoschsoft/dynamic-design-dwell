@@ -9,6 +9,8 @@ import {
   FileText, CheckCircle2, Building2, ArrowRight, Loader2
 } from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 interface CompanyInfoStepProps {
   companyName: string;
@@ -17,6 +19,10 @@ interface CompanyInfoStepProps {
   setIndustry: (value: string) => void;
   companySize: string;
   setCompanySize: (value: string) => void;
+  phoneNumber: string;
+  setPhoneNumber: (value: string) => void;
+  countryCode: string;
+  setCountryCode: (value: string) => void;
   tosAgreed: boolean;
   privacyAgreed: boolean;
   msaAgreed: boolean;
@@ -40,6 +46,56 @@ const industries = [
   "Other"
 ];
 
+// European countries + USA
+const countries = [
+  { code: "al", name: "Albania" },
+  { code: "ad", name: "Andorra" },
+  { code: "at", name: "Austria" },
+  { code: "by", name: "Belarus" },
+  { code: "be", name: "Belgium" },
+  { code: "ba", name: "Bosnia and Herzegovina" },
+  { code: "bg", name: "Bulgaria" },
+  { code: "hr", name: "Croatia" },
+  { code: "cy", name: "Cyprus" },
+  { code: "cz", name: "Czech Republic" },
+  { code: "dk", name: "Denmark" },
+  { code: "ee", name: "Estonia" },
+  { code: "fi", name: "Finland" },
+  { code: "fr", name: "France" },
+  { code: "de", name: "Germany" },
+  { code: "gr", name: "Greece" },
+  { code: "hu", name: "Hungary" },
+  { code: "is", name: "Iceland" },
+  { code: "ie", name: "Ireland" },
+  { code: "it", name: "Italy" },
+  { code: "lv", name: "Latvia" },
+  { code: "li", name: "Liechtenstein" },
+  { code: "lt", name: "Lithuania" },
+  { code: "lu", name: "Luxembourg" },
+  { code: "mt", name: "Malta" },
+  { code: "md", name: "Moldova" },
+  { code: "mc", name: "Monaco" },
+  { code: "me", name: "Montenegro" },
+  { code: "nl", name: "Netherlands" },
+  { code: "mk", name: "North Macedonia" },
+  { code: "no", name: "Norway" },
+  { code: "pl", name: "Poland" },
+  { code: "pt", name: "Portugal" },
+  { code: "ro", name: "Romania" },
+  { code: "ru", name: "Russia" },
+  { code: "sm", name: "San Marino" },
+  { code: "rs", name: "Serbia" },
+  { code: "sk", name: "Slovakia" },
+  { code: "si", name: "Slovenia" },
+  { code: "es", name: "Spain" },
+  { code: "se", name: "Sweden" },
+  { code: "ch", name: "Switzerland" },
+  { code: "ua", name: "Ukraine" },
+  { code: "gb", name: "United Kingdom" },
+  { code: "va", name: "Vatican City" },
+  { code: "us", name: "United States" }
+];
+
 const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   companyName,
   setCompanyName,
@@ -47,6 +103,10 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   setIndustry,
   companySize,
   setCompanySize,
+  phoneNumber,
+  setPhoneNumber,
+  countryCode,
+  setCountryCode,
   tosAgreed,
   privacyAgreed,
   msaAgreed,
@@ -56,7 +116,7 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
 }) => {
   
   const handleNextStep = () => {
-    if (!companyName || !industry || !companySize) {
+    if (!companyName || !industry || !companySize || !phoneNumber) {
       toast({
         variant: "destructive",
         title: "Uzupełnij wszystkie pola",
@@ -138,6 +198,32 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                 <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="phone-number">Numer telefonu</Label>
+            <div className="flex">
+              <Select value={countryCode} onValueChange={setCountryCode}>
+                <SelectTrigger id="country-code" className="w-1/3 bg-white focus:border-primary">
+                  <SelectValue placeholder="Kraj" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {countries.map(country => (
+                    <SelectItem key={country.code} value={country.code}>
+                      {country.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input 
+                id="phone-number"
+                type="tel"
+                placeholder="Wprowadź numer telefonu"
+                value={phoneNumber}
+                onChange={e => setPhoneNumber(e.target.value)}
+                className="flex-1 ml-2 bg-white focus:border-primary"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
