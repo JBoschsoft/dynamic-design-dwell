@@ -197,6 +197,30 @@ const OnboardingPage = () => {
     setLoading(true);
     
     try {
+      console.log("Starting workspace creation...");
+      console.log("Request data:", {
+        companyName,
+        industry,
+        companySize,
+        phoneNumber,
+        countryCode
+      });
+      
+      // Get session information to ensure we have a valid token
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error:", sessionError);
+        throw new Error("Authentication session error. Please try signing in again.");
+      }
+      
+      if (!sessionData?.session) {
+        console.error("No active session found");
+        throw new Error("No active session. Please sign in before creating a workspace.");
+      }
+      
+      console.log("Session verified, proceeding with API call");
+      
       const { data, error } = await supabase.functions.invoke('create-workspace', {
         body: {
           companyName,
@@ -207,16 +231,23 @@ const OnboardingPage = () => {
         },
       });
       
+      console.log("API response:", data, error);
+      
       if (error) {
+        console.error("Function invocation error:", error);
         throw error;
       }
       
       // Store the workspace ID
       if (data?.workspaceId) {
+        console.log("Workspace created with ID:", data.workspaceId);
         setWorkspaceId(data.workspaceId);
         
         // Update URL with workspace ID
         navigate(`/onboarding?step=2&workspace=${data.workspaceId}`, { replace: true });
+      } else {
+        console.error("Missing workspace ID in response:", data);
+        throw new Error("Invalid response from server. Missing workspace ID.");
       }
       
       toast({
@@ -227,10 +258,20 @@ const OnboardingPage = () => {
       setCurrentStep(2);
       
     } catch (error: any) {
+      console.error("Workspace creation error:", error);
+      
+      let errorMessage = "Wystąpił błąd podczas zapisywania informacji o firmie.";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error);
+      }
+      
       toast({
         variant: "destructive",
         title: "Błąd zapisu",
-        description: error.message || "Wystąpił błąd podczas zapisywania informacji o firmie."
+        description: errorMessage
       });
     } finally {
       setLoading(false);
