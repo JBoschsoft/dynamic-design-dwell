@@ -4,12 +4,14 @@ import {
   Button,
   Input,
   Label,
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Card, CardContent, CardHeader, CardTitle, CardDescription,
-  FileText, CheckCircle2, Building2, ArrowRight, Loader2
+  FileText, CheckCircle2, Building2, ArrowRight, Loader2, Search,
+  Command, CommandInput, CommandEmpty, CommandGroup, CommandItem
 } from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
-import PhoneInput from 'react-phone-input-2';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
 import 'react-phone-input-2/lib/style.css';
 
 interface CompanyInfoStepProps {
@@ -46,54 +48,54 @@ const industries = [
   "Other"
 ];
 
-// European countries + USA
+// European countries + USA with flag emoji
 const countries = [
-  { code: "al", name: "Albania" },
-  { code: "ad", name: "Andorra" },
-  { code: "at", name: "Austria" },
-  { code: "by", name: "Belarus" },
-  { code: "be", name: "Belgium" },
-  { code: "ba", name: "Bosnia and Herzegovina" },
-  { code: "bg", name: "Bulgaria" },
-  { code: "hr", name: "Croatia" },
-  { code: "cy", name: "Cyprus" },
-  { code: "cz", name: "Czech Republic" },
-  { code: "dk", name: "Denmark" },
-  { code: "ee", name: "Estonia" },
-  { code: "fi", name: "Finland" },
-  { code: "fr", name: "France" },
-  { code: "de", name: "Germany" },
-  { code: "gr", name: "Greece" },
-  { code: "hu", name: "Hungary" },
-  { code: "is", name: "Iceland" },
-  { code: "ie", name: "Ireland" },
-  { code: "it", name: "Italy" },
-  { code: "lv", name: "Latvia" },
-  { code: "li", name: "Liechtenstein" },
-  { code: "lt", name: "Lithuania" },
-  { code: "lu", name: "Luxembourg" },
-  { code: "mt", name: "Malta" },
-  { code: "md", name: "Moldova" },
-  { code: "mc", name: "Monaco" },
-  { code: "me", name: "Montenegro" },
-  { code: "nl", name: "Netherlands" },
-  { code: "mk", name: "North Macedonia" },
-  { code: "no", name: "Norway" },
-  { code: "pl", name: "Poland" },
-  { code: "pt", name: "Portugal" },
-  { code: "ro", name: "Romania" },
-  { code: "ru", name: "Russia" },
-  { code: "sm", name: "San Marino" },
-  { code: "rs", name: "Serbia" },
-  { code: "sk", name: "Slovakia" },
-  { code: "si", name: "Slovenia" },
-  { code: "es", name: "Spain" },
-  { code: "se", name: "Sweden" },
-  { code: "ch", name: "Switzerland" },
-  { code: "ua", name: "Ukraine" },
-  { code: "gb", name: "United Kingdom" },
-  { code: "va", name: "Vatican City" },
-  { code: "us", name: "United States" }
+  { code: "al", name: "Albania", flag: "🇦🇱" },
+  { code: "ad", name: "Andorra", flag: "🇦🇩" },
+  { code: "at", name: "Austria", flag: "🇦🇹" },
+  { code: "by", name: "Belarus", flag: "🇧🇾" },
+  { code: "be", name: "Belgium", flag: "🇧🇪" },
+  { code: "ba", name: "Bosnia and Herzegovina", flag: "🇧🇦" },
+  { code: "bg", name: "Bulgaria", flag: "🇧🇬" },
+  { code: "hr", name: "Croatia", flag: "🇭🇷" },
+  { code: "cy", name: "Cyprus", flag: "🇨🇾" },
+  { code: "cz", name: "Czech Republic", flag: "🇨🇿" },
+  { code: "dk", name: "Denmark", flag: "🇩🇰" },
+  { code: "ee", name: "Estonia", flag: "🇪🇪" },
+  { code: "fi", name: "Finland", flag: "🇫🇮" },
+  { code: "fr", name: "France", flag: "🇫🇷" },
+  { code: "de", name: "Germany", flag: "🇩🇪" },
+  { code: "gr", name: "Greece", flag: "🇬🇷" },
+  { code: "hu", name: "Hungary", flag: "🇭🇺" },
+  { code: "is", name: "Iceland", flag: "🇮🇸" },
+  { code: "ie", name: "Ireland", flag: "🇮🇪" },
+  { code: "it", name: "Italy", flag: "🇮🇹" },
+  { code: "lv", name: "Latvia", flag: "🇱🇻" },
+  { code: "li", name: "Liechtenstein", flag: "🇱🇮" },
+  { code: "lt", name: "Lithuania", flag: "🇱🇹" },
+  { code: "lu", name: "Luxembourg", flag: "🇱🇺" },
+  { code: "mt", name: "Malta", flag: "🇲🇹" },
+  { code: "md", name: "Moldova", flag: "🇲🇩" },
+  { code: "mc", name: "Monaco", flag: "🇲🇨" },
+  { code: "me", name: "Montenegro", flag: "🇲🇪" },
+  { code: "nl", name: "Netherlands", flag: "🇳🇱" },
+  { code: "mk", name: "North Macedonia", flag: "🇲🇰" },
+  { code: "no", name: "Norway", flag: "🇳🇴" },
+  { code: "pl", name: "Poland", flag: "🇵🇱" },
+  { code: "pt", name: "Portugal", flag: "🇵🇹" },
+  { code: "ro", name: "Romania", flag: "🇷🇴" },
+  { code: "ru", name: "Russia", flag: "🇷🇺" },
+  { code: "sm", name: "San Marino", flag: "🇸🇲" },
+  { code: "rs", name: "Serbia", flag: "🇷🇸" },
+  { code: "sk", name: "Slovakia", flag: "🇸🇰" },
+  { code: "si", name: "Slovenia", flag: "🇸🇮" },
+  { code: "es", name: "Spain", flag: "🇪🇸" },
+  { code: "se", name: "Sweden", flag: "🇸🇪" },
+  { code: "ch", name: "Switzerland", flag: "🇨🇭" },
+  { code: "ua", name: "Ukraine", flag: "🇺🇦" },
+  { code: "gb", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "va", name: "Vatican City", flag: "🇻🇦" },
+  { code: "us", name: "United States", flag: "🇺🇸" }
 ];
 
 const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
@@ -114,6 +116,20 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   onNext,
   loading
 }) => {
+  const [open, setOpen] = useState(false);
+  const [industryOpen, setIndustryOpen] = useState(false);
+  const [companySizeOpen, setCompanySizeOpen] = useState(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState("");
+  const [industrySearchQuery, setIndustrySearchQuery] = useState("");
+  
+  const filteredCountries = countries.filter(country => 
+    country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
+    country.code.toLowerCase().includes(countrySearchQuery.toLowerCase())
+  );
+
+  const filteredIndustries = industries.filter(industry => 
+    industry.toLowerCase().includes(industrySearchQuery.toLowerCase())
+  );
   
   const handleNextStep = () => {
     if (!companyName || !industry || !companySize || !phoneNumber) {
@@ -172,49 +188,205 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
           
           <div className="space-y-2">
             <Label htmlFor="industry">Branża</Label>
-            <Select value={industry} onValueChange={setIndustry}>
-              <SelectTrigger id="industry" className="bg-white focus:border-primary">
-                <SelectValue placeholder="Wybierz branżę" />
-              </SelectTrigger>
-              <SelectContent>
-                {industries.map(ind => (
-                  <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={industryOpen} onOpenChange={setIndustryOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={industryOpen}
+                  aria-label="Select industry"
+                  className="w-full justify-between bg-white focus:border-primary"
+                >
+                  {industry ? industry : "Wybierz branżę"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput 
+                    placeholder="Szukaj branży..." 
+                    value={industrySearchQuery}
+                    onValueChange={setIndustrySearchQuery}
+                  />
+                  <CommandEmpty>Nie znaleziono pasujących branż.</CommandEmpty>
+                  <CommandGroup className="max-h-[300px] overflow-y-auto">
+                    {filteredIndustries.map((ind) => (
+                      <CommandItem
+                        key={ind}
+                        value={ind}
+                        onSelect={() => {
+                          setIndustry(ind);
+                          setIndustryOpen(false);
+                          setIndustrySearchQuery("");
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            industry === ind ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {ind}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="company-size">Wielkość firmy</Label>
-            <Select value={companySize} onValueChange={setCompanySize}>
-              <SelectTrigger id="company-size" className="bg-white focus:border-primary">
-                <SelectValue placeholder="Wybierz wielkość firmy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1-10">1-10 pracowników</SelectItem>
-                <SelectItem value="11-50">11-50 pracowników</SelectItem>
-                <SelectItem value="51-200">51-200 pracowników</SelectItem>
-                <SelectItem value="201-500">201-500 pracowników</SelectItem>
-                <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover open={companySizeOpen} onOpenChange={setCompanySizeOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={companySizeOpen}
+                  aria-label="Select company size"
+                  className="w-full justify-between bg-white focus:border-primary"
+                >
+                  {companySize ? (
+                    companySize === "1-10" 
+                      ? "1-10 pracowników" 
+                      : companySize === "11-50"
+                        ? "11-50 pracowników"
+                        : companySize === "51-200"
+                          ? "51-200 pracowników"
+                          : companySize === "201-500"
+                            ? "201-500 pracowników"
+                            : "Ponad 500 pracowników"
+                  ) : "Wybierz wielkość firmy"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandGroup>
+                    <CommandItem onSelect={() => {
+                      setCompanySize("1-10");
+                      setCompanySizeOpen(false);
+                    }}>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          companySize === "1-10" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      1-10 pracowników
+                    </CommandItem>
+                    <CommandItem onSelect={() => {
+                      setCompanySize("11-50");
+                      setCompanySizeOpen(false);
+                    }}>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          companySize === "11-50" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      11-50 pracowników
+                    </CommandItem>
+                    <CommandItem onSelect={() => {
+                      setCompanySize("51-200");
+                      setCompanySizeOpen(false);
+                    }}>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          companySize === "51-200" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      51-200 pracowników
+                    </CommandItem>
+                    <CommandItem onSelect={() => {
+                      setCompanySize("201-500");
+                      setCompanySizeOpen(false);
+                    }}>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          companySize === "201-500" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      201-500 pracowników
+                    </CommandItem>
+                    <CommandItem onSelect={() => {
+                      setCompanySize("501+");
+                      setCompanySizeOpen(false);
+                    }}>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          companySize === "501+" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      Ponad 500 pracowników
+                    </CommandItem>
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="phone-number">Numer telefonu</Label>
             <div className="flex">
-              <Select value={countryCode} onValueChange={setCountryCode}>
-                <SelectTrigger id="country-code" className="w-1/3 bg-white focus:border-primary">
-                  <SelectValue placeholder="Kraj" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {countries.map(country => (
-                    <SelectItem key={country.code} value={country.code}>
-                      {country.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    aria-label="Select a country"
+                    className="w-[140px] justify-between bg-white focus:border-primary"
+                  >
+                    {countryCode ? (
+                      <>
+                        <span className="mr-1">
+                          {countries.find(c => c.code === countryCode)?.flag}
+                        </span>
+                        {countries.find(c => c.code === countryCode)?.name}
+                      </>
+                    ) : (
+                      "Wybierz kraj"
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Szukaj kraju..." 
+                      value={countrySearchQuery}
+                      onValueChange={setCountrySearchQuery}
+                    />
+                    <CommandEmpty>Nie znaleziono pasującego kraju.</CommandEmpty>
+                    <CommandGroup className="max-h-[300px] overflow-y-auto">
+                      {filteredCountries.map((country) => (
+                        <CommandItem
+                          key={country.code}
+                          value={country.code}
+                          onSelect={() => {
+                            setCountryCode(country.code);
+                            setOpen(false);
+                            setCountrySearchQuery("");
+                          }}
+                        >
+                          <span className="mr-2">{country.flag}</span>
+                          <span>{country.name}</span>
+                          <Check
+                            className={cn(
+                              "ml-auto h-4 w-4",
+                              countryCode === country.code ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <Input 
                 id="phone-number"
                 type="tel"
