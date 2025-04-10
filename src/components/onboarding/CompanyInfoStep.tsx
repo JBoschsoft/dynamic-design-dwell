@@ -122,14 +122,17 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
   const [industrySearchQuery, setIndustrySearchQuery] = useState("");
   
-  const filteredCountries = countries.filter(country => 
-    country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
-    country.code.toLowerCase().includes(countrySearchQuery.toLowerCase())
-  );
+  // Fix: Ensure we always have an array to iterate over by using a fallback empty array
+  const filteredCountries = countrySearchQuery 
+    ? countries.filter(country => 
+        country.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
+        country.code.toLowerCase().includes(countrySearchQuery.toLowerCase()))
+    : countries;
 
-  const filteredIndustries = industries.filter(industry => 
-    industry.toLowerCase().includes(industrySearchQuery.toLowerCase())
-  );
+  const filteredIndustries = industrySearchQuery
+    ? industries.filter(ind => 
+        ind.toLowerCase().includes(industrySearchQuery.toLowerCase()))
+    : industries;
   
   const handleNextStep = () => {
     if (!companyName || !industry || !companySize || !phoneNumber) {
@@ -344,9 +347,9 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                     {countryCode ? (
                       <>
                         <span className="mr-1">
-                          {countries.find(c => c.code === countryCode)?.flag}
+                          {countries.find(c => c.code === countryCode)?.flag || ''}
                         </span>
-                        {countries.find(c => c.code === countryCode)?.name}
+                        {countries.find(c => c.code === countryCode)?.name || ''}
                       </>
                     ) : (
                       "Wybierz kraj"
