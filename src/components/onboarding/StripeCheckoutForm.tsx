@@ -8,6 +8,7 @@ import {
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -127,14 +128,14 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         .from('workspaces')
         .select('*')
         .eq('id', memberData.workspace_id)
-        .single();
+        .maybeSingle();
       
       if (workspaceError) {
         console.error("Error fetching workspace data:", workspaceError);
         return;
       }
       
-      const currentBalance = workspaceData?.token_balance ?? 0;
+      const currentBalance = workspaceData?.token_balance ?? 5;
       const newBalance = currentBalance + amount;
       
       const { error: updateError } = await supabase
