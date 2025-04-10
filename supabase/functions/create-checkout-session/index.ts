@@ -257,7 +257,6 @@ serve(async (req) => {
         currency: 'pln',
         customer: stripeCustomerId || undefined,
         payment_method_types: ['card'],
-        // Remove expiresAt and any timer related functionality
         metadata: {
           tokenAmount: tokenAmount.toString(),
           unitPrice: unitPrice.toString(),
@@ -266,7 +265,6 @@ serve(async (req) => {
           workspaceId: workspaceId || undefined,
           userId: userId || undefined
         },
-        // Don't set a short expiration time
       });
       
       console.log("Payment intent created successfully:", paymentIntent.id);

@@ -30,6 +30,7 @@ interface PaymentStepProps {
   paymentLoading: boolean;
   paymentSuccess: boolean;
   onOpenCheckout: () => void;
+  onSkipPayment: () => void;
 }
 
 const PaymentStep: React.FC<PaymentStepProps> = ({
@@ -43,17 +44,14 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
   onPrevious,
   paymentLoading,
   paymentSuccess,
-  onOpenCheckout
+  onOpenCheckout,
+  onSkipPayment
 }) => {
   
   const formatSubscriptionValue = (value: number[]) => {
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
-  };
-  
-  const handleDirectNextStep = () => {
-    onNext();
   };
   
   return (
@@ -69,7 +67,7 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
       </h2>
       
       <p className="text-gray-600 text-center mb-8">
-        Aby aktywować funkcje platformy, wybierz preferowany wariant płatności.
+        Aby aktywować funkcje platformy, wybierz preferowany wariant płatności lub pomiń ten krok.
       </p>
       
       <div className="space-y-6">
@@ -339,11 +337,11 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
 
         <Button 
           variant="secondary"
-          onClick={handleDirectNextStep}
+          onClick={onSkipPayment}
           className="w-full px-5"
           disabled={paymentLoading || paymentSuccess}
         >
-          Przejdź do następnego kroku 
+          Pomiń płatność i kontynuuj
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

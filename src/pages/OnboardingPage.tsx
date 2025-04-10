@@ -226,6 +226,40 @@ const OnboardingPage = () => {
     proceedToPayment();
   };
   
+  const skipPayment = () => {
+    // Update token balance without payment
+    const updateTokenBalance = async () => {
+      try {
+        const { data: memberData } = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+          .single();
+          
+        if (memberData?.workspace_id) {
+          // Add starter tokens (5)
+          await supabase
+            .from('workspaces')
+            .update({ 
+              token_balance: 5,
+              balance_auto_topup: false
+            })
+            .eq('id', memberData.workspace_id);
+            
+          toast({
+            title: "Pominięto płatność",
+            description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
+          });
+        }
+      } catch (error) {
+        console.error("Error updating token balance:", error);
+      }
+    };
+    
+    updateTokenBalance();
+    setCurrentStep(3);
+  };
+  
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <ProgressBar currentStep={currentStep} totalSteps={6} />
@@ -265,6 +299,7 @@ const OnboardingPage = () => {
             paymentLoading={paymentLoading}
             paymentSuccess={paymentSuccess}
             onOpenCheckout={handleOpenCheckout}
+            onSkipPayment={skipPayment}
           />
         )}
         

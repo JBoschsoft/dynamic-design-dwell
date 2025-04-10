@@ -264,7 +264,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // Clear any previous error state on the card element
       cardElement.update({});
       
       // Check if we need to refresh the payment intent (over 20 minutes old)
@@ -278,17 +277,15 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         return;
       }
       
-      let result;
+      if (!clientSecret) {
+        throw new Error("Brak klucza klienta do autoryzacji płatności");
+      }
+      
+      console.log(`Processing ${paymentType} payment with client secret`);
       
       if (paymentType === 'one-time') {
-        if (!clientSecret) {
-          throw new Error("Brak klucza klienta dla płatności");
-        }
-        
-        console.log("Confirming one-time payment with card element");
-
-        // Important: For one-time payments, we're using confirmCardPayment
-        result = await stripe.confirmCardPayment(clientSecret, {
+        // For one-time payments, use confirmCardPayment
+        const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
             billing_details: {}, // Add empty billing details to meet API requirements
@@ -303,6 +300,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         console.log("Payment result:", result);
         
         if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+          console.log("Payment successful! Updating token balance.");
           await updateTokenBalance(tokenAmount[0]);
           
           if (onSuccess) {
@@ -318,20 +316,16 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
           });
         } else if (result.paymentIntent && result.paymentIntent.status === 'requires_action') {
-          // Handle 3D Secure authentication if needed
-          console.log("Payment requires additional action. Redirecting to 3D Secure...");
-          // No need to do anything, Stripe will handle the redirect
+          console.log("3D Secure authentication required...");
+          // The Stripe JS library will handle the redirect automatically
         } else {
           console.error("Unexpected payment status:", result.paymentIntent?.status);
-          throw new Error("Płatność nie została zakończona pomyślnie.");
+          throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${result.paymentIntent?.status || 'nieznany'}`);
         }
       } else {
-        if (!clientSecret) {
-          throw new Error("Brak klucza klienta dla subskrypcji");
-        }
-        
+        // For subscriptions, use confirmCardSetup
         console.log("Confirming subscription setup with card element");
-        result = await stripe.confirmCardSetup(clientSecret, {
+        const result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
             billing_details: {}, // Add empty billing details to meet API requirements
@@ -339,17 +333,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         });
         
         if (result.error) {
-          throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
+          throw new Error(result.error.message || "Wystąpił błąd podczas ustawiania metody płatności");
         }
         
         console.log("Setup result:", result);
         
         const setupResult = result.setupIntent;
         
-        if (setupResult && setupResult.payment_method) {
+        if (setupResult && setupResult.status === 'succeeded' && setupResult.payment_method) {
           await createInitialCharge(setupResult.payment_method);
         } else {
-          throw new Error("Brak informacji o metodzie płatności");
+          throw new Error(`Nieudane ustawienie metody płatności. Status: ${setupResult?.status || 'nieznany'}`);
         }
       }
       
