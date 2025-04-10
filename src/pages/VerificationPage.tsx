@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -43,15 +42,14 @@ const VerificationPage = () => {
         console.log('User has been verified via Supabase callback with type:', type);
         setVerificationComplete(true);
         
-        // If this is a signup, mark as new user and send directly to onboarding
+        // For signup, we treat them as new users and send directly to onboarding
         if (type === 'signup') {
           console.log("Setting isNewUser to true based on URL param");
           setIsNewUser(true);
           
-          // IMPORTANT: Instead of redirecting to login, we get the session and redirect directly to onboarding
+          // Get the current session after verification
           const { data } = await supabase.auth.getSession();
           
-          // If we have a session after verification, update user metadata and go directly to onboarding
           if (data?.session) {
             console.log("Session exists after verification, setting is_new_user and redirecting to onboarding");
             
@@ -65,10 +63,10 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
             });
             
-            // Redirect directly to onboarding
+            // CRITICAL: Redirect directly to onboarding without requiring login
             navigate('/onboarding', { replace: true });
           } else {
-            // If no session yet (rare case), redirect to login with proper state
+            // In the rare case there's no session after verification
             console.log("No session after verification, redirecting to login with returnTo onboarding");
             toast({
               title: "Weryfikacja udana",
@@ -120,7 +118,7 @@ const VerificationPage = () => {
         description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
       });
       
-      // IMPORTANT: Direct navigation to onboarding page instead of login
+      // IMPORTANT: Direct navigation to onboarding page - no login page detour
       navigate('/onboarding', { replace: true });
       
     } catch (error: any) {
