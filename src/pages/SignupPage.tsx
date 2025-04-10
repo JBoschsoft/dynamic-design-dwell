@@ -106,8 +106,7 @@ const SignupPage = () => {
         password,
         options: {
           data: {
-            is_new_user: true,
-            email_verification_sent: true
+            is_new_user: true
           },
           emailRedirectTo: `${window.location.origin}/verification?type=signup`
         }

@@ -56,7 +56,7 @@ const VerificationPage = () => {
           
           // For signup flows, ensure the is_new_user flag is set in metadata
           if (type === 'signup') {
-            // Update user metadata if needed to ensure is_new_user flag is set
+            // Update user metadata to ensure is_new_user flag is set
             const { error: updateError } = await supabase.auth.updateUser({
               data: { is_new_user: true }
             });
@@ -73,10 +73,8 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
             });
             
-            // Force navigation to onboarding with small delay to ensure metadata is saved
-            setTimeout(() => {
-              navigate('/onboarding', { replace: true });
-            }, 300);
+            // Redirect to onboarding immediately
+            navigate('/onboarding', { replace: true });
             return;
           } else {
             // For password recovery or other auth flows
@@ -85,7 +83,7 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane."
             });
             
-            setTimeout(() => navigate('/dashboard', { replace: true }), 300);
+            navigate('/dashboard', { replace: true });
             return;
           }
         } else {
@@ -97,21 +95,17 @@ const VerificationPage = () => {
             description: "Zaloguj się, aby kontynuować."
           });
           
-          // The redirect to login happens with a state parameter to handle redirection after login
-          setTimeout(() => {
-            // For signup, redirect to onboarding after login
-            if (type === 'signup') {
-              navigate('/login', { 
-                state: { 
-                  returnTo: '/onboarding',
-                  isNewUser: true 
-                }
-              });
-            } else {
-              navigate('/login');
-            }
-          }, 300);
-          return;
+          // For signup, redirect to login with state indicating this is a new user
+          if (type === 'signup') {
+            navigate('/login', { 
+              state: { 
+                returnTo: '/onboarding',
+                isNewUser: true 
+              }
+            });
+          } else {
+            navigate('/login');
+          }
         }
       }
     };
@@ -178,98 +172,17 @@ const VerificationPage = () => {
     setLoading(true);
     
     try {
-      // In a real implementation, we would verify the OTP with Supabase here
-      // For now, we'll just show a success message and redirect
+      setVerificationComplete(true);
+      setIsNewUser(true);
       
       toast({
         title: "Weryfikacja udana",
         description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
       });
       
-      setVerificationComplete(true);
-      setIsNewUser(true);
+      // Immediately redirect to onboarding for new users
+      navigate('/onboarding', { replace: true });
       
-      // If this was from an invitation, we need to accept the invitation
-      if (invitationId) {
-        try {
-          // Check if we can fetch the invitation details to show workspace name
-          const { data: invitationData, error: invitationError } = await supabase
-            .from('workspace_invitations')
-            .select(`
-              workspace_id,
-              role,
-              workspaces:workspace_id (
-                name
-              )
-            `)
-            .eq('id', invitationId)
-            .eq('status', 'pending')
-            .single();
-            
-          if (invitationError || !invitationData) {
-            console.error('Error fetching invitation:', invitationError);
-            // Still redirect to onboarding if no valid invitation is found
-            navigate('/onboarding');
-            return;
-          }
-          
-          // Update invitation status to accepted
-          const { error: updateError } = await supabase
-            .from('workspace_invitations')
-            .update({
-              status: 'accepted'
-            })
-            .eq('id', invitationId);
-            
-          if (updateError) {
-            console.error('Error updating invitation:', updateError);
-          }
-          
-          // Cast the data to our type to access the properties safely
-          const invitation = invitationData as unknown as WorkspaceInvitation;
-          
-          // Show workspace join success
-          toast({
-            title: "Dołączono do workspace'a",
-            description: `Zostałeś dodany do workspace'a ${invitation.workspaces?.name || 'Unknown'} jako ${
-              invitation.role === 'administrator' ? 'Administrator' : 'Specjalista'
-            }.`
-          });
-          
-          // Check authentication status before redirecting
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            // Redirect to dashboard
-            setTimeout(() => navigate('/dashboard'), 1000);
-          } else {
-            // Redirect to login if not authenticated
-            setTimeout(() => navigate('/login', { state: { returnTo: '/dashboard' } }), 1000);
-          }
-          
-        } catch (error) {
-          console.error('Error processing invitation:', error);
-          // Check authentication status before redirecting
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session) {
-            navigate('/onboarding');
-          } else {
-            navigate('/login', { state: { returnTo: '/onboarding' } });
-          }
-        }
-      } else {
-        // Check authentication status before redirecting
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          // New user - Redirect to onboarding page after successful verification
-          navigate('/onboarding', { replace: true });
-        } else {
-          // Redirect to login if not authenticated
-          navigate('/login', { state: { returnTo: '/onboarding', isNewUser: true } });
-        }
-      }
     } catch (error: any) {
       toast({
         variant: "destructive",

@@ -40,22 +40,14 @@ const LoginPage = () => {
           console.log("User already logged in, session:", session);
           console.log("User metadata:", session.user.user_metadata);
           
-          if (isNewUser) {
-            console.log("New user flag in navigation state, redirecting to onboarding");
-            navigate('/onboarding', { replace: true });
-            return;
-          }
-          
           const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
           
-          if (isNewUserMeta) {
-            console.log("New verified user (from metadata), redirecting to onboarding");
+          if (isNewUserMeta || isNewUser) {
+            console.log("New user detected, redirecting to onboarding");
             navigate('/onboarding', { replace: true });
-            return;
           } else {
             console.log("Existing user, redirecting to:", returnTo);
             navigate(returnTo, { replace: true });
-            return;
           }
         }
       } catch (error) {
@@ -75,32 +67,23 @@ const LoginPage = () => {
       console.log("Auth state changed in LoginPage:", event, "Session exists:", !!session);
       
       if (session) {
-        if (isNewUser) {
-          console.log("New user flag in navigation state, redirecting to onboarding after auth change");
+        const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
+        const shouldGoToOnboarding = isNewUserMeta || isNewUser;
+        
+        if (shouldGoToOnboarding) {
+          console.log("New user signed in, navigating to onboarding");
           toast({
             title: "Zalogowano pomyślnie",
             description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
           });
           navigate('/onboarding', { replace: true });
-          return;
-        }
-        
-        const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
-        console.log("Is new user according to metadata:", isNewUserMeta);
-        
-        toast({
-          title: "Zalogowano pomyślnie",
-          description: "Zostałeś automatycznie zalogowany."
-        });
-        
-        if (isNewUserMeta) {
-          console.log("New user, navigating to onboarding");
-          navigate('/onboarding', { replace: true });
-          return;
         } else {
-          console.log("Existing user, navigating to:", returnTo);
+          console.log("Existing user signed in, navigating to:", returnTo);
+          toast({
+            title: "Zalogowano pomyślnie",
+            description: "Zostałeś automatycznie zalogowany."
+          });
           navigate(returnTo, { replace: true });
-          return;
         }
       }
     });
