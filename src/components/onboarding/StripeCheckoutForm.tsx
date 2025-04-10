@@ -341,7 +341,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         const setupResult = result.setupIntent;
         
         if (setupResult && setupResult.status === 'succeeded' && setupResult.payment_method) {
-          await createInitialCharge(setupResult.payment_method);
+          // Fix: Convert payment_method to string if it's not already
+          const paymentMethodId = typeof setupResult.payment_method === 'string' 
+            ? setupResult.payment_method 
+            : setupResult.payment_method.id;
+            
+          await createInitialCharge(paymentMethodId);
         } else {
           throw new Error(`Nieudane ustawienie metody płatności. Status: ${setupResult?.status || 'nieznany'}`);
         }
