@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -39,10 +40,11 @@ const SignupPage = () => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        console.log("User already logged in, checking if new user", session.user.user_metadata);
         if (session.user.user_metadata?.is_new_user === true) {
-          navigate('/onboarding');
+          navigate('/onboarding', { replace: true });
         } else {
-          navigate('/dashboard');
+          navigate('/dashboard', { replace: true });
         }
       }
     };
@@ -104,6 +106,7 @@ const SignupPage = () => {
         email,
         password,
         options: {
+          // The critical part - include the type=signup parameter
           emailRedirectTo: `${window.location.origin}/verification?type=signup`,
           data: {
             is_new_user: true,
@@ -123,6 +126,7 @@ const SignupPage = () => {
         description: "Wysłaliśmy link potwierdzający na Twój adres email. Sprawdź swoją skrzynkę, aby dokończyć rejestrację."
       });
       
+      // Navigate to verification page which will handle the flow
       navigate('/verification');
     } catch (error: any) {
       toast({

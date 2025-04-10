@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 interface LocationState {
   returnTo?: string;
+  isNewUser?: boolean;
 }
 
 const LoginPage = () => {
@@ -21,6 +23,7 @@ const LoginPage = () => {
   const location = useLocation();
   const state = location.state as LocationState;
   const returnTo = state?.returnTo || '/dashboard';
+  const isNewUser = state?.isNewUser || false;
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -32,15 +35,23 @@ const LoginPage = () => {
           console.log("User already logged in, session:", session);
           console.log("User metadata:", session.user.user_metadata);
           
-          const isNewUser = session.user.user_metadata?.is_new_user === true;
-          
+          // First check state from navigation (for verified users coming from verification page)
           if (isNewUser) {
-            console.log("New verified user, redirecting to onboarding");
-            navigate('/onboarding');
+            console.log("New user flag in navigation state, redirecting to onboarding");
+            navigate('/onboarding', { replace: true });
+            return;
+          }
+          
+          // Then check metadata
+          const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
+          
+          if (isNewUserMeta) {
+            console.log("New verified user (from metadata), redirecting to onboarding");
+            navigate('/onboarding', { replace: true });
             return;
           } else {
             console.log("Existing user, redirecting to:", returnTo);
-            navigate(returnTo);
+            navigate(returnTo, { replace: true });
             return;
           }
         }
@@ -57,21 +68,33 @@ const LoginPage = () => {
       console.log("Auth state changed in LoginPage:", event, "Session exists:", !!session);
       
       if (session) {
-        const isNewUser = session.user.user_metadata?.is_new_user === true;
-        console.log("Is new user according to metadata:", isNewUser);
+        // First check state from navigation (for verified users coming from verification page)
+        if (isNewUser) {
+          console.log("New user flag in navigation state, redirecting to onboarding after auth change");
+          toast({
+            title: "Zalogowano pomyślnie",
+            description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
+          });
+          navigate('/onboarding', { replace: true });
+          return;
+        }
+        
+        // Then check metadata
+        const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
+        console.log("Is new user according to metadata:", isNewUserMeta);
         
         toast({
           title: "Zalogowano pomyślnie",
           description: "Zostałeś automatycznie zalogowany."
         });
         
-        if (isNewUser) {
+        if (isNewUserMeta) {
           console.log("New user, navigating to onboarding");
-          navigate('/onboarding');
+          navigate('/onboarding', { replace: true });
           return;
         } else {
           console.log("Existing user, navigating to:", returnTo);
-          navigate(returnTo);
+          navigate(returnTo, { replace: true });
           return;
         }
       }
@@ -80,14 +103,14 @@ const LoginPage = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigate, returnTo]);
+  }, [navigate, returnTo, isNewUser]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -96,12 +119,11 @@ const LoginPage = () => {
         throw error;
       }
       
-      toast({
-        title: "Logowanie udane",
-        description: "Zostałeś poprawnie zalogowany.",
-      });
+      console.log("Login successful, checking if new user:", data?.user?.user_metadata?.is_new_user);
       
-      navigate(returnTo);
+      // Let the auth state change listener handle navigation
+      // This is intentionally empty - navigation will happen via the listener
+      
     } catch (error: any) {
       toast({
         variant: "destructive",

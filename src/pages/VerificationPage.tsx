@@ -37,9 +37,13 @@ const VerificationPage = () => {
       const type = searchParams.get('type');
       
       if (type === 'signup' || type === 'recovery') {
-        // This means Supabase has already verified the user
-        console.log('User has been verified via Supabase callback');
+        console.log('User has been verified via Supabase callback with type:', type);
         setVerificationComplete(true);
+        
+        // If this is a signup, mark as new user
+        if (type === 'signup') {
+          setIsNewUser(true);
+        }
         
         // Check if the user is already logged in
         const { data: { session } } = await supabase.auth.getSession();
@@ -47,23 +51,27 @@ const VerificationPage = () => {
         if (session) {
           console.log("User is authenticated after verification", session.user);
           
-          // Check if this is a new user who has just confirmed their email
-          const isNewSignup = type === 'signup';
-          const isNewUserMetadata = session.user.user_metadata?.is_new_user === true;
-          
-          if (isNewSignup || isNewUserMetadata) {
-            console.log("New user signup confirmed, redirecting to onboarding");
-            setIsNewUser(true);
+          // For signup flows, ensure the is_new_user flag is set in metadata
+          if (type === 'signup') {
+            // Update user metadata if needed to ensure is_new_user flag is set
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: { is_new_user: true }
+            });
             
+            if (updateError) {
+              console.error("Error updating user metadata:", updateError);
+            }
+            
+            console.log("New user signup confirmed, redirecting to onboarding");
             toast({
               title: "Weryfikacja udana",
               description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
             });
             
-            // Direct navigation to onboarding without delay
+            // Force navigation to onboarding with small delay to ensure metadata is saved
             setTimeout(() => {
-              navigate('/onboarding');
-            }, 0);
+              navigate('/onboarding', { replace: true });
+            }, 500);
           } else {
             // For password recovery or other auth flows
             toast({
@@ -71,20 +79,31 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane."
             });
             
-            setTimeout(() => navigate('/dashboard'), 1500);
+            setTimeout(() => navigate('/dashboard', { replace: true }), 500);
           }
         } else {
           console.log("User is verified but not logged in");
-          // If verified but not logged in, set flags and redirect user
-          setIsNewUser(true); // Assume new user if coming from signup flow
+          // If verified but not logged in, direct to login with special params
           
           toast({
             title: "Weryfikacja udana",
             description: "Zaloguj się, aby kontynuować."
           });
           
-          // The redirect to login happens after a delay for the toast to be visible
-          setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 1500);
+          // The redirect to login happens with a state parameter to handle redirection after login
+          setTimeout(() => {
+            // For signup, redirect to onboarding after login
+            if (type === 'signup') {
+              navigate('/login', { 
+                state: { 
+                  returnTo: '/onboarding',
+                  isNewUser: true 
+                }
+              });
+            } else {
+              navigate('/login');
+            }
+          }, 500);
         }
       }
     };
@@ -99,24 +118,35 @@ const VerificationPage = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed in VerificationPage:", event, "Session exists:", !!session);
       
+      // Only handle sign-in events - we don't want to interfere with other flows
       if (event === 'SIGNED_IN' && session) {
-        const isNewUserMetadata = session.user.user_metadata?.is_new_user === true;
-        console.log("Is new user according to metadata:", isNewUserMetadata);
+        // Check if this is a new user verification flow
+        const signupType = searchParams.get('type');
+        const isNewUserFlow = signupType === 'signup' || isNewUser;
         
-        if (isNewUserMetadata) {
-          console.log("New user signed in, redirecting to onboarding");
-          toast({
-            title: "Logowanie udane",
-            description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
-          });
+        if (isNewUserFlow) {
+          console.log("New user signed in within verification page, updating metadata and redirecting");
           
-          // Direct navigation to onboarding without using a timeout
-          navigate('/onboarding');
-          return;
+          // Update user metadata to ensure is_new_user flag is set
+          (async () => {
+            const { error } = await supabase.auth.updateUser({
+              data: { is_new_user: true }
+            });
+            
+            if (error) {
+              console.error("Error updating user metadata:", error);
+            }
+            
+            toast({
+              title: "Logowanie udane",
+              description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
+            });
+            
+            navigate('/onboarding', { replace: true });
+          })();
         } else {
           // For existing users
-          navigate('/dashboard');
-          return;
+          navigate('/dashboard', { replace: true });
         }
       }
     });
@@ -124,7 +154,7 @@ const VerificationPage = () => {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, searchParams, isNewUser]);
   
   useEffect(() => {
     const invitation = searchParams.get('invitation');
