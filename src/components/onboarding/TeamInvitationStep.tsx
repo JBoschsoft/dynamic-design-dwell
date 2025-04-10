@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface TeamMember {
   email: string;
-  role: 'hr-director' | 'hr-specialist' | 'recruiter';
+  role: 'administrator' | 'specialist';
 }
 
 interface TeamInvitationStepProps {
@@ -24,33 +24,31 @@ interface TeamInvitationStepProps {
 }
 
 const ROLE_DESCRIPTIONS = {
-  'hr-director': 'Pełny dostęp do wszystkich funkcji systemu, możliwość zarządzania użytkownikami',
-  'hr-specialist': 'Dostęp do większości funkcji rekrutacyjnych, bez możliwości zarządzania użytkownikami',
-  'recruiter': 'Podstawowy dostęp do funkcji rekrutacyjnych'
+  'administrator': 'Pełny dostęp do wszystkich funkcji systemu, możliwość zarządzania użytkownikami',
+  'specialist': 'Dostęp do większości funkcji rekrutacyjnych, bez możliwości zarządzania użytkownikami'
 };
 
 const ROLE_LABELS = {
-  'hr-director': 'Dyrektor HR',
-  'hr-specialist': 'Specjalista HR',
-  'recruiter': 'Rekruter'
+  'administrator': 'Administrator',
+  'specialist': 'Specjalista'
 };
 
 const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevious }) => {
   const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    { email: '', role: 'hr-specialist' }
+    { email: '', role: 'specialist' }
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   
   const form = useForm({
     defaultValues: {
-      teamMembers: [{ email: '', role: 'hr-specialist' }]
+      teamMembers: [{ email: '', role: 'specialist' }]
     }
   });
 
   const handleAddMember = () => {
-    setTeamMembers([...teamMembers, { email: '', role: 'hr-specialist' }]);
+    setTeamMembers([...teamMembers, { email: '', role: 'specialist' }]);
   };
 
   const handleRemoveMember = (index: number) => {
@@ -75,7 +73,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
     setTeamMembers(updatedMembers);
   };
 
-  const handleRoleChange = (index: number, role: 'hr-director' | 'hr-specialist' | 'recruiter') => {
+  const handleRoleChange = (index: number, role: 'administrator' | 'specialist') => {
     const updatedMembers = [...teamMembers];
     updatedMembers[index].role = role;
     setTeamMembers(updatedMembers);
@@ -233,9 +231,8 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevi
                       <SelectValue placeholder="Wybierz rolę" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hr-director">{ROLE_LABELS['hr-director']}</SelectItem>
-                      <SelectItem value="hr-specialist">{ROLE_LABELS['hr-specialist']}</SelectItem>
-                      <SelectItem value="recruiter">{ROLE_LABELS['recruiter']}</SelectItem>
+                      <SelectItem value="administrator">{ROLE_LABELS['administrator']}</SelectItem>
+                      <SelectItem value="specialist">{ROLE_LABELS['specialist']}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
