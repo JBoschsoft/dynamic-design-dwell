@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -92,7 +93,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (error.message?.includes('Failed to fetch') || 
           error.message?.includes('Network Error') ||
-          error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
+          error.message?.includes('ERR_BLOCKED_BY_CLIENT') ||
+          error.message?.includes('AbortError')) {
         setConnectionError(true);
         setError('Błąd połączenia z systemem płatności. Proszę sprawdzić połączenie internetowe lub wyłączyć blokady (np. adblock).');
       } else {
@@ -102,8 +104,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       toast({
         variant: "destructive",
         title: "Błąd inicjalizacji płatności",
-        description: connectionError 
-          ? "Problem z połączeniem do systemu płatności. Sprawdź połączenie internetowe lub wyłącz adblock."
+        description: error.message?.includes('ERR_BLOCKED_BY_CLIENT') 
+          ? "Wykryto blokadę połączenia do Stripe (ERR_BLOCKED_BY_CLIENT). Wyłącz AdBlock i inne blokady, aby kontynuować."
           : (error.message || "Nie można nawiązać połączenia z systemem płatności. Spróbuj ponownie."),
       });
     } finally {
@@ -367,15 +369,31 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               <div className="flex items-start">
                 <AlertCircle className="h-5 w-5 mr-2 mt-0.5" />
                 <div>
-                  <h3 className="font-medium">Problem z połączeniem do systemu płatności</h3>
+                  <h3 className="font-medium">Wykryto blokadę połączenia do systemu płatności!</h3>
                   <p className="text-sm mt-1">
-                    Wygląda na to, że połączenie do systemu płatności jest blokowane. Proszę:
+                    Strona płatności Stripe jest blokowana przez Twój przeglądarkę. Aby kontynuować, wykonaj następujące kroki:
                     <ul className="list-disc pl-5 mt-1 space-y-1">
-                      <li>Wyłączyć wszelkie blokady reklam (AdBlock, uBlock itp.)</li>
-                      <li>Sprawdzić połączenie internetowe</li>
-                      <li>Spróbować w trybie prywatnym/incognito</li>
+                      <li>Wyłącz rozszerzenia blokujące reklamy (AdBlock, uBlock Origin itp.)</li>
+                      <li>Wyłącz blokady JavaScript i ciasteczek</li>
+                      <li>Sprawdź czy zapora sieciowa nie blokuje połączeń</li>
+                      <li>Spróbuj odświeżyć stronę lub użyć trybu incognito</li>
                     </ul>
                   </p>
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fetchPaymentIntent()}
+                      disabled={loading}
+                      className="text-xs"
+                    >
+                      {loading ? (
+                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Próbuję ponownie...</>
+                      ) : (
+                        <>Spróbuj ponownie po wyłączeniu blokad</>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -403,7 +421,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </div>
           </div>
           
-          {error && (
+          {error && !connectionError && (
             <div className="text-sm text-red-500">
               {error}
             </div>
@@ -427,7 +445,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !clientSecret || processingSetupConfirmation}
+              disabled={loading || !clientSecret || processingSetupConfirmation || connectionError}
             >
               {loading || processingSetupConfirmation ? (
                 <>
