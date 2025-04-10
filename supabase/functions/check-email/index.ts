@@ -20,9 +20,18 @@ serve(async (req) => {
   try {
     console.log("Starting check-email function");
     
+    // Check for required environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error("Missing required environment variables");
+      throw new Error("Server configuration error: Missing environment variables");
+    }
+    
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      supabaseUrl,
+      supabaseServiceRoleKey,
     );
 
     // Get the authorization header from the request
@@ -32,7 +41,14 @@ serve(async (req) => {
     }
 
     // Get the request body
-    const requestData = await req.json();
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      console.error("Error parsing request JSON:", e);
+      throw new Error("Invalid request format: could not parse JSON body");
+    }
+    
     const { email } = requestData as CheckEmailRequest;
     console.log("Checking email:", email);
 

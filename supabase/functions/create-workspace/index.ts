@@ -24,9 +24,23 @@ serve(async (req) => {
   try {
     console.log("Starting create-workspace function");
     
+    // Check for required environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+      console.error("Missing required environment variables:", {
+        url: !!supabaseUrl,
+        anonKey: !!supabaseAnonKey,
+        serviceKey: !!supabaseServiceRoleKey
+      });
+      throw new Error("Server configuration error: Missing environment variables");
+    }
+    
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      supabaseUrl,
+      supabaseAnonKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -38,34 +52,65 @@ serve(async (req) => {
     // Get the authorization header from the request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("Missing Authorization header");
       throw new Error("Authorization header is required");
     }
 
     // Get the user from the auth header
     const token = authHeader.replace("Bearer ", "");
+    console.log("Attempting to get user with token");
+    
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
-    if (userError || !user) {
-      console.error("User error:", userError);
-      throw new Error("Invalid user token");
+    if (userError) {
+      console.error("User authentication error:", userError);
+      throw new Error(`Invalid user token: ${userError.message}`);
+    }
+    
+    if (!user) {
+      console.error("No user found with provided token");
+      throw new Error("Invalid user token: No user found");
     }
 
     console.log("User authenticated:", user.id);
 
     // Parse the request body
-    const requestData = await req.json();
-    console.log("Request data:", JSON.stringify(requestData));
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log("Request data:", JSON.stringify(requestData));
+    } catch (e) {
+      console.error("Error parsing request JSON:", e);
+      throw new Error("Invalid request format: could not parse JSON body");
+    }
     
     const { companyName, industry, companySize, phoneNumber, countryCode } = requestData as CreateWorkspaceRequest;
+    
+    // Validate required fields
+    if (!companyName || !industry || !companySize || !phoneNumber || !countryCode) {
+      console.error("Missing required fields:", { 
+        companyName: !!companyName, 
+        industry: !!industry, 
+        companySize: !!companySize,
+        phoneNumber: !!phoneNumber,
+        countryCode: !!countryCode
+      });
+      throw new Error("Missing required fields in request");
+    }
 
     // Create a connection using the service role key (needed for writing to profiles table)
     const serviceRoleClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      supabaseUrl,
+      supabaseServiceRoleKey,
     );
 
     // Start a transaction by first creating workspace
-    console.log("Creating workspace");
+    console.log("Creating workspace with data:", {
+      name: companyName,
+      industry,
+      company_size: companySize
+    });
+    
     const { data: workspaceData, error: workspaceError } = await serviceRoleClient
       .from("workspaces")
       .insert({
@@ -76,9 +121,14 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (workspaceError || !workspaceData) {
+    if (workspaceError) {
       console.error("Workspace creation error:", workspaceError);
-      throw new Error(`Error creating workspace: ${workspaceError?.message || "Unknown error"}`);
+      throw new Error(`Error creating workspace: ${workspaceError.message}`);
+    }
+    
+    if (!workspaceData) {
+      console.error("Workspace created but no data returned");
+      throw new Error("Error creating workspace: No data returned");
     }
 
     console.log("Workspace created:", workspaceData.id);
