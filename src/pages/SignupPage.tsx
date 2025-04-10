@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ const SignupPage = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const navigate = useNavigate();
 
-  // Password strength calculation
   useEffect(() => {
     if (!password) {
       setPasswordStrength(0);
@@ -27,10 +25,8 @@ const SignupPage = () => {
     
     let strength = 0;
     
-    // Length check
     if (password.length >= 8) strength += 1;
     
-    // Complexity checks
     if (/[A-Z]/.test(password)) strength += 1;
     if (/[a-z]/.test(password)) strength += 1;
     if (/[0-9]/.test(password)) strength += 1;
@@ -39,12 +35,10 @@ const SignupPage = () => {
     setPasswordStrength(strength);
   }, [password]);
 
-  // Check if the user is already authenticated
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // User is already logged in, redirect to onboarding or dashboard
         navigate('/onboarding');
       }
     };
@@ -52,7 +46,6 @@ const SignupPage = () => {
     checkAuth();
   }, [navigate]);
 
-  // Prevent copy paste for password fields
   const preventCopyPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     toast({
@@ -103,7 +96,6 @@ const SignupPage = () => {
     setLoading(true);
     
     try {
-      // Try to sign up the user with Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -127,7 +119,6 @@ const SignupPage = () => {
         description: "Wysłaliśmy link potwierdzający na Twój adres email. Sprawdź swoją skrzynkę, aby dokończyć rejestrację."
       });
       
-      // Redirect to verification page
       navigate('/verification');
     } catch (error: any) {
       toast({
@@ -212,7 +203,6 @@ const SignupPage = () => {
                 </div>
               </div>
               
-              {/* Password strength meter */}
               {password && (
                 <div className="mt-2">
                   <div className="w-full bg-gray-200 rounded-full h-2.5">

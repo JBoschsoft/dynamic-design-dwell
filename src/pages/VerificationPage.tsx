@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ const VerificationPage = () => {
           const isNewSignup = type === 'signup';
           const isNewUserMetadata = session.user.user_metadata?.is_new_user === true;
           
-          if (isNewSignup && isNewUserMetadata) {
+          if (isNewSignup || isNewUserMetadata) {
             console.log("New user signup confirmed, redirecting to onboarding");
             setIsNewUser(true);
             
@@ -60,11 +61,8 @@ const VerificationPage = () => {
               description: "Twoje konto zostało pomyślnie zweryfikowane. Teraz skonfigurujmy Twój profil."
             });
             
-            // Add a delay to make sure toast is shown before redirect
-            setTimeout(() => {
-              console.log("Redirecting to onboarding...");
-              navigate('/onboarding');
-            }, 1500);
+            // Direct navigation to onboarding without delay
+            navigate('/onboarding');
           } else {
             // For password recovery or other auth flows
             toast({
@@ -76,11 +74,15 @@ const VerificationPage = () => {
           }
         } else {
           console.log("User is verified but not logged in");
-          // If verified but not logged in, redirect to login
+          // If verified but not logged in, set flags and redirect user
+          setIsNewUser(true); // Assume new user if coming from signup flow
+          
           toast({
             title: "Weryfikacja udana",
             description: "Zaloguj się, aby kontynuować."
           });
+          
+          // The redirect to login happens after a delay for the toast to be visible
           setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 1500);
         }
       }
@@ -107,7 +109,11 @@ const VerificationPage = () => {
             description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
           });
           
-          setTimeout(() => navigate('/onboarding'), 1000);
+          // Direct navigation to onboarding
+          navigate('/onboarding');
+        } else {
+          // For existing users
+          navigate('/dashboard');
         }
       }
     });
@@ -160,7 +166,7 @@ const VerificationPage = () => {
           if (invitationError || !invitationData) {
             console.error('Error fetching invitation:', invitationError);
             // Still redirect to onboarding if no valid invitation is found
-            setTimeout(() => navigate('/onboarding'), 2000);
+            navigate('/onboarding');
             return;
           }
           
@@ -192,10 +198,10 @@ const VerificationPage = () => {
           
           if (session) {
             // Redirect to dashboard
-            setTimeout(() => navigate('/dashboard'), 2000);
+            setTimeout(() => navigate('/dashboard'), 1000);
           } else {
             // Redirect to login if not authenticated
-            setTimeout(() => navigate('/login', { state: { returnTo: '/dashboard' } }), 2000);
+            setTimeout(() => navigate('/login', { state: { returnTo: '/dashboard' } }), 1000);
           }
           
         } catch (error) {
@@ -204,9 +210,9 @@ const VerificationPage = () => {
           const { data: { session } } = await supabase.auth.getSession();
           
           if (session) {
-            setTimeout(() => navigate('/onboarding'), 2000);
+            navigate('/onboarding');
           } else {
-            setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 2000);
+            navigate('/login', { state: { returnTo: '/onboarding' } });
           }
         }
       } else {
@@ -215,10 +221,10 @@ const VerificationPage = () => {
         
         if (session) {
           // New user - Redirect to onboarding page after successful verification
-          setTimeout(() => navigate('/onboarding'), 2000);
+          navigate('/onboarding');
         } else {
           // Redirect to login if not authenticated
-          setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 2000);
+          navigate('/login', { state: { returnTo: '/onboarding' } });
         }
       }
     } catch (error: any) {

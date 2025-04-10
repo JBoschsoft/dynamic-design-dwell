@@ -21,7 +21,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
-  const returnTo = state?.returnTo || '/onboarding';
+  const returnTo = state?.returnTo || '/dashboard';
 
   // Check if we're already authenticated
   useEffect(() => {
@@ -39,6 +39,7 @@ const LoginPage = () => {
           
           if (isNewUser) {
             console.log("New verified user, redirecting to onboarding");
+            // Navigate directly to onboarding, don't wait
             navigate('/onboarding');
           } else {
             console.log("Existing user, redirecting to:", returnTo);
@@ -68,7 +69,7 @@ const LoginPage = () => {
           description: "Zostałeś automatycznie zalogowany."
         });
         
-        // Direct new verified users to onboarding
+        // Direct new verified users to onboarding immediately
         if (isNewUser) {
           console.log("New user, navigating to onboarding");
           navigate('/onboarding');
