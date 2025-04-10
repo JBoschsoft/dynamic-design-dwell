@@ -26,27 +26,20 @@ serve(async (req) => {
     
     // Check for required environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       console.error("Missing required environment variables:", {
         url: !!supabaseUrl,
-        anonKey: !!supabaseAnonKey,
         serviceKey: !!supabaseServiceRoleKey
       });
       throw new Error("Server configuration error: Missing environment variables");
     }
     
-    const supabaseClient = createClient(
+    // Create a Supabase client with the service role key
+    const serviceRoleClient = createClient(
       supabaseUrl,
-      supabaseAnonKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
+      supabaseServiceRoleKey
     );
 
     // Get the authorization header from the request
@@ -60,16 +53,11 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     console.log("Attempting to get user with token");
     
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: userError } = await serviceRoleClient.auth.getUser(token);
 
-    if (userError) {
-      console.error("User authentication error:", userError);
-      throw new Error(`Invalid user token: ${userError.message}`);
-    }
-    
-    if (!user) {
-      console.error("No user found with provided token");
-      throw new Error("Invalid user token: No user found");
+    if (userError || !user) {
+      console.error("User authentication error:", userError || "No user found");
+      throw new Error(`Authentication failed: ${userError?.message || "Invalid token"}`);
     }
 
     console.log("User authenticated:", user.id);
@@ -98,80 +86,32 @@ serve(async (req) => {
       throw new Error("Missing required fields in request");
     }
 
-    // Create a connection using the service role key (needed for writing to profiles table)
-    const serviceRoleClient = createClient(
-      supabaseUrl,
-      supabaseServiceRoleKey,
-    );
-
-    // Start a transaction by first creating workspace
-    console.log("Creating workspace with data:", {
-      name: companyName,
-      industry,
-      company_size: companySize
-    });
+    console.log("Creating workspace using database function");
     
-    const { data: workspaceData, error: workspaceError } = await serviceRoleClient
-      .from("workspaces")
-      .insert({
-        name: companyName,
-        industry,
-        company_size: companySize,
-      })
-      .select()
-      .single();
+    // Use the database function to create workspace, profile, and member in a transaction
+    const { data: workspaceData, error: workspaceError } = await serviceRoleClient.rpc(
+      'create_workspace_with_admin',
+      {
+        workspace_name: companyName,
+        workspace_industry: industry,
+        workspace_company_size: companySize,
+        user_phone_number: phoneNumber,
+        user_country_code: countryCode
+      }
+    );
 
     if (workspaceError) {
       console.error("Workspace creation error:", workspaceError);
       throw new Error(`Error creating workspace: ${workspaceError.message}`);
     }
     
-    if (!workspaceData) {
-      console.error("Workspace created but no data returned");
-      throw new Error("Error creating workspace: No data returned");
-    }
-
-    console.log("Workspace created:", workspaceData.id);
-
-    // Create profile record
-    console.log("Creating profile for user:", user.id);
-    const { error: profileError } = await serviceRoleClient
-      .from("profiles")
-      .insert({
-        id: user.id,
-        phone_number: phoneNumber,
-        country_code: countryCode,
-      });
-
-    if (profileError) {
-      console.error("Profile creation error:", profileError);
-      throw new Error(`Error creating profile: ${profileError.message}`);
-    }
-
-    console.log("Profile created successfully");
-
-    // Create workspace member record with super_admin role
-    console.log("Creating workspace member with super_admin role");
-    const { error: memberError } = await serviceRoleClient
-      .from("workspace_members")
-      .insert({
-        workspace_id: workspaceData.id,
-        user_id: user.id,
-        role: "super_admin",
-      });
-
-    if (memberError) {
-      console.error("Workspace member creation error:", memberError);
-      throw new Error(`Error creating workspace member: ${memberError.message}`);
-    }
-
-    console.log("Workspace member created successfully");
+    console.log("Workspace created:", workspaceData);
 
     // Return the workspace id
     return new Response(
       JSON.stringify({ 
         success: true, 
-        workspaceId: workspaceData.id,
+        workspaceId: workspaceData,
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
