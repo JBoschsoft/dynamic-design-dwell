@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -16,21 +17,50 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
-  const returnTo = state?.returnTo || '/';
+  const returnTo = state?.returnTo || '/onboarding';
 
   // Check if we're already authenticated
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate(returnTo);
+      setAuthChecking(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          console.log("User already logged in, redirecting to:", returnTo);
+          navigate(returnTo);
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
+      } finally {
+        setAuthChecking(false);
       }
     };
     
     checkAuth();
+    
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, "Session exists:", !!session);
+      
+      if (session) {
+        // If we receive a new session, navigate to returnTo path
+        toast({
+          title: "Zalogowano pomyślnie",
+          description: "Zostałeś automatycznie zalogowany."
+        });
+        
+        navigate(returnTo);
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [navigate, returnTo]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -52,16 +82,14 @@ const LoginPage = () => {
         description: "Zostałeś poprawnie zalogowany.",
       });
       
-      // Navigate to the return URL or homepage
-      navigate(returnTo);
+      // Navigate to the return URL or homepage (navigation will be handled by the auth state change listener)
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Błąd logowania",
         description: error.message || "Wystąpił błąd podczas logowania. Spróbuj ponownie."
       });
-    } finally {
-      setLoading(false);
+      setLoading(false); // Only set loading to false on error, success is handled by auth state change
     }
   };
 
@@ -103,6 +131,17 @@ const LoginPage = () => {
     }
   };
 
+  // Show loading while checking authentication
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+          <p className="text-gray-600">Sprawdzanie sesji...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

@@ -90,11 +90,12 @@ const SignupPage = () => {
     setLoading(true);
     
     try {
+      // Try to sign up the user with Supabase
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/verification`,
         }
       });
       

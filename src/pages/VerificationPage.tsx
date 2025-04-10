@@ -26,8 +26,47 @@ const VerificationPage = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [invitationId, setInvitationId] = useState<string | null>(null);
+  const [verificationComplete, setVerificationComplete] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  
+  // Check if verification has already happened via URL parameters
+  useEffect(() => {
+    const checkVerificationStatus = async () => {
+      // Check if there's a type=recovery or type=signup in the URL (Supabase callback)
+      const type = searchParams.get('type');
+      
+      if (type === 'signup' || type === 'recovery') {
+        // This means Supabase has already verified the user
+        console.log('User has been verified via Supabase callback');
+        setVerificationComplete(true);
+        
+        // Check if the user is already logged in
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          console.log("User is authenticated after verification");
+          toast({
+            title: "Weryfikacja udana",
+            description: "Twoje konto zostało pomyślnie zweryfikowane."
+          });
+          
+          // Redirect to onboarding after a short delay
+          setTimeout(() => navigate('/onboarding'), 1500);
+        } else {
+          console.log("User is verified but not logged in");
+          // If verified but not logged in, redirect to login
+          toast({
+            title: "Weryfikacja udana",
+            description: "Zaloguj się, aby kontynuować."
+          });
+          setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 1500);
+        }
+      }
+    };
+    
+    checkVerificationStatus();
+  }, [searchParams, navigate]);
   
   useEffect(() => {
     const invitation = searchParams.get('invitation');
@@ -48,6 +87,8 @@ const VerificationPage = () => {
         title: "Weryfikacja udana",
         description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
       });
+      
+      setVerificationComplete(true);
       
       // If this was from an invitation, we need to accept the invitation
       if (invitationId) {
@@ -96,16 +137,39 @@ const VerificationPage = () => {
             }.`
           });
           
-          // Redirect to dashboard
-          setTimeout(() => navigate('/dashboard'), 2000);
+          // Check authentication status before redirecting
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            // Redirect to dashboard
+            setTimeout(() => navigate('/dashboard'), 2000);
+          } else {
+            // Redirect to login if not authenticated
+            setTimeout(() => navigate('/login', { state: { returnTo: '/dashboard' } }), 2000);
+          }
           
         } catch (error) {
           console.error('Error processing invitation:', error);
-          setTimeout(() => navigate('/onboarding'), 2000);
+          // Check authentication status before redirecting
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            setTimeout(() => navigate('/onboarding'), 2000);
+          } else {
+            setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 2000);
+          }
         }
       } else {
-        // Redirect to onboarding page after successful verification
-        setTimeout(() => navigate('/onboarding'), 2000);
+        // Check authentication status before redirecting
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          // Redirect to onboarding page after successful verification
+          setTimeout(() => navigate('/onboarding'), 2000);
+        } else {
+          // Redirect to login if not authenticated
+          setTimeout(() => navigate('/login', { state: { returnTo: '/onboarding' } }), 2000);
+        }
       }
     } catch (error: any) {
       toast({
@@ -124,6 +188,32 @@ const VerificationPage = () => {
       description: "Nowy kod weryfikacyjny został wysłany na Twój adres email."
     });
   };
+
+  // If verification is already complete, show a success message
+  if (verificationComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md text-center">
+          <div className="flex justify-center">
+            <div className="rounded-full bg-green-100 p-3">
+              <svg className="h-12 w-12 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Weryfikacja zakończona
+          </h2>
+          <p className="mt-2 text-gray-600">
+            Przekierowujemy Cię do następnego kroku...
+          </p>
+          <div className="mt-6">
+            <div className="animate-pulse rounded-full h-2 bg-primary mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
