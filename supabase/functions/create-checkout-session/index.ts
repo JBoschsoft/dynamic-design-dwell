@@ -87,6 +87,9 @@ serve(async (req) => {
     const unitPrice = getTokenPrice(tokenAmount);
     const totalAmount = unitPrice * tokenAmount;
     
+    // Determine if auto-topup should be enabled
+    const isAutoTopupEnabled = paymentType === 'subscription';
+    
     // If we already have a paymentMethodId from a setup intent confirmation
     if (paymentMethodId && paymentType === 'subscription') {
       try {
@@ -152,20 +155,21 @@ serve(async (req) => {
         
         console.log("Initial subscription charge created:", paymentIntent.id);
         
-        // Update workspace table with Stripe customer ID if this is a new customer
+        // Update workspace table with Stripe customer ID and auto-topup setting
         if (workspaceId && (isNewCustomer || customerId !== customer.id)) {
           const { error: updateError } = await supabase
             .from('workspaces')
             .update({ 
               stripe_customer_id: customer.id,
-              token_balance: tokenAmount 
+              token_balance: tokenAmount,
+              balance_auto_topup: isAutoTopupEnabled
             })
             .eq('id', workspaceId);
           
           if (updateError) {
             console.error("Error updating workspace with Stripe customer ID:", updateError);
           } else {
-            console.log("Updated workspace with Stripe customer ID and token balance");
+            console.log("Updated workspace with Stripe customer ID, token balance, and auto-topup setting");
           }
         }
         
@@ -232,7 +236,10 @@ serve(async (req) => {
           if (workspaceId) {
             const { error: updateError } = await supabase
               .from('workspaces')
-              .update({ stripe_customer_id: stripeCustomerId })
+              .update({ 
+                stripe_customer_id: stripeCustomerId,
+                balance_auto_topup: false 
+              })
               .eq('id', workspaceId);
             
             if (updateError) {
