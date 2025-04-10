@@ -9,6 +9,7 @@ import {
   FileText, CheckCircle2, Building2, ArrowRight, Loader2
 } from "@/components/ui";
 import { toast } from "@/hooks/use-toast";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface CompanyInfoStepProps {
   companyName: string;
@@ -17,6 +18,10 @@ interface CompanyInfoStepProps {
   setIndustry: (value: string) => void;
   companySize: string;
   setCompanySize: (value: string) => void;
+  phoneNumber: string;
+  setPhoneNumber: (value: string) => void;
+  countryCode: string;
+  setCountryCode: (value: string) => void;
   tosAgreed: boolean;
   privacyAgreed: boolean;
   msaAgreed: boolean;
@@ -47,6 +52,10 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
   setIndustry,
   companySize,
   setCompanySize,
+  phoneNumber,
+  setPhoneNumber,
+  countryCode,
+  setCountryCode,
   tosAgreed,
   privacyAgreed,
   msaAgreed,
@@ -56,7 +65,7 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
 }) => {
   
   const handleNextStep = () => {
-    if (!companyName || !industry || !companySize) {
+    if (!companyName || !industry || !companySize || !phoneNumber) {
       toast({
         variant: "destructive",
         title: "Uzupełnij wszystkie pola",
@@ -138,6 +147,18 @@ const CompanyInfoStep: React.FC<CompanyInfoStepProps> = ({
                 <SelectItem value="501+">Ponad 500 pracowników</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone-number">Numer telefonu</Label>
+            <PhoneInput 
+              value={phoneNumber}
+              onChange={setPhoneNumber}
+              countryCode={countryCode}
+              onCountryChange={setCountryCode}
+              placeholder="Wprowadź numer telefonu"
+              className="bg-white focus:border-primary"
+            />
           </div>
         </CardContent>
       </Card>

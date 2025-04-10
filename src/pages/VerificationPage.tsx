@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Mail } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 import {
   InputOTP,
   InputOTPGroup,
@@ -13,7 +14,16 @@ import {
 const VerificationPage = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [invitationId, setInvitationId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  useEffect(() => {
+    const invitation = searchParams.get('invitation');
+    if (invitation) {
+      setInvitationId(invitation);
+    }
+  }, [searchParams]);
   
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,15 +31,68 @@ const VerificationPage = () => {
     
     try {
       // In a real implementation, we would verify the OTP with Supabase here
-      // For now, we'll just show a success message and redirect to onboarding
+      // For now, we'll just show a success message and redirect
       
       toast({
         title: "Weryfikacja udana",
         description: "Twoje konto zostało zweryfikowane. Teraz skonfigurujmy Twój profil."
       });
       
-      // Redirect to onboarding page after successful verification
-      setTimeout(() => navigate('/onboarding'), 2000);
+      // If this was from an invitation, we need to accept the invitation
+      if (invitationId) {
+        try {
+          // Check if we can fetch the invitation details to show workspace name
+          const { data: invitationData, error: invitationError } = await supabase
+            .from('workspace_invitations')
+            .select(`
+              workspace_id,
+              role,
+              workspaces:workspace_id (
+                name
+              )
+            `)
+            .eq('id', invitationId)
+            .eq('status', 'pending')
+            .single();
+            
+          if (invitationError || !invitationData) {
+            console.error('Error fetching invitation:', invitationError);
+            // Still redirect to onboarding if no valid invitation is found
+            setTimeout(() => navigate('/onboarding'), 2000);
+            return;
+          }
+          
+          // Update invitation status to accepted
+          const { error: updateError } = await supabase
+            .from('workspace_invitations')
+            .update({
+              status: 'accepted'
+            })
+            .eq('id', invitationId);
+            
+          if (updateError) {
+            console.error('Error updating invitation:', updateError);
+          }
+          
+          // Show workspace join success
+          toast({
+            title: "Dołączono do workspace'a",
+            description: `Zostałeś dodany do workspace'a ${invitationData.workspaces?.name || 'Unknown'} jako ${
+              invitationData.role === 'administrator' ? 'Administrator' : 'Specjalista'
+            }.`
+          });
+          
+          // Redirect to dashboard
+          setTimeout(() => navigate('/dashboard'), 2000);
+          
+        } catch (error) {
+          console.error('Error processing invitation:', error);
+          setTimeout(() => navigate('/onboarding'), 2000);
+        }
+      } else {
+        // Redirect to onboarding page after successful verification
+        setTimeout(() => navigate('/onboarding'), 2000);
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -63,6 +126,11 @@ const VerificationPage = () => {
           <p className="mt-4 text-center text-gray-600">
             Kod weryfikacyjny został wysłany na Twój adres email. 
             Wprowadź go poniżej, aby zweryfikować swoje konto.
+            {invitationId && (
+              <span className="block mt-2 font-medium text-primary">
+                Po weryfikacji zostaniesz dołączony do workspace'a.
+              </span>
+            )}
           </p>
         </div>
 
