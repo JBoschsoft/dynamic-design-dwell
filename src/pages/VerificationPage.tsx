@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Mail } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
 import {
   InputOTP,
   InputOTPGroup,
@@ -13,15 +14,74 @@ import {
 const VerificationPage = () => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Extract email from location state or query params
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const emailParam = queryParams.get('email');
+    
+    // Try to get email from state first, then from query params
+    const emailFromState = location.state?.email;
+    const finalEmail = emailFromState || emailParam;
+    
+    if (finalEmail) {
+      setEmail(finalEmail);
+      console.log("Email set for verification:", finalEmail);
+    } else {
+      console.log("No email found for verification");
+    }
+    
+    // Check if user is already authenticated
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        const { user } = data.session;
+        console.log("User already authenticated:", user.id);
+        
+        // Check if user is new and should be redirected to onboarding
+        if (user.user_metadata?.is_new_user === true) {
+          console.log("New user detected, redirecting to onboarding");
+          navigate('/onboarding');
+        } else {
+          console.log("Existing user detected, redirecting to dashboard");
+          navigate('/dashboard');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [location, navigate]);
   
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email) {
+      toast({
+        variant: "destructive",
+        title: "Brak adresu email",
+        description: "Nie można zweryfikować konta bez adresu email."
+      });
+      return;
+    }
+    
+    if (otp.length !== 6) {
+      toast({
+        variant: "destructive",
+        title: "Nieprawidłowy kod",
+        description: "Kod weryfikacyjny musi mieć 6 cyfr."
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
       // In a real implementation, we would verify the OTP with Supabase here
-      // For now, we'll just show a success message and redirect to onboarding
+      // For now, we'll simulate verification success
+      console.log("Verifying OTP for email:", email);
       
       toast({
         title: "Weryfikacja udana",
@@ -29,7 +89,7 @@ const VerificationPage = () => {
       });
       
       // Redirect to onboarding page after successful verification
-      setTimeout(() => navigate('/onboarding'), 2000);
+      navigate('/onboarding');
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -42,10 +102,34 @@ const VerificationPage = () => {
   };
 
   const handleResendCode = async () => {
-    toast({
-      title: "Kod wysłany ponownie",
-      description: "Nowy kod weryfikacyjny został wysłany na Twój adres email."
-    });
+    if (!email) {
+      toast({
+        variant: "destructive",
+        title: "Brak adresu email",
+        description: "Nie można wysłać kodu bez adresu email."
+      });
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Kod wysłany ponownie",
+        description: "Nowy kod weryfikacyjny został wysłany na Twój adres email."
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Błąd wysyłania",
+        description: error.message || "Nie udało się wysłać kodu weryfikacyjnego. Spróbuj ponownie."
+      });
+    }
   };
 
   return (
@@ -61,7 +145,11 @@ const VerificationPage = () => {
             </div>
           </div>
           <p className="mt-4 text-center text-gray-600">
-            Kod weryfikacyjny został wysłany na Twój adres email. 
+            {email ? (
+              <>Kod weryfikacyjny został wysłany na adres <span className="font-medium">{email}</span>.</>
+            ) : (
+              <>Kod weryfikacyjny został wysłany na Twój adres email.</>
+            )}
             Wprowadź go poniżej, aby zweryfikować swoje konto.
           </p>
         </div>

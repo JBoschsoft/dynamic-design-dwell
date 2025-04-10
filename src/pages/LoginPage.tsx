@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,34 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log("User already authenticated, checking if new user");
+        
+        // Check if user is new and should go to onboarding
+        if (data.session.user.user_metadata?.is_new_user === true) {
+          console.log("New user detected, redirecting to onboarding");
+          navigate('/onboarding');
+        } else {
+          console.log("Existing user detected, redirecting to dashboard");
+          navigate('/dashboard');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log("Attempting to log in with email:", email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -29,12 +51,23 @@ const LoginPage = () => {
         throw error;
       }
       
+      console.log("Login successful, checking if new user:", data.user.user_metadata);
+      
       toast({
         title: "Logowanie udane",
         description: "Zostałeś poprawnie zalogowany.",
       });
-      navigate('/');
+      
+      // Check if this is a new user who should go to onboarding
+      if (data.user.user_metadata?.is_new_user === true) {
+        console.log("New user detected, redirecting to onboarding");
+        navigate('/onboarding');
+      } else {
+        console.log("Existing user detected, redirecting to dashboard");
+        navigate('/dashboard');
+      }
     } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Błąd logowania",
@@ -51,6 +84,10 @@ const LoginPage = () => {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         },
       });
       
@@ -70,6 +107,9 @@ const LoginPage = () => {
         provider: 'azure',
         options: {
           redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            prompt: 'consent',
+          }
         },
       });
       

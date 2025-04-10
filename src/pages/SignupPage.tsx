@@ -18,6 +18,19 @@ const SignupPage = () => {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const navigate = useNavigate();
 
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log("User already authenticated, redirecting");
+        navigate('/dashboard');
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
+
   // Password strength calculation
   useEffect(() => {
     if (!password) {
@@ -90,11 +103,15 @@ const SignupPage = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log("Attempting to sign up user with email:", email);
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            is_new_user: true
+          }
         }
       });
       
@@ -102,14 +119,19 @@ const SignupPage = () => {
         throw error;
       }
       
+      console.log("Signup successful, data:", data);
+      
       toast({
         title: "Rejestracja udana",
         description: "Wysłaliśmy link potwierdzający na Twój adres email. Sprawdź swoją skrzynkę, aby dokończyć rejestrację."
       });
       
-      // Redirect to verification page
-      navigate('/verification');
+      // Redirect to verification page with email
+      navigate('/verification', { 
+        state: { email: email }
+      });
     } catch (error: any) {
+      console.error("Signup error:", error);
       toast({
         variant: "destructive",
         title: "Błąd rejestracji",
