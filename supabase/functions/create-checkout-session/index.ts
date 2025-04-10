@@ -210,7 +210,7 @@ serve(async (req) => {
         }
       }
       
-      // If no Stripe customer ID exists, create one
+      // If no Stripe customer ID exists and we have a user ID, create one
       if (!stripeCustomerId && userId) {
         // Get user email to create customer
         const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
@@ -244,7 +244,10 @@ serve(async (req) => {
         }
       }
       
-      // Create a payment intent for one-time payments
+      // Set an expiration time for the payment intent (5 minutes)
+      const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+      
+      // Create a payment intent for one-time payments with a short expiration
       const paymentIntent = await stripe.paymentIntents.create({
         amount: totalAmount * 100, // amount in cents
         currency: 'pln',
@@ -256,7 +259,8 @@ serve(async (req) => {
           paymentType,
           autoRecharge: "false",
           workspaceId: workspaceId || undefined,
-          userId: userId || undefined
+          userId: userId || undefined,
+          expiresAt: expiresAt.toString()
         }
       });
       
@@ -269,7 +273,8 @@ serve(async (req) => {
           amount: tokenAmount,
           unitPrice,
           totalPrice: totalAmount,
-          id: paymentIntent.id  // Include the ID for reference
+          id: paymentIntent.id,
+          expiresAt
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -304,7 +309,7 @@ serve(async (req) => {
           amount: tokenAmount,
           unitPrice,
           totalPrice: totalAmount,
-          id: setupIntent.id  // Include the ID for reference
+          id: setupIntent.id
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

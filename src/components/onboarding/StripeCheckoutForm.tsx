@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
@@ -33,14 +34,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
+  const [intentTimestamp, setIntentTimestamp] = useState<number | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   
+  // Reset form when dialog is opened
   useEffect(() => {
     if (open) {
       setClientSecret(null);
       setIntentId(null);
+      setIntentTimestamp(null);
       setError(null);
       setRetryCount(0);
       setProcessingSetupConfirmation(false);
@@ -49,6 +53,21 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       fetchPaymentIntent();
     }
   }, [open]);
+  
+  // Prevent using stale payment intents
+  useEffect(() => {
+    // If the intent is more than 30 minutes old, refresh it
+    const checkIntentValidity = () => {
+      if (intentTimestamp && Date.now() - intentTimestamp > 30 * 60 * 1000) {
+        console.log("Payment intent may be stale, refreshing...");
+        fetchPaymentIntent();
+      }
+    };
+    
+    const intervalId = setInterval(checkIntentValidity, 60000); // Check every minute
+    
+    return () => clearInterval(intervalId);
+  }, [intentTimestamp]);
   
   const fetchPaymentIntent = async () => {
     setLoading(true);
@@ -84,6 +103,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         console.log("Intent ID:", data.id);
         setClientSecret(data.clientSecret);
         setIntentId(data.id);
+        setIntentTimestamp(Date.now()); // Store when we got this intent
       } else {
         throw new Error("Nie otrzymano klucza klienta od serwera płatności");
       }
@@ -136,8 +156,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         return;
       }
       
+      // Default to 5 if no current balance exists
       const currentBalance = workspaceData?.token_balance ?? 5;
       const newBalance = currentBalance + amount;
+      
+      console.log(`Updating token balance: Current=${currentBalance}, Adding=${amount}, New=${newBalance}`);
       
       const { error: updateError } = await supabase
         .from('workspaces')
@@ -228,7 +251,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
+      // Clear any previous error state on the card element
       cardElement.update({});
+      
+      // Check if we need to refresh the payment intent (over 20 minutes old)
+      if (intentTimestamp && Date.now() - intentTimestamp > 20 * 60 * 1000) {
+        console.log("Payment intent is too old, refreshing before confirmation...");
+        await fetchPaymentIntent();
+        
+        // Exit this submission and let the user try again with the fresh intent
+        setError("Odświeżono sesję płatności - proszę spróbować ponownie za chwilę");
+        setLoading(false);
+        return;
+      }
       
       let result;
       
@@ -245,6 +280,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         });
         
         if (result.error) {
+          console.error("Payment confirmation error:", result.error);
           throw new Error(result.error.message || "Wystąpił błąd podczas przetwarzania płatności");
         }
         
@@ -265,7 +301,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             title: "Płatność zrealizowana",
             description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
           });
+        } else if (result.paymentIntent && result.paymentIntent.status === 'requires_action') {
+          // Handle 3D Secure authentication if needed
+          console.log("Payment requires additional action. Redirecting to 3D Secure...");
+          // No need to do anything, Stripe will handle the redirect
         } else {
+          console.error("Unexpected payment status:", result.paymentIntent?.status);
           throw new Error("Płatność nie została zakończona pomyślnie.");
         }
       } else {
@@ -298,10 +339,18 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } catch (error: any) {
       console.error('Payment error:', error);
       
+      // Check for common Stripe errors that might need special handling
+      const stripeErrorCode = error?.code || error?.decline_code;
+      
+      if (stripeErrorCode) {
+        console.log("Stripe error code:", stripeErrorCode);
+      }
+      
       const intentExpiredError = 
         error.message?.includes("No such setupintent") || 
         error.message?.includes("No such payment_intent") ||
-        error.message?.includes("expired");
+        error.message?.includes("expired") ||
+        error.message?.includes("Intent with id pi_");
       
       if (intentExpiredError && retryCount < 3) {
         setRetryCount(prev => prev + 1);
@@ -371,13 +420,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                   <h3 className="font-medium">Wykryto blokadę połączenia do systemu płatności!</h3>
                   <p className="text-sm mt-1">
                     Strona płatności Stripe jest blokowana przez Twój przeglądarkę. Aby kontynuować, wykonaj następujące kroki:
-                    <ul className="list-disc pl-5 mt-1 space-y-1">
-                      <li>Wyłącz rozszerzenia blokujące reklamy (AdBlock, uBlock Origin itp.)</li>
-                      <li>Wyłącz blokady JavaScript i ciasteczek</li>
-                      <li>Sprawdź czy zapora sieciowa nie blokuje połączeń</li>
-                      <li>Spróbuj odświeżyć stronę lub użyć trybu incognito</li>
-                    </ul>
                   </p>
+                  <ul className="list-disc pl-5 mt-1 space-y-1 text-sm">
+                    <li>Wyłącz rozszerzenia blokujące reklamy (AdBlock, uBlock Origin itp.)</li>
+                    <li>Wyłącz blokady JavaScript i ciasteczek</li>
+                    <li>Sprawdź czy zapora sieciowa nie blokuje połączeń</li>
+                    <li>Spróbuj odświeżyć stronę lub użyć trybu incognito</li>
+                  </ul>
                   <div className="mt-3">
                     <Button
                       type="button"
@@ -417,6 +466,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                   }
                 }}
               />
+            </div>
+            <div className="text-xs text-gray-500">
+              Do testów użyj numeru karty: 4242 4242 4242 4242, dowolnej przyszłej daty ważności i dowolnego CVC
             </div>
           </div>
           
