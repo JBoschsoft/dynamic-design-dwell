@@ -104,6 +104,20 @@ serve(async (req) => {
       console.error("Workspace creation error:", workspaceError);
       throw new Error(`Error creating workspace: ${workspaceError.message}`);
     }
+
+    // After workspace creation, update the user's profile with the role
+    const { error: profileUpdateError } = await serviceRoleClient
+      .from('profiles')
+      .update({ role: 'super_admin' })
+      .eq('id', user.id);
+    
+    if (profileUpdateError) {
+      console.error("Profile update error:", profileUpdateError);
+      // We don't throw here as the workspace was created successfully
+      console.warn("Failed to update user role, but workspace was created");
+    } else {
+      console.log("User profile updated with super_admin role");
+    }
     
     console.log("Workspace created:", workspaceData);
 
