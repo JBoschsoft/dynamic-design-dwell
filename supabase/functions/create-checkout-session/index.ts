@@ -154,6 +154,8 @@ serve(async (req) => {
             autoRecharge: "true",
             workspaceId: workspaceId || undefined
           },
+          // For subscriptions, explicitly set this to true
+          setup_future_usage: isAutoTopupEnabled ? 'off_session' : undefined,
         });
         
         console.log("Initial subscription charge created:", paymentIntent.id);
@@ -284,6 +286,8 @@ serve(async (req) => {
           workspaceId: workspaceId || undefined,
           userId: userId || undefined
         },
+        // For one-time payments, explicitly set this to null
+        setup_future_usage: undefined,
       });
       
       console.log("Payment intent created successfully:", paymentIntent.id);

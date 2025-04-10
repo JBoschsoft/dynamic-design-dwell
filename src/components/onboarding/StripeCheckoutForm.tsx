@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -339,10 +340,16 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         const setupResult = result.setupIntent;
         
         if (setupResult && setupResult.status === 'succeeded' && setupResult.payment_method) {
-          // Fix: Convert payment_method to string if it's not already
-          const paymentMethodId = typeof setupResult.payment_method === 'string' 
-            ? setupResult.payment_method 
-            : setupResult.payment_method.id;
+          // Fix the TypeScript error: Handle payment_method that could be string or object
+          let paymentMethodId: string;
+          
+          if (typeof setupResult.payment_method === 'string') {
+            paymentMethodId = setupResult.payment_method;
+          } else if (setupResult.payment_method && 'id' in setupResult.payment_method) {
+            paymentMethodId = setupResult.payment_method.id;
+          } else {
+            throw new Error("Nie można uzyskać identyfikatora metody płatności");
+          }
             
           await createInitialCharge(paymentMethodId);
         } else {

@@ -147,7 +147,7 @@ const OnboardingPage = () => {
     try {
       setPaymentLoading(true);
       
-      const { data: memberData } = await supabase
+      const { data: memberData, error: memberError } = await supabase
         .from('workspace_members')
         .select('workspace_id')
         .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
@@ -167,13 +167,17 @@ const OnboardingPage = () => {
           title: "Pominięto płatność",
           description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
         });
+        
+        // Set payment success so we move to the next step
+        setPaymentSuccess(true);
+        
+        // Navigate to next step after a short delay
+        setTimeout(() => {
+          setCurrentStep(3);
+          // Update URL to reflect new step
+          navigate(`/onboarding?step=3`, { replace: true });
+        }, 500);
       }
-      
-      setPaymentSuccess(true);
-      setTimeout(() => {
-        setCurrentStep(3);
-      }, 500);
-      
     } catch (error) {
       console.error("Error updating token balance:", error);
       toast({
@@ -225,6 +229,8 @@ const OnboardingPage = () => {
         });
         
         setCurrentStep(2);
+        // Update URL with the new step
+        navigate(`/onboarding?step=2`, { replace: true });
         
       } catch (error: any) {
         toast({
@@ -237,14 +243,20 @@ const OnboardingPage = () => {
       }
     } else if (currentStep === 2) {
       setCurrentStep(3);
+      // Update URL with the new step
+      navigate(`/onboarding?step=3`, { replace: true });
     } else if (currentStep === 3) {
       setCurrentStep(4);
       // Update URL with the new step
       navigate(`/onboarding?step=4`, { replace: true });
     } else if (currentStep === 4) {
       setCurrentStep(5);
+      // Update URL with the new step
+      navigate(`/onboarding?step=5`, { replace: true });
     } else if (currentStep === 5) {
       setCurrentStep(6);
+      // Update URL with the new step
+      navigate(`/onboarding?step=6`, { replace: true });
     } else if (currentStep === 6) {
       navigate('/dashboard');
     }
@@ -252,7 +264,10 @@ const OnboardingPage = () => {
   
   const handlePreviousStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+      // Update URL with the new step
+      navigate(`/onboarding?step=${newStep}`, { replace: true });
     }
   };
   
