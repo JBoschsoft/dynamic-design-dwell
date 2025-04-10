@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,114 +8,19 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
-interface LocationState {
-  returnTo?: string;
-  isNewUser?: boolean;
-}
-
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
   const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as LocationState;
-  const returnTo = state?.returnTo || '/dashboard';
-  const isNewUser = state?.isNewUser || false;
-
-  useEffect(() => {
-    console.log("Login page loaded with state:", state);
-    console.log("isNewUser from state:", isNewUser);
-    console.log("returnTo from state:", returnTo);
-  }, [state, isNewUser, returnTo]);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      setAuthChecking(true);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          console.log("User already logged in, session:", session);
-          console.log("User metadata:", session.user.user_metadata);
-          
-          // Look for is_new_user flag in user metadata
-          const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
-          
-          if (isNewUserMeta || isNewUser) {
-            console.log("New user detected, redirecting to onboarding");
-            
-            // Update user metadata to ensure is_new_user flag is set
-            await supabase.auth.updateUser({
-              data: { is_new_user: true }
-            });
-            
-            navigate('/onboarding', { replace: true });
-          } else {
-            console.log("Existing user, redirecting to:", returnTo);
-            navigate(returnTo, { replace: true });
-          }
-        }
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-      } finally {
-        setAuthChecking(false);
-      }
-    };
-    
-    checkAuth();
-  }, [navigate, returnTo, isNewUser]);
-
-  useEffect(() => {
-    console.log("Setting up auth state listener in LoginPage");
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed in LoginPage:", event, "Session exists:", !!session);
-      
-      if (session) {
-        const isNewUserMeta = session.user.user_metadata?.is_new_user === true;
-        const shouldGoToOnboarding = isNewUserMeta || isNewUser;
-        
-        if (shouldGoToOnboarding) {
-          console.log("New user signed in, navigating to onboarding");
-          
-          // Update user metadata to ensure is_new_user flag is set
-          (async () => {
-            await supabase.auth.updateUser({
-              data: { is_new_user: true }
-            });
-            
-            toast({
-              title: "Zalogowano pomyślnie",
-              description: "Zostałeś automatycznie zalogowany. Teraz skonfigurujmy Twój profil."
-            });
-            
-            navigate('/onboarding', { replace: true });
-          })();
-        } else {
-          console.log("Existing user signed in, navigating to:", returnTo);
-          toast({
-            title: "Zalogowano pomyślnie",
-            description: "Zostałeś automatycznie zalogowany."
-          });
-          navigate(returnTo, { replace: true });
-        }
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate, returnTo, isNewUser]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -123,38 +29,29 @@ const LoginPage = () => {
         throw error;
       }
       
-      console.log("Login successful, checking if new user:", data?.user?.user_metadata?.is_new_user);
-      
-      // Let the auth state listener handle the redirection
-      
+      toast({
+        title: "Logowanie udane",
+        description: "Zostałeś poprawnie zalogowany.",
+      });
+      navigate('/');
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Błąd logowania",
         description: error.message || "Wystąpił błąd podczas logowania. Spróbuj ponownie."
       });
+    } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
-      let redirectOptions = {};
-      
-      // If this is a new user, we need to pass that information through to the redirect
-      if (isNewUser) {
-        redirectOptions = {
-          redirectTo: `${window.location.origin}/onboarding`,
-        };
-      } else {
-        redirectOptions = {
-          redirectTo: `${window.location.origin}${returnTo}`,
-        };
-      }
-      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: redirectOptions,
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
       });
       
       if (error) throw error;
@@ -169,22 +66,11 @@ const LoginPage = () => {
 
   const handleMicrosoftLogin = async () => {
     try {
-      let redirectOptions = {};
-      
-      // If this is a new user, we need to pass that information through to the redirect
-      if (isNewUser) {
-        redirectOptions = {
-          redirectTo: `${window.location.origin}/onboarding`,
-        };
-      } else {
-        redirectOptions = {
-          redirectTo: `${window.location.origin}${returnTo}`,
-        };
-      }
-      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'azure',
-        options: redirectOptions,
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
       });
       
       if (error) throw error;
@@ -197,31 +83,13 @@ const LoginPage = () => {
     }
   };
 
-  if (authChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
-          <p className="text-gray-600">Sprawdzanie sesji...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const wasVerified = state?.isNewUser === true;
-  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {wasVerified ? "Weryfikacja udana! Zaloguj się" : "Zaloguj się do konta"}
+            Zaloguj się do konta
           </h2>
-          {wasVerified && (
-            <p className="mt-2 text-center text-sm text-green-600">
-              Twoje konto zostało pomyślnie zweryfikowane. Zaloguj się, aby kontynuować konfigurację.
-            </p>
-          )}
           <p className="mt-2 text-center text-sm text-gray-600">
             Lub{' '}
             <Link to="/signup" className="font-medium text-primary hover:text-primary/80">

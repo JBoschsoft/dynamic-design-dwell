@@ -3,10 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
-
-// Import all pages
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AboutPage from "./pages/AboutPage";
 import ExamplesPage from "./pages/ExamplesPage";
@@ -37,27 +34,12 @@ import CampaignDetailsPage from "./pages/CampaignDetailsPage";
 
 const queryClient = new QueryClient();
 
-// Navigation logger component to track route changes
-const NavigationLogger = () => {
-  const location = useLocation();
-  
-  useEffect(() => {
-    console.log(`Navigation: Route changed to: ${location.pathname}`, {
-      search: location.search,
-      state: location.state
-    });
-  }, [location]);
-  
-  return null;
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <NavigationLogger />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/o-nas" element={<AboutPage />} />

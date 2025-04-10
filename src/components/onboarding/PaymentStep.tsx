@@ -30,7 +30,6 @@ interface PaymentStepProps {
   paymentLoading: boolean;
   paymentSuccess: boolean;
   onOpenCheckout: () => void;
-  workspaceId?: string | null;
 }
 
 const PaymentStep: React.FC<PaymentStepProps> = ({

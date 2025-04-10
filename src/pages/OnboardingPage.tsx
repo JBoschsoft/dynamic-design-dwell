@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -27,38 +26,26 @@ const OnboardingPage = () => {
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
   
-  // Company info state
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [companySize, setCompanySize] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('PL');
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   
-  // Legal agreements state
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [currentAgreement, setCurrentAgreement] = useState<'tos' | 'privacy' | 'msa'>('tos');
   const [tosAgreed, setTosAgreed] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [msaAgreed, setMsaAgreed] = useState(false);
   
-  // Payment state
   const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('subscription');
   const [tokenAmount, setTokenAmount] = useState([50]);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   
   const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
-  
-  // Team invitations state
-  const [invitationsSent, setInvitationsSent] = useState(false);
   
   // Stripe configuration
   const stripeOptions = {
@@ -76,66 +63,10 @@ const OnboardingPage = () => {
     },
   };
   
-  // Check authentication state when component mounts
-  useEffect(() => {
-    const checkAuth = async () => {
-      setAuthChecking(true);
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData?.session) {
-          console.log("User is authenticated:", sessionData.session.user.id);
-          setAuthenticated(true);
-        } else {
-          console.log("No active session found");
-          setAuthenticated(false);
-          // Redirect to login
-          toast({
-            variant: "destructive",
-            title: "Wymagane logowanie",
-            description: "Musisz być zalogowany, aby kontynuować proces onboardingu."
-          });
-          navigate('/login', { state: { returnTo: '/onboarding' } });
-        }
-      } catch (error) {
-        console.error("Error checking auth state:", error);
-        setAuthenticated(false);
-      } finally {
-        setAuthChecking(false);
-      }
-    };
-
-    checkAuth();
-    
-    // Set up auth state change listener
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event);
-      setAuthenticated(!!session);
-      
-      if (!session && !authChecking) {
-        toast({
-          variant: "destructive",
-          title: "Sesja wygasła",
-          description: "Twoja sesja wygasła. Zaloguj się ponownie."
-        });
-        navigate('/login', { state: { returnTo: '/onboarding' } });
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
-  
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
       setCurrentStep(parseInt(stepParam));
-    }
-    
-    const wid = searchParams.get('workspace');
-    if (wid) {
-      setWorkspaceId(wid);
     }
     
     const canceled = searchParams.get('canceled');
@@ -150,47 +81,16 @@ const OnboardingPage = () => {
     const success = searchParams.get('success');
     if (success === 'true') {
       const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0]);
-      const stripeId = searchParams.get('customer');
-      
-      if (stripeId) {
-        setStripeCustomerId(stripeId);
-      }
-      
       toast({
         title: "Płatność zakończona sukcesem",
         description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
       });
-      
       setPaymentSuccess(true);
       setTimeout(() => {
         setCurrentStep(3);
       }, 2000);
     }
   }, [searchParams, navigate, paymentType, tokenAmount, subscriptionAmount]);
-  
-  // Update workspace with stripe customer ID when it becomes available
-  useEffect(() => {
-    if (stripeCustomerId && workspaceId && paymentSuccess) {
-      updateWorkspacePayment();
-    }
-  }, [stripeCustomerId, workspaceId, paymentSuccess]);
-  
-  const updateWorkspacePayment = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('update-workspace-payment', {
-        body: {
-          workspaceId,
-          stripeCustomerId
-        },
-      });
-      
-      if (error) {
-        console.error('Error updating workspace payment:', error);
-      }
-    } catch (error) {
-      console.error('Error updating workspace payment:', error);
-    }
-  };
   
   const handleAgreeToCurrentAgreement = () => {
     if (currentAgreement === 'tos') {
@@ -222,16 +122,11 @@ const OnboardingPage = () => {
     }
   };
   
-  const handlePaymentSuccess = (paymentType: string, amount: number, customerId?: string) => {
-    if (customerId) {
-      setStripeCustomerId(customerId);
-    }
-    
+  const handlePaymentSuccess = (paymentType: string, amount: number) => {
     toast({
       title: "Płatność zakończona sukcesem",
       description: `Twoje konto zostało pomyślnie doładowane o ${amount} tokenów.`
     });
-    
     setPaymentSuccess(true);
     setTimeout(() => {
       setCurrentStep(3);
@@ -246,162 +141,10 @@ const OnboardingPage = () => {
   const proceedToPayment = async () => {
     setCheckoutDialogOpen(true);
   };
-
-  const createWorkspace = async () => {
-    setLoading(true);
-    
-    try {
-      console.log("Starting workspace creation...");
-      
-      // Get session information to ensure we have a valid token
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        throw new Error("Authentication session error. Please try signing in again.");
-      }
-      
-      if (!sessionData?.session) {
-        console.error("No active session found");
-        toast({
-          variant: "destructive",
-          title: "Wymagane logowanie",
-          description: "Musisz być zalogowany, aby utworzyć workspace."
-        });
-        navigate('/login', { state: { returnTo: '/onboarding' } });
-        return;
-      }
-      
-      console.log("Session verified, proceeding with API call");
-      console.log("Request data:", {
-        companyName,
-        industry,
-        companySize,
-        phoneNumber,
-        countryCode
-      });
-      
-      const { data, error } = await supabase.functions.invoke('create-workspace', {
-        body: {
-          companyName,
-          industry,
-          companySize,
-          phoneNumber,
-          countryCode
-        },
-      });
-      
-      console.log("API response:", data, error);
-      
-      if (error) {
-        console.error("Function invocation error:", error);
-        throw error;
-      }
-      
-      // Store the workspace ID
-      if (data?.workspaceId) {
-        console.log("Workspace created with ID:", data.workspaceId);
-        setWorkspaceId(data.workspaceId);
-        
-        // Update URL with workspace ID
-        navigate(`/onboarding?step=2&workspace=${data.workspaceId}`, { replace: true });
-      } else {
-        console.error("Missing workspace ID in response:", data);
-        throw new Error("Invalid response from server. Missing workspace ID.");
-      }
-      
-      toast({
-        title: "Dane firmy zapisane",
-        description: "Pomyślnie zapisano informacje o firmie."
-      });
-      
-      setCurrentStep(2);
-      
-    } catch (error: any) {
-      console.error("Workspace creation error:", error);
-      
-      let errorMessage = "Wystąpił błąd podczas zapisywania informacji o firmie.";
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        errorMessage = JSON.stringify(error);
-      }
-      
-      toast({
-        variant: "destructive",
-        title: "Błąd zapisu",
-        description: errorMessage
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleSendInvitations = async (teamMembers: { email: string; role: 'administrator' | 'specialist' }[]) => {
-    if (!workspaceId) {
-      toast({
-        variant: "destructive",
-        title: "Błąd",
-        description: "Brak identyfikatora workspace. Spróbuj ponownie później."
-      });
-      return;
-    }
-    
-    // Filter out empty emails
-    const validMembers = teamMembers.filter(member => member.email.trim() !== '');
-    
-    if (validMembers.length === 0) {
-      // No valid members to invite, just proceed
-      setInvitationsSent(true);
-      navigate('/dashboard');
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('invite-user', {
-        body: {
-          workspaceId,
-          invites: validMembers
-        },
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Check for individual invitation results
-      const successCount = data?.results.filter((r: any) => r.status === 'success').length || 0;
-      
-      if (successCount > 0) {
-        toast({
-          title: "Zaproszenia wysłane",
-          description: `Wysłano ${successCount} zaproszeń do członków zespołu.`
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Nie wysłano zaproszeń",
-          description: "Nie udało się wysłać żadnych zaproszeń. Sprawdź adresy email i spróbuj ponownie."
-        });
-        return;
-      }
-      
-      setInvitationsSent(true);
-      navigate('/dashboard');
-      
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Błąd wysyłania zaproszeń",
-        description: error.message || "Wystąpił błąd podczas wysyłania zaproszeń."
-      });
-    }
-  };
   
   const handleNextStep = async () => {
     if (currentStep === 1) {
-      if (!companyName || !industry || !companySize || !phoneNumber) {
+      if (!companyName || !industry || !companySize) {
         toast({
           variant: "destructive",
           title: "Uzupełnij wszystkie pola",
@@ -416,20 +159,40 @@ const OnboardingPage = () => {
         return;
       }
       
-      // Create workspace and proceed to next step
-      await createWorkspace();
+      setLoading(true);
       
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        toast({
+          title: "Dane firmy zapisane",
+          description: "Pomyślnie zapisano informacje o firmie."
+        });
+        
+        setCurrentStep(2);
+        
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Błąd zapisu",
+          description: error.message || "Wystąpił błąd podczas zapisywania informacji o firmie."
+        });
+      } finally {
+        setLoading(false);
+      }
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
       // Fix: Explicitly navigate to step 4 when leaving the success screen
       setCurrentStep(4);
       // Update URL with the new step
-      navigate(`/onboarding?step=4${workspaceId ? `&workspace=${workspaceId}` : ''}`, { replace: true });
+      navigate(`/onboarding?step=4`, { replace: true });
     } else if (currentStep === 4) {
       setCurrentStep(5);
     } else if (currentStep === 5) {
       setCurrentStep(6);
+    } else if (currentStep === 6) {
+      navigate('/dashboard');
     }
   };
   
@@ -449,38 +212,6 @@ const OnboardingPage = () => {
     proceedToPayment();
   };
   
-  const checkEmailExists = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('check-email', {
-        body: { email }
-      });
-      
-      if (error) {
-        console.error('Error checking email:', error);
-        return false;
-      }
-      
-      return data?.exists || false;
-    } catch (error) {
-      console.error('Error checking email:', error);
-      return false;
-    }
-  };
-
-  // Show loading while checking authentication
-  if (authChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  // Redirect if not authenticated
-  if (!authenticated) {
-    return null; // The navigate in the useEffect will handle redirection
-  }
-  
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <ProgressBar currentStep={currentStep} totalSteps={6} />
@@ -494,10 +225,6 @@ const OnboardingPage = () => {
             setIndustry={setIndustry}
             companySize={companySize}
             setCompanySize={setCompanySize}
-            phoneNumber={phoneNumber}
-            setPhoneNumber={setPhoneNumber}
-            countryCode={countryCode}
-            setCountryCode={setCountryCode}
             tosAgreed={tosAgreed}
             privacyAgreed={privacyAgreed}
             msaAgreed={msaAgreed}
@@ -520,7 +247,6 @@ const OnboardingPage = () => {
             paymentLoading={paymentLoading}
             paymentSuccess={paymentSuccess}
             onOpenCheckout={handleOpenCheckout}
-            workspaceId={workspaceId}
           />
         )}
         
@@ -549,10 +275,8 @@ const OnboardingPage = () => {
         
         {currentStep === 6 && (
           <TeamInvitationStep 
-            onNext={handleSendInvitations}
+            onNext={handleNextStep}
             onPrevious={handlePreviousStep}
-            checkEmailExists={checkEmailExists}
-            workspaceId={workspaceId}
           />
         )}
       </div>
@@ -579,7 +303,6 @@ const OnboardingPage = () => {
             paymentType={paymentType}
             tokenAmount={paymentType === 'one-time' ? tokenAmount : subscriptionAmount}
             onSuccess={handlePaymentSuccess}
-            workspaceId={workspaceId}
           />
         </Elements>
       )}

@@ -8,73 +8,59 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui";
-import { Plus, Trash2, Info, ArrowRight, Loader2, Users, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Info, ArrowRight, Loader2, Users } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
+import { useNavigate } from 'react-router-dom';
 
 interface TeamMember {
   email: string;
-  role: 'administrator' | 'specialist';
+  role: 'hr-director' | 'hr-specialist' | 'recruiter';
 }
 
 interface TeamInvitationStepProps {
-  onNext: (teamMembers: TeamMember[]) => void;
+  onNext: () => void;
   onPrevious: () => void;
-  checkEmailExists?: (email: string) => Promise<boolean>;
-  workspaceId?: string | null;
 }
 
 const ROLE_DESCRIPTIONS = {
-  'administrator': 'Pełny dostęp do wszystkich funkcji systemu, możliwość zarządzania użytkownikami',
-  'specialist': 'Dostęp do większości funkcji rekrutacyjnych, bez możliwości zarządzania użytkownikami'
+  'hr-director': 'Pełny dostęp do wszystkich funkcji systemu, możliwość zarządzania użytkownikami',
+  'hr-specialist': 'Dostęp do większości funkcji rekrutacyjnych, bez możliwości zarządzania użytkownikami',
+  'recruiter': 'Podstawowy dostęp do funkcji rekrutacyjnych'
 };
 
 const ROLE_LABELS = {
-  'administrator': 'Administrator',
-  'specialist': 'Specjalista'
+  'hr-director': 'Dyrektor HR',
+  'hr-specialist': 'Specjalista HR',
+  'recruiter': 'Rekruter'
 };
 
-const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ 
-  onNext, 
-  onPrevious, 
-  checkEmailExists,
-  workspaceId
-}) => {
+const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({ onNext, onPrevious }) => {
+  const navigate = useNavigate();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    { email: '', role: 'specialist' }
+    { email: '', role: 'hr-specialist' }
   ]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
-  const [emailErrors, setEmailErrors] = useState<{[index: number]: string}>({});
   
   const form = useForm({
     defaultValues: {
-      teamMembers: [{ email: '', role: 'specialist' }]
+      teamMembers: [{ email: '', role: 'hr-specialist' }]
     }
   });
 
   const handleAddMember = () => {
-    setTeamMembers([...teamMembers, { email: '', role: 'specialist' }]);
+    setTeamMembers([...teamMembers, { email: '', role: 'hr-specialist' }]);
   };
 
   const handleRemoveMember = (index: number) => {
     if (teamMembers.length > 1) {
       setTeamMembers(teamMembers.filter((_, i) => i !== index));
-      
-      // Also remove any errors for this index
-      const newErrors = { ...emailErrors };
-      delete newErrors[index];
-      setEmailErrors(newErrors);
     } else {
       // If it's the last member, just clear the email field
       const updatedMembers = [...teamMembers];
       updatedMembers[index].email = '';
       setTeamMembers(updatedMembers);
-      
-      // Clear any errors for this index
-      const newErrors = { ...emailErrors };
-      delete newErrors[index];
-      setEmailErrors(newErrors);
       
       toast({
         title: "Ostatni członek zespołu",
@@ -83,31 +69,13 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({
     }
   };
 
-  const handleEmailChange = async (index: number, email: string) => {
+  const handleEmailChange = (index: number, email: string) => {
     const updatedMembers = [...teamMembers];
     updatedMembers[index].email = email;
     setTeamMembers(updatedMembers);
-    
-    // Clear any existing error for this index
-    if (emailErrors[index]) {
-      const newErrors = { ...emailErrors };
-      delete newErrors[index];
-      setEmailErrors(newErrors);
-    }
-    
-    // Check if email already exists when email is valid and blur event happens
-    if (email.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && checkEmailExists) {
-      const exists = await checkEmailExists(email);
-      if (exists) {
-        setEmailErrors({
-          ...emailErrors,
-          [index]: 'Ten adres email już istnieje w systemie'
-        });
-      }
-    }
   };
 
-  const handleRoleChange = (index: number, role: 'administrator' | 'specialist') => {
+  const handleRoleChange = (index: number, role: 'hr-director' | 'hr-specialist' | 'recruiter') => {
     const updatedMembers = [...teamMembers];
     updatedMembers[index].role = role;
     setTeamMembers(updatedMembers);
@@ -122,42 +90,30 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({
       return true;
     }
 
-    const newErrors: {[index: number]: string} = {};
-    let hasErrors = false;
-    
-    // Check for invalid email formats
-    teamMembers.forEach((member, index) => {
-      // Skip empty emails
-      if (member.email.trim() === '') {
-        return;
-      }
-      
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)) {
-        newErrors[index] = 'Nieprawidłowy format adresu email';
-        hasErrors = true;
-      }
-      
-      // If we already know this email exists
-      if (emailErrors[index]) {
-        newErrors[index] = emailErrors[index];
-        hasErrors = true;
-      }
-    });
-    
-    // Check for duplicates within the form
+    const invalidEmails = nonEmptyMembers.some(
+      member => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)
+    );
+    if (invalidEmails) {
+      toast({
+        title: "Nieprawidłowy format email",
+        description: "Jeden lub więcej adresów email ma nieprawidłowy format.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     const emails = nonEmptyMembers.map(member => member.email.toLowerCase());
-    emails.forEach((email, index) => {
-      const originalIndex = teamMembers.findIndex(m => m.email.toLowerCase() === email);
-      const duplicateIndex = emails.indexOf(email);
-      
-      if (duplicateIndex !== index) {
-        newErrors[originalIndex] = 'Ten adres email jest już na liście';
-        hasErrors = true;
-      }
-    });
-    
-    setEmailErrors(newErrors);
-    return !hasErrors;
+    const hasDuplicates = emails.some((email, index) => emails.indexOf(email) !== index);
+    if (hasDuplicates) {
+      toast({
+        title: "Zduplikowane adresy email",
+        description: "Każdy adres email musi być unikalny.",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,41 +129,34 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({
     }
     
     if (!validateEmails()) {
-      toast({
-        variant: "destructive",
-        title: "Błędne dane",
-        description: "Popraw błędy w formularzach przed kontynuowaniem."
-      });
-      return;
-    }
-    
-    if (!workspaceId) {
-      toast({
-        variant: "destructive",
-        title: "Błąd",
-        description: "Brak identyfikatora workspace. Spróbuj ponownie później."
-      });
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Pass the non-empty team members to onNext
-      onNext(nonEmptyMembers);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: "Zaproszenia wysłane",
+        description: `Wysłano zaproszenia do ${nonEmptyMembers.length} członków zespołu.`,
+      });
+      
+      onNext();
     } catch (error) {
       toast({
         title: "Błąd wysyłania zaproszeń",
         description: "Wystąpił problem podczas wysyłania zaproszeń. Spróbuj ponownie.",
         variant: "destructive"
       });
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleSkipInvitations = () => {
     setConfirmDialogOpen(false);
-    onNext([]);
+    navigate('/dashboard');
   };
 
   const handleContinueAddingMembers = () => {
@@ -263,35 +212,14 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({
                   <Label htmlFor={`email-${index}`} className="mb-1 block text-sm font-medium">
                     Adres email
                   </Label>
-                  <div className="relative">
-                    <Input
-                      id={`email-${index}`}
-                      type="email"
-                      value={member.email}
-                      onChange={(e) => handleEmailChange(index, e.target.value)}
-                      onBlur={async (e) => {
-                        // Check email existence on blur
-                        const email = e.target.value.trim();
-                        if (email && checkEmailExists) {
-                          const exists = await checkEmailExists(email);
-                          if (exists) {
-                            setEmailErrors({
-                              ...emailErrors,
-                              [index]: 'Ten adres email już istnieje w systemie'
-                            });
-                          }
-                        }
-                      }}
-                      placeholder="email@firma.pl"
-                      className={`bg-white focus:border-primary ${emailErrors[index] ? 'border-red-500' : ''}`}
-                    />
-                    {emailErrors[index] && (
-                      <div className="flex items-center mt-1 text-xs text-red-500">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        {emailErrors[index]}
-                      </div>
-                    )}
-                  </div>
+                  <Input
+                    id={`email-${index}`}
+                    type="email"
+                    value={member.email}
+                    onChange={(e) => handleEmailChange(index, e.target.value)}
+                    placeholder="email@firma.pl"
+                    className="bg-white focus:border-primary"
+                  />
                 </div>
                 <div className="w-1/3">
                   <Label htmlFor={`role-${index}`} className="text-sm font-medium mb-1 block">
@@ -305,8 +233,9 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({
                       <SelectValue placeholder="Wybierz rolę" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="administrator">{ROLE_LABELS['administrator']}</SelectItem>
-                      <SelectItem value="specialist">{ROLE_LABELS['specialist']}</SelectItem>
+                      <SelectItem value="hr-director">{ROLE_LABELS['hr-director']}</SelectItem>
+                      <SelectItem value="hr-specialist">{ROLE_LABELS['hr-specialist']}</SelectItem>
+                      <SelectItem value="recruiter">{ROLE_LABELS['recruiter']}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -348,7 +277,7 @@ const TeamInvitationStep: React.FC<TeamInvitationStepProps> = ({
           
           <Button
             type="submit"
-            disabled={isLoading || Object.keys(emailErrors).length > 0}
+            disabled={isLoading}
             className="px-5 bg-primary hover:bg-primary/90"
           >
             {isLoading ? (
