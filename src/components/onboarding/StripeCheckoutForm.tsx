@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -15,7 +14,8 @@ interface StripeCheckoutFormProps {
   onOpenChange: (open: boolean) => void;
   paymentType: 'one-time' | 'subscription';
   tokenAmount: number[];
-  onSuccess?: (paymentType: string, amount: number) => void;
+  onSuccess?: (paymentType: string, amount: number, customerId?: string) => void;
+  workspaceId?: string | null;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
@@ -23,7 +23,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   onOpenChange,
   paymentType,
   tokenAmount,
-  onSuccess
+  onSuccess,
+  workspaceId
 }) => {
   const navigate = useNavigate();
   const stripe = useStripe();
@@ -36,10 +37,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
   
-  // Always get a fresh payment intent when the dialog opens
   useEffect(() => {
     if (open) {
-      // Reset state when dialog opens
       setClientSecret(null);
       setIntentId(null);
       setError(null);
@@ -55,11 +54,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // Call Supabase Edge Function to create a payment intent
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: paymentType,
-          tokenAmount: tokenAmount[0]
+          tokenAmount: tokenAmount[0],
+          workspaceId: workspaceId
         }
       });
       
@@ -91,12 +90,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setProcessingSetupConfirmation(true);
     
     try {
-      // Call the edge function to create an initial charge for subscription users
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: 'subscription',
           tokenAmount: tokenAmount[0],
-          paymentMethodId
+          paymentMethodId,
+          workspaceId: workspaceId
         }
       });
       
@@ -104,14 +103,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       console.log("Initial charge created:", data);
       
-      // Handle successful payment
       if (onSuccess) {
-        onSuccess(paymentType, tokenAmount[0]);
+        onSuccess(paymentType, tokenAmount[0], data?.customerId);
       }
       
       onOpenChange(false);
       
-      navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+      navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}${data?.customerId ? `&customer=${data.customerId}` : ''}`);
       
       toast({
         title: "Płatność zrealizowana",
@@ -150,10 +148,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // Clear the card element state before confirmation
       cardElement.update({});
       
-      // Confirm payment/setup based on payment type
       let result;
       
       if (paymentType === 'one-time') {
@@ -173,9 +169,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         console.log("Payment result:", result);
         
-        // Check the payment status
         if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-          // Handle successful payment
           if (onSuccess) {
             onSuccess(paymentType, tokenAmount[0]);
           }
@@ -196,7 +190,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error("Brak klucza klienta dla subskrypcji");
         }
         
-        // Confirm the setup intent with the card element
         result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -209,7 +202,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         console.log("Setup result:", result);
         
-        // For subscription, we need to now create an initial charge with the stored payment method
         const setupResult = result.setupIntent;
         
         if (setupResult && setupResult.payment_method) {
@@ -222,23 +214,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } catch (error: any) {
       console.error('Payment error:', error);
       
-      // Check if the error is due to an expired or invalid setup/payment intent
       const intentExpiredError = 
         error.message?.includes("No such setupintent") || 
         error.message?.includes("No such payment_intent") ||
         error.message?.includes("expired");
       
       if (intentExpiredError && retryCount < 3) {
-        // Get a new intent and increment retry count
         setRetryCount(prev => prev + 1);
         setError("Sesja płatności wygasła - odświeżamy dane płatności, spróbuj ponownie za chwilę.");
         
-        // Reset the card input
         if (cardElement) {
           cardElement.clear();
         }
         
-        // Get a new payment intent
         await fetchPaymentIntent();
       } else {
         setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
@@ -249,7 +237,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
         });
         
-        // Reset the form if there's an error
         if (cardElement) {
           cardElement.clear();
         }

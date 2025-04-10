@@ -7,6 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface CheckEmailRequest {
+  email: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -26,7 +30,7 @@ serve(async (req) => {
     }
 
     // Get the request body
-    const { email } = await req.json() as { email: string };
+    const { email } = await req.json() as CheckEmailRequest;
 
     if (!email) {
       throw new Error("Email is required");
@@ -51,7 +55,7 @@ serve(async (req) => {
         status: 200,
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in check-email function:", error);
     return new Response(
       JSON.stringify({ error: error.message }),

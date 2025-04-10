@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,14 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+
+interface WorkspaceInvitation {
+  workspace_id: string;
+  role: string;
+  workspaces?: {
+    name: string;
+  };
+}
 
 const VerificationPage = () => {
   const [otp, setOtp] = useState("");
@@ -74,11 +81,14 @@ const VerificationPage = () => {
             console.error('Error updating invitation:', updateError);
           }
           
+          // Cast the data to our type to access the properties safely
+          const invitation = invitationData as unknown as WorkspaceInvitation;
+          
           // Show workspace join success
           toast({
             title: "Dołączono do workspace'a",
-            description: `Zostałeś dodany do workspace'a ${invitationData.workspaces?.name || 'Unknown'} jako ${
-              invitationData.role === 'administrator' ? 'Administrator' : 'Specjalista'
+            description: `Zostałeś dodany do workspace'a ${invitation.workspaces?.name || 'Unknown'} jako ${
+              invitation.role === 'administrator' ? 'Administrator' : 'Specjalista'
             }.`
           });
           
