@@ -135,7 +135,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_email_exists: {
+        Args: { email_to_check: string }
+        Returns: boolean
+      }
+      create_workspace_with_admin: {
+        Args: {
+          workspace_name: string
+          workspace_industry: string
+          workspace_company_size: string
+          user_phone_number: string
+          user_country_code: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

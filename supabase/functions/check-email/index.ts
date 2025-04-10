@@ -50,7 +50,7 @@ serve(async (req) => {
       throw new Error("Email is required");
     }
 
-    // Check if email already exists using secure function
+    // Check if email already exists using the RPC function
     const { data, error } = await supabaseClient.rpc(
       'check_email_exists',
       { email_to_check: email }
