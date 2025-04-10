@@ -86,7 +86,7 @@ serve(async (req) => {
 
     // Get the user from the auth header
     const token = authHeader.replace("Bearer ", "");
-    console.log("→ Attempting to get user with token");
+    console.log("→ Attempting to get user with token length:", token.length);
     
     const { data: userData, error: userError } = await serviceRoleClient.auth.getUser(token);
 

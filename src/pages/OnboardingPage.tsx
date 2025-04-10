@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -26,6 +27,8 @@ const OnboardingPage = () => {
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   
   // Company info state
   const [companyName, setCompanyName] = useState('');
@@ -72,6 +75,57 @@ const OnboardingPage = () => {
       },
     },
   };
+  
+  // Check authentication state when component mounts
+  useEffect(() => {
+    const checkAuth = async () => {
+      setAuthChecking(true);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData?.session) {
+          console.log("User is authenticated:", sessionData.session.user.id);
+          setAuthenticated(true);
+        } else {
+          console.log("No active session found");
+          setAuthenticated(false);
+          // Redirect to login
+          toast({
+            variant: "destructive",
+            title: "Wymagane logowanie",
+            description: "Musisz być zalogowany, aby kontynuować proces onboardingu."
+          });
+          navigate('/login', { state: { returnTo: '/onboarding' } });
+        }
+      } catch (error) {
+        console.error("Error checking auth state:", error);
+        setAuthenticated(false);
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+
+    checkAuth();
+    
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event);
+      setAuthenticated(!!session);
+      
+      if (!session && !authChecking) {
+        toast({
+          variant: "destructive",
+          title: "Sesja wygasła",
+          description: "Twoja sesja wygasła. Zaloguj się ponownie."
+        });
+        navigate('/login', { state: { returnTo: '/onboarding' } });
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
   
   useEffect(() => {
     const stepParam = searchParams.get('step');
@@ -198,13 +252,6 @@ const OnboardingPage = () => {
     
     try {
       console.log("Starting workspace creation...");
-      console.log("Request data:", {
-        companyName,
-        industry,
-        companySize,
-        phoneNumber,
-        countryCode
-      });
       
       // Get session information to ensure we have a valid token
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -216,10 +263,23 @@ const OnboardingPage = () => {
       
       if (!sessionData?.session) {
         console.error("No active session found");
-        throw new Error("No active session. Please sign in before creating a workspace.");
+        toast({
+          variant: "destructive",
+          title: "Wymagane logowanie",
+          description: "Musisz być zalogowany, aby utworzyć workspace."
+        });
+        navigate('/login', { state: { returnTo: '/onboarding' } });
+        return;
       }
       
       console.log("Session verified, proceeding with API call");
+      console.log("Request data:", {
+        companyName,
+        industry,
+        companySize,
+        phoneNumber,
+        countryCode
+      });
       
       const { data, error } = await supabase.functions.invoke('create-workspace', {
         body: {
@@ -406,6 +466,20 @@ const OnboardingPage = () => {
       return false;
     }
   };
+
+  // Show loading while checking authentication
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  // Redirect if not authenticated
+  if (!authenticated) {
+    return null; // The navigate in the useEffect will handle redirection
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
