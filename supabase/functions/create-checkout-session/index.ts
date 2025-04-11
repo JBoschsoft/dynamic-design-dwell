@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -139,9 +138,7 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
-      },
-      // Ensure the payment intent remains valid longer to avoid expiration issues during testing
-      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
+      }
     });
     
     log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
@@ -233,7 +230,6 @@ async function processAutoRechargePayment(
   }
 }
 
-// New function to attach payment method directly to a payment intent
 async function attachPaymentMethod(
   stripe: Stripe,
   paymentIntentId: string,
@@ -260,7 +256,6 @@ async function attachPaymentMethod(
   }
 }
 
-// New function to confirm a payment intent with an attached payment method
 async function confirmPaymentIntent(
   stripe: Stripe,
   paymentIntentId: string,
@@ -340,7 +335,6 @@ serve(async (req) => {
     
     const stripe = initStripe();
     
-    // Handle direct payment method attachment to existing payment intent
     if (shouldAttachMethod && paymentIntentId && paymentMethodId) {
       try {
         const attachResult = await attachPaymentMethod(
@@ -374,7 +368,6 @@ serve(async (req) => {
       }
     }
     
-    // Handle direct payment intent confirmation
     if (shouldConfirmIntent && paymentIntentId) {
       try {
         const confirmResult = await confirmPaymentIntent(
