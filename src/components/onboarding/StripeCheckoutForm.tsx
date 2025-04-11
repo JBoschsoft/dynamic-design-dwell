@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -42,7 +41,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   } | null>(null);
   const [intentFetchTime, setIntentFetchTime] = useState<Date | null>(null);
   
-  // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
     if (data) {
       console.log(`[CHECKOUT-${sessionId}] ${message}`, data);
@@ -51,11 +49,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   }, [sessionId]);
   
-  // Check if the payment intent is still valid (not expired)
   const isIntentValid = useCallback(() => {
     if (!intentFetchTime) return false;
     
-    // Consider intents older than 2 minutes as potentially invalid
     const MAX_INTENT_AGE_MS = 2 * 60 * 1000;
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
@@ -67,7 +63,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     return isValid;
   }, [intentFetchTime, log]);
   
-  // Create a new payment intent when the dialog is opened
   const createPaymentIntent = async () => {
     if (loading) return;
     
@@ -132,14 +127,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   }, [open, stripe, elements, paymentIntent]);
 
-  // Set up PaymentElement when client secret is available
   useEffect(() => {
     if (paymentIntent?.clientSecret && stripe && elements) {
       log('Setting up payment element with client secret');
     }
   }, [paymentIntent?.clientSecret, stripe, elements]);
 
-  // Clean up when the dialog closes
   useEffect(() => {
     if (!open) {
       log('Checkout dialog closed, cleaning up');
@@ -184,6 +177,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     try {
       log(`Confirming payment for intent: ${paymentIntent.id.substring(0, 10)}...`);
       
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        log('Payment submission error:', submitError);
+        throw new Error(submitError.message || "Payment submission failed");
+      }
+      
       const result = await stripe.confirmPayment({
         elements,
         clientSecret: paymentIntent.clientSecret,
@@ -216,7 +215,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error(result.error.message || "Payment confirmation failed");
       }
       
-      // Handle success without redirect
       if (result.paymentIntent?.status === 'succeeded') {
         log('Payment successful! Updating token balance.');
         const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
@@ -260,7 +258,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
-  // Return early if the PaymentElement can't be shown
   if (!paymentIntent?.clientSecret || !stripe || !elements) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
