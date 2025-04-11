@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -36,7 +35,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const stripe = useStripe();
   const elements = useElements();
   
-  // Add a unique session ID for tracking this checkout instance
   const [sessionId] = useState(`checkout-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   
   const [loading, setLoading] = useState(false);
@@ -57,7 +55,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [purposelyDelaying, setPurposelyDelaying] = useState(false);
   const operationTimestamps = useRef<{[key: string]: number}>({});
 
-  // Debug helper - track timing of operations
   const timeOperation = (operation: string) => {
     operationTimestamps.current[operation] = Date.now();
     log(`Starting operation: ${operation}`);
@@ -102,7 +99,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       const timeout = setTimeout(() => {
         log('Initial intent fetch triggered');
         fetchPaymentIntent(true);
-      }, 500); // Increased delay
+      }, 500);
       
       return () => {
         clearTimeout(timeout);
@@ -164,7 +161,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
-    const maxIntentAge = 20 * 1000; // Reduced staleness threshold to 20 seconds
+    const maxIntentAge = 20 * 1000;
     
     const isStale = timeDiff > maxIntentAge;
     log(`Intent staleness check: age=${timeDiff}ms, max=${maxIntentAge}ms, isStale=${isStale}`);
@@ -197,7 +194,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     log(`Fetch request received. Force=${force}, Last fetch=${lastFetchTimestamp ? new Date(lastFetchTimestamp).toISOString() : 'never'}`);
     log(`Time since last fetch: ${now - lastFetchTimestamp}ms`);
     
-    if (!force && now - lastFetchTimestamp < 3000) { // Reduced to 3 seconds
+    if (!force && now - lastFetchTimestamp < 3000) {
       log("Fetch requests too frequent, adding delay");
       
       if (rateLimited && retryAfter > 0) {
@@ -272,7 +269,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         log(`Received new client secret: ${data.clientSecret.substring(0, 10)}...`);
         log(`Intent ID: ${data.id}`);
         
-        // Add a small delay before setting the new intent
         await waitFor(200, 'After receiving client secret');
         
         setPaymentIntent({
@@ -413,7 +409,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setProcessingSetupConfirmation(true);
     
     try {
-      // Add a small delay before processing
       await waitFor(300, 'Before initial charge');
       
       log('Invoking create-checkout-session for initial charge', {
@@ -531,7 +526,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setForceNewIntent(true);
         await fetchPaymentIntent(true);
         
-        // Add a delay for intent creation to settle
         await waitFor(1000, 'After fetching fresh intent');
         
         if (!paymentIntent?.clientSecret) {
@@ -547,7 +541,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         log('Intent ID:', paymentIntent.id);
         log('Client secret starts with:', paymentIntent.clientSecret?.slice(0, 10));
         
-        // Add a small delay before confirming
         await waitFor(500, 'Before payment confirmation');
         
         const result = await stripe.confirmCardPayment(paymentIntent.clientSecret!, {
@@ -574,7 +567,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             
             await fetchPaymentIntent(true);
             
-            // Add delay after fetching new intent
             await waitFor(1000, 'After fetching new payment intent');
             
             if (paymentIntent?.clientSecret) {
@@ -626,7 +618,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${result.paymentIntent?.status || 'nieznany'}`);
         }
       } else {
-        // Auto-recharge option processing
         log('Using confirmCardSetup for auto-recharge setup');
         
         if (!paymentIntent?.clientSecret) {
@@ -637,7 +628,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         log('Setup intent ID:', paymentIntent.id);
         log('Setup client secret starts with:', paymentIntent.clientSecret.slice(0, 10));
         
-        // Verify the intent exists in Stripe before attempting to confirm
         try {
           log('Verifying setup intent exists, waiting before confirmation...');
           await waitFor(1000, 'Before setup confirmation');
@@ -703,7 +693,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               
               log(`Payment method ID obtained: ${paymentMethodId.substring(0, 5)}...`);
               
-              // Add a small delay before initial charge
               await waitFor(500, 'Before creating initial charge');
               
               await createInitialCharge(paymentMethodId);

@@ -55,6 +55,14 @@ const checkRateLimit = (ip: string): { allowed: boolean, retryAfter?: number } =
   return { allowed: true };
 };
 
+// Helper function to calculate token price
+const calculateTokenPrice = (quantity: number): number => {
+  if (quantity >= 150) return 5;
+  if (quantity >= 100) return 6;
+  if (quantity >= 50) return 7;
+  return 8;
+};
+
 // Initialize Stripe with API key from environment variable
 const initStripe = () => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
@@ -124,22 +132,25 @@ async function createSetupIntent(stripe: Stripe, customerId: string, sessionId?:
 }
 
 // Create a payment intent for one-time payment
-async function createPaymentIntent(stripe: Stripe, customerId: string, amount: number, sessionId?: string) {
+async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmount: number, sessionId?: string) {
   try {
-    log(sessionId, `Creating payment intent for customer: ${customerId}, amount: ${amount}`);
+    // Calculate price based on token amount
+    const pricePerToken = calculateTokenPrice(tokenAmount);
+    const amount = Math.round(tokenAmount * pricePerToken * 100); // Convert to smallest currency unit (cents)
     
-    // Calculate amount in smallest currency unit (e.g., cents)
-    const amountInSmallestUnit = amount * 100; // assuming price is in dollars/euros
+    log(sessionId, `Creating payment intent for customer: ${customerId}, token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
     
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInSmallestUnit,
+      amount: amount,
       currency: 'pln',
       customer: customerId,
       capture_method: 'automatic',
       payment_method_types: ['card'],
+      // For future off-session charges (optional)
+      // setup_future_usage: 'off_session', 
     });
     
-    log(sessionId, `Payment intent created: ${paymentIntent.id}`);
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
     
     return {
       id: paymentIntent.id,
@@ -188,7 +199,7 @@ async function processAutoRechargePayment(
     });
     
     // Calculate price based on token amount
-    const pricePerToken = tokenAmount >= 350 ? 0.99 : 1.19; // Example pricing logic
+    const pricePerToken = calculateTokenPrice(tokenAmount);
     const amount = Math.round(tokenAmount * pricePerToken * 100); // Convert to smallest currency unit (cents)
     
     // Create and confirm a PaymentIntent
