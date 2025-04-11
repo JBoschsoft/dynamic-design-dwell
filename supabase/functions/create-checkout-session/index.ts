@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -239,40 +240,78 @@ async function attachPaymentMethod(
   try {
     log(sessionId, `Attaching payment method ${paymentMethodId} to payment intent ${paymentIntentId}`);
     
+    // First, retrieve the payment intent to check its status
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    log(sessionId, `Payment intent status before attachment: ${paymentIntent.status}`);
+    
+    if (paymentIntent.status === 'succeeded') {
+      log(sessionId, `Payment intent ${paymentIntentId} has already succeeded, no need to attach payment method`);
+      return {
+        updated: false,
+        status: paymentIntent.status,
+        message: 'Payment already succeeded'
+      };
+    }
+    
+    // Check if payment method exists
     let paymentMethod;
     
     try {
+      log(sessionId, `Retrieving payment method: ${paymentMethodId}`);
       paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
       log(sessionId, `Successfully retrieved payment method: ${paymentMethodId}`);
     } catch (retrieveError) {
       log(sessionId, `Error retrieving payment method: ${retrieveError.message}`);
       
-      log(sessionId, `Creating a test payment method for development`);
-      
-      try {
-        paymentMethod = await stripe.paymentMethods.create({
-          type: 'card',
-          card: {
-            number: '4242424242424242',
-            exp_month: 12,
-            exp_year: new Date().getFullYear() + 1,
-            cvc: '123',
-          },
-        });
-        paymentMethodId = paymentMethod.id;
-        log(sessionId, `Created new test payment method: ${paymentMethod.id}`);
-      } catch (createError) {
-        log(sessionId, `Failed to create test payment method: ${createError.message}`);
-        throw new Error(`Cannot create payment method: ${createError.message}`);
+      // For testing environment only - create a test card if the payment method doesn't exist
+      if (Deno.env.get("ENVIRONMENT") !== "production") {
+        log(sessionId, `Creating a test payment method for development`);
+        
+        try {
+          paymentMethod = await stripe.paymentMethods.create({
+            type: 'card',
+            card: {
+              number: '4242424242424242',
+              exp_month: 12,
+              exp_year: new Date().getFullYear() + 1,
+              cvc: '123',
+            },
+          });
+          paymentMethodId = paymentMethod.id;
+          log(sessionId, `Created new test payment method: ${paymentMethod.id}`);
+        } catch (createError) {
+          log(sessionId, `Failed to create test payment method: ${createError.message}`);
+          throw new Error(`Cannot create payment method: ${createError.message}`);
+        }
+      } else {
+        throw new Error(`Payment method not found: ${retrieveError.message}`);
       }
     }
     
+    // Attach the payment method to the customer if needed
+    const customerId = paymentIntent.customer as string;
+    if (customerId && (!paymentMethod.customer || paymentMethod.customer !== customerId)) {
+      try {
+        log(sessionId, `Attaching payment method ${paymentMethodId} to customer ${customerId}`);
+        paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: customerId,
+        });
+        log(sessionId, `Successfully attached payment method to customer`);
+      } catch (attachError) {
+        log(sessionId, `Error attaching payment method to customer: ${attachError.message}`);
+        // Continue anyway as we might be able to attach it directly to the payment intent
+      }
+    }
+    
+    // Update the payment intent with the payment method
     try {
+      log(sessionId, `Updating payment intent ${paymentIntentId} with payment method ${paymentMethodId}`);
       const updatedIntent = await stripe.paymentIntents.update(paymentIntentId, {
         payment_method: paymentMethodId,
       });
       
       log(sessionId, `Successfully attached payment method ${paymentMethodId} to intent ${paymentIntentId}`);
+      log(sessionId, `Updated payment intent status: ${updatedIntent.status}`);
       
       return {
         updated: true,
@@ -297,18 +336,67 @@ async function confirmPaymentIntent(
   try {
     log(sessionId, `Confirming payment intent ${paymentIntentId}`);
     
-    const confirmedIntent = await stripe.paymentIntents.confirm(paymentIntentId);
+    // First check if the payment intent exists and its current status
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    log(sessionId, `Payment intent current status: ${paymentIntent.status}`);
     
-    log(sessionId, `Payment intent confirmation result: ${confirmedIntent.status}`);
+    if (paymentIntent.status === 'succeeded') {
+      log(sessionId, `Payment intent ${paymentIntentId} has already succeeded`);
+      return {
+        status: 'succeeded',
+        requiresAction: false,
+        message: 'Payment already succeeded'
+      };
+    }
     
-    return {
-      status: confirmedIntent.status,
-      clientSecret: confirmedIntent.client_secret,
-      requiresAction: confirmedIntent.status === 'requires_action'
-    };
+    if (!paymentIntent.payment_method) {
+      log(sessionId, `No payment method attached to intent ${paymentIntentId}`);
+      return {
+        status: 'requires_payment_method',
+        requiresAction: false,
+        error: 'No payment method attached to this intent'
+      };
+    }
     
+    // Only confirm the payment intent if it's in a confirmable state
+    if (['requires_confirmation', 'requires_payment_method'].includes(paymentIntent.status)) {
+      log(sessionId, `Confirming payment intent ${paymentIntentId} with status ${paymentIntent.status}`);
+      
+      try {
+        const confirmedIntent = await stripe.paymentIntents.confirm(paymentIntentId);
+        
+        log(sessionId, `Payment intent confirmation result: ${confirmedIntent.status}`);
+        
+        return {
+          status: confirmedIntent.status,
+          clientSecret: confirmedIntent.client_secret,
+          requiresAction: confirmedIntent.status === 'requires_action'
+        };
+      } catch (confirmError) {
+        log(sessionId, `Error confirming payment intent: ${confirmError.message}`);
+        
+        // Special handling for authentication required errors
+        if (confirmError.type === 'StripeCardError' && confirmError.code === 'authentication_required') {
+          return {
+            status: 'requires_authentication',
+            clientSecret: paymentIntent.client_secret,
+            requiresAction: true,
+            message: confirmError.message
+          };
+        }
+        
+        throw confirmError;
+      }
+    } else {
+      // For other statuses, just return the current status
+      return {
+        status: paymentIntent.status,
+        clientSecret: paymentIntent.client_secret,
+        requiresAction: paymentIntent.status === 'requires_action'
+      };
+    }
   } catch (error) {
-    log(sessionId, `Error confirming payment intent: ${error.message}`);
+    log(sessionId, `Error in confirmPaymentIntent: ${error.message}`);
     throw error;
   }
 }
