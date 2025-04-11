@@ -134,11 +134,14 @@ serve(async (req) => {
             }
           }
           
-          // Create a new customer with the payment method
+          // Create a new customer with the payment method and appropriate metadata for auto-recharge
           console.log("Creating new customer with payment method:", paymentMethodId);
           customer = await stripe.customers.create({
             email: userEmail || undefined,
             payment_method: paymentMethodId,
+            invoice_settings: {
+              default_payment_method: paymentMethodId,
+            },
             metadata: {
               autoRecharge: "true",
               rechargeThreshold: "10",
@@ -149,6 +152,21 @@ serve(async (req) => {
           });
           isNewCustomer = true;
           console.log("Created new customer:", customer.id);
+        } else {
+          // If we're using an existing customer, we should update their metadata and default payment method
+          await stripe.customers.update(customer.id, {
+            invoice_settings: {
+              default_payment_method: paymentMethodId,
+            },
+            metadata: {
+              autoRecharge: "true",
+              rechargeThreshold: "10",
+              rechargeAmount: tokenAmount.toString(),
+              userId: userId || undefined,
+              workspaceId: workspaceId || undefined
+            }
+          });
+          console.log("Updated existing customer metadata and default payment method");
         }
         
         // Verify the payment method exists before attempting to attach it
@@ -167,6 +185,16 @@ serve(async (req) => {
             customer: customer.id,
           });
           console.log("Payment method attached successfully");
+          
+          // Update the payment method with metadata for auto-recharge
+          await stripe.paymentMethods.update(paymentMethodId, {
+            metadata: {
+              autoRecharge: "true",
+              forOffSessionUsage: "true"
+            }
+          });
+          console.log("Updated payment method metadata for off-session usage");
+          
         } catch (error) {
           // Only continue if the error is because it's already attached
           if (!error.message?.includes("already been attached")) {
@@ -174,6 +202,15 @@ serve(async (req) => {
             throw error;
           }
           console.log("Payment method already attached");
+          
+          // Still update the payment method metadata
+          await stripe.paymentMethods.update(paymentMethodId, {
+            metadata: {
+              autoRecharge: "true",
+              forOffSessionUsage: "true"
+            }
+          });
+          console.log("Updated payment method metadata for off-session usage");
         }
         
         // Set as the default payment method
@@ -200,7 +237,7 @@ serve(async (req) => {
             autoRecharge: "true",
             workspaceId: workspaceId || undefined
           },
-          setup_future_usage: 'off_session', // Explicitly set this for subscriptions
+          setup_future_usage: 'off_session', // Explicitly set this for future charges
           description: `Initial subscription charge for ${tokenAmount} tokens`,
         });
         
@@ -314,7 +351,8 @@ serve(async (req) => {
           email: userEmail,
           metadata: {
             userId: userId,
-            workspaceId: workspaceId || undefined
+            workspaceId: workspaceId || undefined,
+            autoRecharge: "false" // Explicitly mark as not auto-recharge
           }
         });
         
@@ -424,8 +462,22 @@ serve(async (req) => {
           
           // Verify the customer still exists in Stripe
           try {
-            await stripe.customers.retrieve(existingCustomerId);
+            const customer = await stripe.customers.retrieve(existingCustomerId);
             console.log("Found existing customer:", existingCustomerId);
+            
+            // Update customer metadata for auto recharge if it's a subscription
+            if (isAutoTopupEnabled) {
+              await stripe.customers.update(existingCustomerId, {
+                metadata: {
+                  autoRecharge: "true",
+                  rechargeThreshold: "10",
+                  rechargeAmount: tokenAmount.toString(),
+                  workspaceId: workspaceId || undefined,
+                  userId: userId || undefined
+                }
+              });
+              console.log("Updated existing customer metadata for auto-recharge");
+            }
           } catch (error) {
             console.error("Customer no longer exists in Stripe:", error);
             existingCustomerId = null;
