@@ -106,6 +106,7 @@ serve(async (req) => {
             console.log("Found existing customer:", customer.id);
           } catch (error) {
             console.error("Error retrieving customer, will create new one:", error);
+            console.log("Customer ID that failed:", customerId);
             customer = null; // Reset to create new customer
           }
         } 
@@ -137,6 +138,15 @@ serve(async (req) => {
           console.log("Created new customer:", customer.id);
         }
         
+        // Verify the payment method exists before attempting to attach it
+        try {
+          const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+          console.log("Payment method exists:", paymentMethod.id);
+        } catch (error) {
+          console.error("Error retrieving payment method:", error);
+          throw new Error(`Invalid payment method: ${paymentMethodId}`);
+        }
+        
         // Attach the payment method to the customer if not already
         try {
           console.log("Attaching payment method to customer");
@@ -147,6 +157,7 @@ serve(async (req) => {
         } catch (error) {
           // Only continue if the error is because it's already attached
           if (!error.message?.includes("already been attached")) {
+            console.error("Error attaching payment method:", error);
             throw error;
           }
           console.log("Payment method already attached");
@@ -234,7 +245,16 @@ serve(async (req) => {
           );
         }
         
-        throw error;
+        return new Response(
+          JSON.stringify({ 
+            error: error.message || 'An error occurred processing the subscription',
+            errorType: error.type || 'unknown'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          }
+        );
       }
     }
     
@@ -368,7 +388,8 @@ serve(async (req) => {
           rechargeAmount: tokenAmount.toString(),
           workspaceId: workspaceId || undefined,
           userId: userId || undefined,
-          userEmail: userEmail || undefined
+          userEmail: userEmail || undefined,
+          createdAt: new Date().toISOString(), // Add creation timestamp
         },
         // Set to off_session to allow future off-session payments
         usage: 'off_session',
