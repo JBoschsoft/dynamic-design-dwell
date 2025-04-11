@@ -35,6 +35,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [cardElementReady, setCardElementReady] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   
   // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
@@ -52,6 +54,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setLoading(false);
       setCardElementReady(false);
       setClientSecret(null);
+      setPaymentIntentId(null);
+      setCustomerId(null);
       
       // Create payment intent when the dialog opens
       const createPaymentIntent = async () => {
@@ -87,6 +91,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           }
           
           setClientSecret(data.clientSecret);
+          setPaymentIntentId(data.id);
+          if (data.customerId) {
+            setCustomerId(data.customerId);
+          }
         } catch (error) {
           log('Error creating payment intent:', error);
           setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
@@ -119,7 +127,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
-    if (!clientSecret) {
+    if (!clientSecret || !paymentIntentId) {
       setError('Brak klucza klienta. Proszę odświeżyć stronę i spróbować ponownie.');
       return;
     }
@@ -133,14 +141,42 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
+      // Step 1: Create a payment method from the card element
+      log('Creating payment method from card');
+      const { error: createMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: 'Lovable Customer',
+        },
+      });
+      
+      if (createMethodError) {
+        throw createMethodError;
+      }
+      
+      if (!paymentMethod) {
+        throw new Error("Nie udało się utworzyć metody płatności");
+      }
+      
+      log('Payment method created:', paymentMethod.id);
+      
+      // Step 2: Attach payment method to the payment intent
+      if (customerId) {
+        log('Attaching payment method to customer:', customerId);
+        try {
+          await stripe.paymentMethods.attach(paymentMethod.id, { customer: customerId });
+          log('Payment method attached to customer');
+        } catch (attachError) {
+          log('Error attaching payment method to customer:', attachError);
+          // Continue anyway, as Stripe will attach it during confirmation
+        }
+      }
+      
+      // Step 3: Confirm the payment with the payment method
       log('Confirming payment with Stripe');
       const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name: 'Lovable Customer'
-          }
-        }
+        payment_method: paymentMethod.id
       });
       
       if (result.error) {
