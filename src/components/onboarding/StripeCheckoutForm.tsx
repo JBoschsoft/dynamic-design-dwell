@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Button, Label, Loader2, Card, CardContent, Alert, AlertCircle
+  Button, Label, Loader2, Card, CardContent
 } from "@/components/ui";
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
@@ -34,7 +34,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cardElementReady, setCardElementReady] = useState(false);
-  const [customerId, setCustomerId] = useState<string | null>(null);
   
   // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
@@ -78,8 +77,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      // Step 1: Process the payment with a single API call
-      log('Creating and confirming direct payment');
+      // Step 1: Create a payment intent
+      log('Creating payment intent');
       const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: 'direct-charge',
@@ -105,11 +104,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       }
       
       // Step 2: Confirm the payment with the card element
+      log('Confirming payment with Stripe');
       const result = await stripe.confirmCardPayment(data.clientSecret, {
         payment_method: {
           card: cardElement,
           billing_details: {
-            name: 'Lovable Customer' // Can be customized later
+            name: 'Lovable Customer'
           }
         }
       });

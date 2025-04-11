@@ -623,6 +623,61 @@ serve(async (req) => {
       }
     }
     
+    // Handle direct charge scenario (new simplified flow)
+    if (paymentType === 'direct-charge') {
+      try {
+        // For direct charges, we may or may not have authentication
+        let userEmail = null;
+        
+        // Try to get user information if there's an auth header
+        const authHeader = req.headers.get("Authorization");
+        if (authHeader) {
+          try {
+            const token = authHeader.split(" ")[1];
+            const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+            const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+            
+            const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "apikey": supabaseKey,
+              },
+            });
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              userEmail = userData.email;
+              log(sessionId, `Processing for authenticated user: ${userEmail}`);
+            }
+          } catch (authError) {
+            log(sessionId, `Error getting user data: ${authError.message}`);
+            // Continue without user email
+          }
+        }
+        
+        const result = await createDirectCharge(stripe, tokenAmount, sessionId, userEmail);
+        
+        return new Response(
+          JSON.stringify(result),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } catch (error) {
+        log(sessionId, `Error creating direct charge: ${error.message}`);
+        return new Response(
+          JSON.stringify({
+            error: `Failed to create payment: ${error.message}`
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+    }
+    
     // Auth check for standard operations (not for direct charge)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -670,31 +725,6 @@ serve(async (req) => {
     }
     
     log(sessionId, `Processing for user email: ${userEmail}`);
-    
-    // Handle direct charge scenario (new simplified flow)
-    if (paymentType === 'direct-charge') {
-      try {
-        const result = await createDirectCharge(stripe, tokenAmount, sessionId, userEmail);
-        
-        return new Response(
-          JSON.stringify(result),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
-      } catch (error) {
-        return new Response(
-          JSON.stringify({
-            error: `Failed to create payment: ${error.message}`
-          }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
-      }
-    }
     
     // Normal flow continues here
     let customerId = existingCustomerId;
