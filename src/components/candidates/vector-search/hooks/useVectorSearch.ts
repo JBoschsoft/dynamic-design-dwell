@@ -85,12 +85,13 @@ export const useVectorSearch = () => {
   const initialRenderRef = useRef(true);
   const searchSessionId = useRef(`search-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  // Logging function with session ID
+  // Enhanced logging function with session ID and timestamps
   const log = (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
     if (data) {
-      console.log(`[SEARCH-${searchSessionId.current}] ${message}`, data);
+      console.log(`[VECTOR-SEARCH-${searchSessionId.current}][${timestamp}] ${message}`, data);
     } else {
-      console.log(`[SEARCH-${searchSessionId.current}] ${message}`);
+      console.log(`[VECTOR-SEARCH-${searchSessionId.current}][${timestamp}] ${message}`);
     }
   };
 

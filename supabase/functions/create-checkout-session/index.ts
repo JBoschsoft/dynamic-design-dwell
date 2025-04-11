@@ -38,10 +38,21 @@ setInterval(() => {
   }
 }, 120000);
 
+// Add a more detailed debug function to track payment attachment flow
+const debugPaymentFlow = (requestId: string, step: string, data?: any) => {
+  const timestamp = new Date().toISOString();
+  if (data) {
+    console.log(`[PAYMENT-FLOW-${requestId}][${timestamp}] ${step}:`, data);
+  } else {
+    console.log(`[PAYMENT-FLOW-${requestId}][${timestamp}] ${step}`);
+  }
+};
+
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const requestStart = Date.now();
   console.log(`[REQ-${requestId}] Request started at ${new Date(requestStart).toISOString()}`);
+  debugPaymentFlow(requestId, "Request received", { url: req.url, method: req.method });
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -51,12 +62,14 @@ serve(async (req) => {
   
   try {
     console.log(`[REQ-${requestId}] Processing ${req.method} request to ${req.url}`);
+    debugPaymentFlow(requestId, "Processing request", { method: req.method, url: req.url });
     
     // Parse the request body
     let requestBody;
     try {
       requestBody = await req.json();
       console.log(`[REQ-${requestId}] Request body parsed:`, JSON.stringify(requestBody));
+      debugPaymentFlow(requestId, "Request body parsed", requestBody);
     } catch (parseError) {
       console.error(`[REQ-${requestId}] Failed to parse request body:`, parseError);
       throw new Error(`Invalid request body: ${parseError.message}`);
@@ -110,6 +123,7 @@ serve(async (req) => {
     
     if (authHeader) {
       console.log(`[REQ-${requestId}] Authorization header found, getting user...`);
+      debugPaymentFlow(requestId, "Authorization header found, getting user");
       const token = authHeader.replace('Bearer ', '');
       
       try {
@@ -117,15 +131,19 @@ serve(async (req) => {
         
         if (userError) {
           console.error(`[REQ-${requestId}] Error getting user from token:`, userError);
+          debugPaymentFlow(requestId, "Error getting user from token", userError);
         } else if (userData && userData.user) {
           userId = userData.user.id;
           console.log(`[REQ-${requestId}] User authenticated: ${userId.substring(0, 8)}...`);
+          debugPaymentFlow(requestId, "User authenticated", { userId: userId.substring(0, 8) + "..." });
         }
       } catch (authError) {
         console.error(`[REQ-${requestId}] Auth error:`, authError);
+        debugPaymentFlow(requestId, "Auth error", authError);
       }
     } else {
       console.log(`[REQ-${requestId}] No authorization header found`);
+      debugPaymentFlow(requestId, "No authorization header found");
     }
     
     // Get the user's workspace ID if they're logged in
@@ -133,6 +151,7 @@ serve(async (req) => {
     if (userId) {
       try {
         console.log(`[REQ-${requestId}] Getting workspace for user ${userId.substring(0, 8)}...`);
+        debugPaymentFlow(requestId, "Getting workspace for user", { userId: userId.substring(0, 8) + "..." });
         const { data: memberData, error: memberError } = await supabase
           .from('workspace_members')
           .select('workspace_id')
@@ -141,14 +160,18 @@ serve(async (req) => {
         
         if (memberError) {
           console.error(`[REQ-${requestId}] Error getting workspace:`, memberError);
+          debugPaymentFlow(requestId, "Error getting workspace", memberError);
         } else if (memberData) {
           workspaceId = memberData.workspace_id;
           console.log(`[REQ-${requestId}] Found workspace ID: ${workspaceId}`);
+          debugPaymentFlow(requestId, "Found workspace ID", { workspaceId });
         } else {
           console.log(`[REQ-${requestId}] No workspace found for user`);
+          debugPaymentFlow(requestId, "No workspace found for user");
         }
       } catch (workspaceError) {
         console.error(`[REQ-${requestId}] Workspace error:`, workspaceError);
+        debugPaymentFlow(requestId, "Workspace error", workspaceError);
       }
     }
     
@@ -164,15 +187,18 @@ serve(async (req) => {
     const totalAmount = unitPrice * tokenAmount;
     
     console.log(`[REQ-${requestId}] Price calculation: ${tokenAmount} tokens at ${unitPrice} PLN each = ${totalAmount} PLN total`);
+    debugPaymentFlow(requestId, "Price calculation", { tokenAmount, unitPrice, totalAmount });
     
     // Determine if auto-topup should be enabled
     const isAutoTopupEnabled = paymentType === 'subscription';
     console.log(`[REQ-${requestId}] Auto-topup enabled: ${isAutoTopupEnabled}`);
+    debugPaymentFlow(requestId, "Auto-topup enabled", { isAutoTopupEnabled });
     
     // If we already have a paymentMethodId from a setup intent confirmation
     if (paymentMethodId && paymentType === 'subscription') {
       try {
         console.log(`[REQ-${requestId}] Processing subscription with payment method: ${paymentMethodId.substring(0, 5)}...`);
+        debugPaymentFlow(requestId, "Processing subscription with payment method", { paymentMethodId: paymentMethodId.substring(0, 5) + "..." });
         
         // Find or create a customer to attach the payment method to
         let customer;
@@ -180,11 +206,14 @@ serve(async (req) => {
         
         if (customerId) {
           console.log(`[REQ-${requestId}] Retrieving existing customer: ${customerId.substring(0, 5)}...`);
+          debugPaymentFlow(requestId, "Retrieving existing customer", { customerId: customerId.substring(0, 5) + "..." });
           try {
             customer = await stripe.customers.retrieve(customerId);
             console.log(`[REQ-${requestId}] Found existing customer: ${customer.id.substring(0, 5)}...`);
+            debugPaymentFlow(requestId, "Found existing customer", { customerId: customer.id.substring(0, 5) + "..." });
           } catch (customerError) {
             console.error(`[REQ-${requestId}] Error retrieving customer:`, customerError);
+            debugPaymentFlow(requestId, "Error retrieving customer", customerError);
             console.log(`[REQ-${requestId}] Customer ID that failed: ${customerId}`);
             console.log(`[REQ-${requestId}] Will create new customer instead`);
             customer = null; // Reset to create new customer
@@ -196,19 +225,23 @@ serve(async (req) => {
           let userEmail = null;
           if (userId) {
             console.log(`[REQ-${requestId}] Getting user email for new customer...`);
+            debugPaymentFlow(requestId, "Getting user email for new customer");
             try {
               const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
               if (!userError && userData && userData.user?.email) {
                 userEmail = userData.user.email;
                 console.log(`[REQ-${requestId}] Found user email: ${userEmail}`);
+                debugPaymentFlow(requestId, "Found user email", { userEmail });
               }
             } catch (emailError) {
               console.error(`[REQ-${requestId}] Error getting user email:`, emailError);
+              debugPaymentFlow(requestId, "Error getting user email", emailError);
             }
           }
           
           // Create a new customer with the payment method and appropriate metadata for auto-recharge
           console.log(`[REQ-${requestId}] Creating new customer with payment method: ${paymentMethodId.substring(0, 5)}...`);
+          debugPaymentFlow(requestId, "Creating new customer with payment method", { paymentMethodId: paymentMethodId.substring(0, 5) + "..." });
           try {
             customer = await stripe.customers.create({
               email: userEmail || undefined,
@@ -226,13 +259,16 @@ serve(async (req) => {
             });
             isNewCustomer = true;
             console.log(`[REQ-${requestId}] Created new customer: ${customer.id}`);
+            debugPaymentFlow(requestId, "Created new customer", { customerId: customer.id });
           } catch (customerCreateError) {
             console.error(`[REQ-${requestId}] Error creating customer:`, customerCreateError);
+            debugPaymentFlow(requestId, "Error creating customer", customerCreateError);
             throw new Error(`Failed to create customer: ${customerCreateError.message}`);
           }
         } else {
           // If we're using an existing customer, we should update their metadata and default payment method
           console.log(`[REQ-${requestId}] Updating existing customer: ${customer.id}`);
+          debugPaymentFlow(requestId, "Updating existing customer", { customerId: customer.id });
           try {
             await stripe.customers.update(customer.id, {
               invoice_settings: {
@@ -247,76 +283,155 @@ serve(async (req) => {
               }
             });
             console.log(`[REQ-${requestId}] Updated existing customer metadata and default payment method`);
+            debugPaymentFlow(requestId, "Updated customer metadata and payment method");
           } catch (customerUpdateError) {
             console.error(`[REQ-${requestId}] Error updating customer:`, customerUpdateError);
+            debugPaymentFlow(requestId, "Error updating customer", customerUpdateError);
           }
         }
         
         // Verify the payment method exists before attempting to attach it
         try {
           console.log(`[REQ-${requestId}] Verifying payment method: ${paymentMethodId.substring(0, 5)}...`);
+          debugPaymentFlow(requestId, "Verifying payment method", { paymentMethodId: paymentMethodId.substring(0, 5) + "..." });
           const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
           console.log(`[REQ-${requestId}] Payment method exists: ${paymentMethod.id.substring(0, 5)}...`);
+          debugPaymentFlow(requestId, "Payment method exists", { paymentMethodId: paymentMethod.id.substring(0, 5) + "..." });
+          
+          // Add enhanced debug for payment method details
+          debugPaymentFlow(requestId, "Payment method details", {
+            type: paymentMethod.type,
+            card: paymentMethod.card ? {
+              brand: paymentMethod.card.brand,
+              last4: paymentMethod.card.last4,
+              expMonth: paymentMethod.card.exp_month,
+              expYear: paymentMethod.card.exp_year
+            } : null,
+            customerId: paymentMethod.customer,
+            metadata: paymentMethod.metadata
+          });
         } catch (pmError) {
           console.error(`[REQ-${requestId}] Error retrieving payment method:`, pmError);
+          debugPaymentFlow(requestId, "Error retrieving payment method", pmError);
           throw new Error(`Invalid payment method: ${paymentMethodId}`);
         }
         
         // Attach the payment method to the customer if not already
         try {
           console.log(`[REQ-${requestId}] Attaching payment method ${paymentMethodId.substring(0, 5)}... to customer ${customer.id.substring(0, 5)}...`);
-          await stripe.paymentMethods.attach(paymentMethodId, {
-            customer: customer.id,
+          debugPaymentFlow(requestId, "Attempting to attach payment method to customer", { 
+            paymentMethodId: paymentMethodId.substring(0, 5) + "...",
+            customerId: customer.id.substring(0, 5) + "..."
           });
-          console.log(`[REQ-${requestId}] Payment method attached successfully`);
+          
+          // Check if payment method is already attached to the customer
+          const existingPaymentMethods = await stripe.paymentMethods.list({
+            customer: customer.id,
+            type: 'card'
+          });
+          
+          debugPaymentFlow(requestId, "Customer's existing payment methods", { 
+            count: existingPaymentMethods.data.length,
+            paymentMethodIds: existingPaymentMethods.data.map(pm => pm.id.substring(0, 5) + "...")
+          });
+          
+          const isAlreadyAttached = existingPaymentMethods.data.some(pm => pm.id === paymentMethodId);
+          
+          if (isAlreadyAttached) {
+            console.log(`[REQ-${requestId}] Payment method already attached to customer`);
+            debugPaymentFlow(requestId, "Payment method already attached to customer");
+          } else {
+            const attachResult = await stripe.paymentMethods.attach(paymentMethodId, {
+              customer: customer.id,
+            });
+            console.log(`[REQ-${requestId}] Payment method attached successfully`);
+            debugPaymentFlow(requestId, "Payment method attached successfully", { 
+              paymentMethodId: attachResult.id.substring(0, 5) + "..." 
+            });
+          }
           
           // Update the payment method with metadata for auto-recharge
           await stripe.paymentMethods.update(paymentMethodId, {
             metadata: {
               autoRecharge: "true",
-              forOffSessionUsage: "true"
+              forOffSessionUsage: "true",
+              attachedToCustomer: customer.id,
+              attachedAt: new Date().toISOString()
             }
           });
           console.log(`[REQ-${requestId}] Updated payment method metadata for off-session usage`);
+          debugPaymentFlow(requestId, "Updated payment method metadata for off-session usage");
           
         } catch (attachError) {
           console.log(`[REQ-${requestId}] Attach error:`, attachError);
+          debugPaymentFlow(requestId, "Attach error", attachError);
+          
           // Only continue if the error is because it's already attached
           if (!attachError.message?.includes("already been attached")) {
             console.error(`[REQ-${requestId}] Error attaching payment method:`, attachError);
+            debugPaymentFlow(requestId, "Error attaching payment method", attachError);
             throw attachError;
           }
           console.log(`[REQ-${requestId}] Payment method already attached`);
+          debugPaymentFlow(requestId, "Payment method already attached (from error)");
           
           // Still update the payment method metadata
           try {
             await stripe.paymentMethods.update(paymentMethodId, {
               metadata: {
                 autoRecharge: "true",
-                forOffSessionUsage: "true"
+                forOffSessionUsage: "true",
+                attachedToCustomer: customer.id,
+                attachedAt: new Date().toISOString(),
+                updatedViaErrorPath: "true"
               }
             });
             console.log(`[REQ-${requestId}] Updated payment method metadata for off-session usage`);
+            debugPaymentFlow(requestId, "Updated payment method metadata after attachment error");
           } catch (updateError) {
             console.error(`[REQ-${requestId}] Error updating payment method:`, updateError);
+            debugPaymentFlow(requestId, "Error updating payment method after attachment error", updateError);
           }
         }
         
         // Set as the default payment method
         try {
           console.log(`[REQ-${requestId}] Setting default payment method: ${paymentMethodId.substring(0, 5)}...`);
+          debugPaymentFlow(requestId, "Setting default payment method", { paymentMethodId: paymentMethodId.substring(0, 5) + "..." });
+          
           await stripe.customers.update(customer.id, {
             invoice_settings: {
               default_payment_method: paymentMethodId,
             },
           });
           console.log(`[REQ-${requestId}] Updated customer's default payment method`);
+          debugPaymentFlow(requestId, "Updated customer's default payment method");
+          
+          // Verify the default payment method was set correctly
+          const updatedCustomer = await stripe.customers.retrieve(customer.id);
+          const defaultPaymentMethod = updatedCustomer.invoice_settings?.default_payment_method;
+          
+          debugPaymentFlow(requestId, "Verified default payment method", { 
+            customerId: customer.id,
+            defaultPaymentMethod: defaultPaymentMethod || "none" 
+          });
+          
+          if (defaultPaymentMethod !== paymentMethodId) {
+            console.warn(`[REQ-${requestId}] Default payment method mismatch: expected ${paymentMethodId}, got ${defaultPaymentMethod}`);
+            debugPaymentFlow(requestId, "Default payment method mismatch", {
+              expected: paymentMethodId,
+              actual: defaultPaymentMethod
+            });
+          }
         } catch (defaultPmError) {
           console.error(`[REQ-${requestId}] Error setting default payment method:`, defaultPmError);
+          debugPaymentFlow(requestId, "Error setting default payment method", defaultPmError);
         }
         
         // Create a payment intent for the initial charge
         console.log(`[REQ-${requestId}] Creating payment intent for initial charge of ${totalAmount} PLN`);
+        debugPaymentFlow(requestId, "Creating payment intent for initial charge", { totalAmount });
+        
         const paymentIntentData = {
           amount: totalAmount * 100, // amount in cents
           currency: 'pln',
@@ -337,13 +452,19 @@ serve(async (req) => {
         };
         
         console.log(`[REQ-${requestId}] Payment intent data:`, JSON.stringify(paymentIntentData));
+        debugPaymentFlow(requestId, "Payment intent data", paymentIntentData);
         
         let paymentIntent;
         try {
           paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
           console.log(`[REQ-${requestId}] Initial subscription charge created: ${paymentIntent.id}, Status: ${paymentIntent.status}`);
+          debugPaymentFlow(requestId, "Initial subscription charge created", { 
+            paymentIntentId: paymentIntent.id,
+            status: paymentIntent.status
+          });
         } catch (piError) {
           console.error(`[REQ-${requestId}] Payment intent creation error:`, piError);
+          debugPaymentFlow(requestId, "Payment intent creation error", piError);
           console.error(`[REQ-${requestId}] Error type: ${piError.type}`);
           console.error(`[REQ-${requestId}] Error code: ${piError.code}`);
           console.error(`[REQ-${requestId}] Error message: ${piError.message}`);
@@ -358,6 +479,12 @@ serve(async (req) => {
             token_balance: tokenAmount,
             auto_topup: isAutoTopupEnabled
           });
+          debugPaymentFlow(requestId, "Updating workspace with Stripe data", {
+            workspaceId,
+            customerId: customer.id,
+            tokenBalance: tokenAmount,
+            autoTopup: isAutoTopupEnabled
+          });
           
           try {
             const { error: updateError } = await supabase
@@ -371,15 +498,19 @@ serve(async (req) => {
             
             if (updateError) {
               console.error(`[REQ-${requestId}] Error updating workspace:`, updateError);
+              debugPaymentFlow(requestId, "Error updating workspace", updateError);
             } else {
               console.log(`[REQ-${requestId}] Updated workspace with Stripe customer ID, token balance, and auto-topup setting`);
+              debugPaymentFlow(requestId, "Updated workspace with Stripe data successfully");
             }
           } catch (dbError) {
             console.error(`[REQ-${requestId}] Database error:`, dbError);
+            debugPaymentFlow(requestId, "Database error updating workspace", dbError);
           }
         }
         
         console.log(`[REQ-${requestId}] Subscription flow completed successfully`);
+        debugPaymentFlow(requestId, "Subscription flow completed successfully");
         
         const responseData = {
           paymentIntentId: paymentIntent.id,
@@ -392,6 +523,7 @@ serve(async (req) => {
         };
         
         console.log(`[REQ-${requestId}] Response data:`, JSON.stringify(responseData));
+        debugPaymentFlow(requestId, "Response data", responseData);
         
         return new Response(
           JSON.stringify(responseData),
@@ -402,10 +534,16 @@ serve(async (req) => {
         );
       } catch (error) {
         console.error(`[REQ-${requestId}] Error creating initial subscription charge:`, error);
+        debugPaymentFlow(requestId, "Error creating initial subscription charge", error);
         
         // Handle specific Stripe errors that might need special responses
         if (error.type === 'StripeCardError') {
           console.log(`[REQ-${requestId}] Stripe card error:`, {
+            message: error.message,
+            code: error.code,
+            decline_code: error.decline_code
+          });
+          debugPaymentFlow(requestId, "Stripe card error", {
             message: error.message,
             code: error.code,
             decline_code: error.decline_code
@@ -440,6 +578,7 @@ serve(async (req) => {
     // Create a payment intent or setup intent based on payment type
     if (paymentType === 'one-time') {
       console.log(`[REQ-${requestId}] Creating one-time payment intent for ${tokenAmount} tokens`);
+      debugPaymentFlow(requestId, "Creating one-time payment intent", { tokenAmount });
       
       // Find existing Stripe customer ID for this workspace if available
       let stripeCustomerId = null;
@@ -448,19 +587,23 @@ serve(async (req) => {
       if (userId) {
         try {
           console.log(`[REQ-${requestId}] Getting user email...`);
+          debugPaymentFlow(requestId, "Getting user email for one-time payment");
           const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
           if (!userError && userData && userData.user?.email) {
             userEmail = userData.user.email;
             console.log(`[REQ-${requestId}] Found user email: ${userEmail}`);
+            debugPaymentFlow(requestId, "Found user email", { userEmail });
           }
         } catch (emailError) {
           console.error(`[REQ-${requestId}] Error getting user email:`, emailError);
+          debugPaymentFlow(requestId, "Error getting user email", emailError);
         }
       }
       
       if (workspaceId) {
         try {
           console.log(`[REQ-${requestId}] Looking for existing Stripe customer ID for workspace ${workspaceId}...`);
+          debugPaymentFlow(requestId, "Looking for existing Stripe customer ID", { workspaceId });
           const { data: workspaceData, error: workspaceError } = await supabase
             .from('workspaces')
             .select('stripe_customer_id')
@@ -470,27 +613,36 @@ serve(async (req) => {
           if (!workspaceError && workspaceData && workspaceData.stripe_customer_id) {
             stripeCustomerId = workspaceData.stripe_customer_id;
             console.log(`[REQ-${requestId}] Found existing Stripe customer ID: ${stripeCustomerId}`);
+            debugPaymentFlow(requestId, "Found existing Stripe customer ID", { 
+              customerIdStart: stripeCustomerId.substring(0, 6) + "..." 
+            });
             
             // Verify the customer still exists in Stripe
             try {
               console.log(`[REQ-${requestId}] Verifying customer exists in Stripe...`);
+              debugPaymentFlow(requestId, "Verifying customer exists in Stripe");
               await stripe.customers.retrieve(stripeCustomerId);
               console.log(`[REQ-${requestId}] Customer verified in Stripe`);
+              debugPaymentFlow(requestId, "Customer verified in Stripe");
             } catch (customerError) {
               console.error(`[REQ-${requestId}] Customer no longer exists in Stripe:`, customerError);
+              debugPaymentFlow(requestId, "Customer no longer exists in Stripe", customerError);
               stripeCustomerId = null;
             }
           } else {
             console.log(`[REQ-${requestId}] No existing Stripe customer ID found for workspace`);
+            debugPaymentFlow(requestId, "No existing Stripe customer ID found");
           }
         } catch (customerLookupError) {
           console.error(`[REQ-${requestId}] Error looking up customer:`, customerLookupError);
+          debugPaymentFlow(requestId, "Error looking up customer", customerLookupError);
         }
       }
       
       // If no Stripe customer ID exists and we have a user ID, create one
       if (!stripeCustomerId && userEmail) {
         console.log(`[REQ-${requestId}] Creating new Stripe customer for user email: ${userEmail}`);
+        debugPaymentFlow(requestId, "Creating new Stripe customer", { userEmail });
         
         try {
           const customer = await stripe.customers.create({
@@ -504,11 +656,13 @@ serve(async (req) => {
           
           stripeCustomerId = customer.id;
           console.log(`[REQ-${requestId}] Created new customer: ${stripeCustomerId}`);
+          debugPaymentFlow(requestId, "Created new customer", { customerId: stripeCustomerId });
           
           // Update workspace with new Stripe customer ID
           if (workspaceId) {
             try {
               console.log(`[REQ-${requestId}] Updating workspace with new customer ID...`);
+              debugPaymentFlow(requestId, "Updating workspace with new customer ID");
               const { error: updateError } = await supabase
                 .from('workspaces')
                 .update({ 
@@ -519,20 +673,25 @@ serve(async (req) => {
               
               if (updateError) {
                 console.error(`[REQ-${requestId}] Error updating workspace:`, updateError);
+                debugPaymentFlow(requestId, "Error updating workspace", updateError);
               } else {
                 console.log(`[REQ-${requestId}] Updated workspace with new Stripe customer ID`);
+                debugPaymentFlow(requestId, "Updated workspace with new Stripe customer ID");
               }
             } catch (updateError) {
               console.error(`[REQ-${requestId}] Error updating workspace:`, updateError);
+              debugPaymentFlow(requestId, "Error updating workspace", updateError);
             }
           }
         } catch (createCustomerError) {
           console.error(`[REQ-${requestId}] Error creating customer:`, createCustomerError);
+          debugPaymentFlow(requestId, "Error creating customer", createCustomerError);
         }
       }
       
       // Create a payment intent for one-time payments
       console.log(`[REQ-${requestId}] Creating payment intent data...`);
+      debugPaymentFlow(requestId, "Creating payment intent data");
       
       const paymentIntentData = {
         amount: totalAmount * 100, // amount in cents
@@ -555,6 +714,7 @@ serve(async (req) => {
       };
       
       console.log(`[REQ-${requestId}] Payment intent data:`, JSON.stringify(paymentIntentData));
+      debugPaymentFlow(requestId, "Payment intent data", paymentIntentData);
       
       let paymentIntent;
       try {
@@ -566,9 +726,15 @@ serve(async (req) => {
           customerId: stripeCustomerId
         });
         console.log(`[REQ-${requestId}] Payment intent created successfully: ${paymentIntent.id}, Client Secret: ${paymentIntent.client_secret?.substring(0, 10)}...`);
+        debugPaymentFlow(requestId, "Payment intent created successfully", { 
+          paymentIntentId: paymentIntent.id,
+          clientSecretStart: paymentIntent.client_secret?.substring(0, 10) + "..." 
+        });
         console.log(`[REQ-${requestId}] Added payment intent to tracker`);
+        debugPaymentFlow(requestId, "Added payment intent to tracker");
       } catch (piError) {
         console.error(`[REQ-${requestId}] Error creating payment intent:`, piError);
+        debugPaymentFlow(requestId, "Error creating payment intent", piError);
         console.error(`[REQ-${requestId}] Error type: ${piError.type}, code: ${piError.code}`);
         console.error(`[REQ-${requestId}] Error message: ${piError.message}`);
         throw piError;
@@ -589,6 +755,10 @@ serve(async (req) => {
         ...responseData,
         clientSecret: responseData.clientSecret ? `${responseData.clientSecret.substring(0, 10)}...` : null
       });
+      debugPaymentFlow(requestId, "Response data", {
+        ...responseData,
+        clientSecret: responseData.clientSecret ? `${responseData.clientSecret.substring(0, 10)}...` : null
+      });
       
       return new Response(
         JSON.stringify(responseData),
@@ -599,6 +769,7 @@ serve(async (req) => {
       );
     } else {
       console.log(`[REQ-${requestId}] Creating setup intent for subscription payments${forceNewIntent ? ' (forcing new intent)' : ''}`);
+      debugPaymentFlow(requestId, "Creating setup intent for subscription payments", { forceNewIntent });
       
       // Apply rate limiting for setup intent creation
       // Create a unique key based on userId or a client identifier
@@ -607,16 +778,22 @@ serve(async (req) => {
       
       const now = Date.now();
       console.log(`[REQ-${requestId}] Rate limit check for key: ${rateKey}`);
+      debugPaymentFlow(requestId, "Rate limit check", { rateKey });
       
       // Check if we've created an intent for this user recently, unless we're forcing a new one
       if (!forceNewIntent) {
         const lastCreation = rateLimiter.get(rateKey);
         console.log(`[REQ-${requestId}] Last creation time: ${lastCreation ? new Date(lastCreation).toISOString() : 'none'}`);
+        debugPaymentFlow(requestId, "Last creation time", { 
+          lastCreation: lastCreation ? new Date(lastCreation).toISOString() : 'none' 
+        });
         
         if (lastCreation && (now - lastCreation) < 3000) { // 3-second rate limit (reduced further)
           console.log(`[REQ-${requestId}] Rate limited: Setup intent creation too frequent for client ${clientId}`);
+          debugPaymentFlow(requestId, "Rate limited", { clientId });
           const retryAfter = Math.ceil((lastCreation + 3000 - now) / 1000);
           console.log(`[REQ-${requestId}] Retry after: ${retryAfter} seconds`);
+          debugPaymentFlow(requestId, "Retry after", { retryAfter });
           
           return new Response(
             JSON.stringify({ 
@@ -632,6 +809,7 @@ serve(async (req) => {
         }
       } else {
         console.log(`[REQ-${requestId}] Bypassing rate limit due to forceNewIntent=true`);
+        debugPaymentFlow(requestId, "Bypassing rate limit due to forceNewIntent");
       }
       
       // Get user email if available
@@ -639,13 +817,16 @@ serve(async (req) => {
       if (userId) {
         try {
           console.log(`[REQ-${requestId}] Getting user email...`);
+          debugPaymentFlow(requestId, "Getting user email for setup intent");
           const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
           if (!userError && userData && userData.user?.email) {
             userEmail = userData.user.email;
             console.log(`[REQ-${requestId}] Found user email: ${userEmail}`);
+            debugPaymentFlow(requestId, "Found user email", { userEmail });
           }
         } catch (emailError) {
           console.error(`[REQ-${requestId}] Error getting user email:`, emailError);
+          debugPaymentFlow(requestId, "Error getting user email", emailError);
         }
       }
       
@@ -655,6 +836,7 @@ serve(async (req) => {
       if (workspaceId && !existingCustomerId) {
         try {
           console.log(`[REQ-${requestId}] Checking for existing Stripe customer ID for workspace ${workspaceId}...`);
+          debugPaymentFlow(requestId, "Checking for existing Stripe customer ID", { workspaceId });
           const { data: workspaceData, error: workspaceError } = await supabase
             .from('workspaces')
             .select('stripe_customer_id')
@@ -664,17 +846,25 @@ serve(async (req) => {
           if (!workspaceError && workspaceData && workspaceData.stripe_customer_id) {
             existingCustomerId = workspaceData.stripe_customer_id;
             console.log(`[REQ-${requestId}] Found existing customer ID: ${existingCustomerId}`);
+            debugPaymentFlow(requestId, "Found existing customer ID", { 
+              customerIdStart: existingCustomerId.substring(0, 6) + "..." 
+            });
             
             // Verify the customer still exists in Stripe
             try {
               console.log(`[REQ-${requestId}] Verifying customer exists in Stripe...`);
+              debugPaymentFlow(requestId, "Verifying customer exists in Stripe");
               const customer = await stripe.customers.retrieve(existingCustomerId);
               console.log(`[REQ-${requestId}] Found existing customer: ${existingCustomerId}`);
+              debugPaymentFlow(requestId, "Found existing customer", { 
+                customerIdStart: existingCustomerId.substring(0, 6) + "..." 
+              });
               
               // Update customer metadata for auto recharge if it's a subscription
               if (isAutoTopupEnabled) {
                 try {
                   console.log(`[REQ-${requestId}] Updating customer metadata for auto-recharge...`);
+                  debugPaymentFlow(requestId, "Updating customer metadata for auto-recharge");
                   await stripe.customers.update(existingCustomerId, {
                     metadata: {
                       autoRecharge: "true",
@@ -685,19 +875,24 @@ serve(async (req) => {
                     }
                   });
                   console.log(`[REQ-${requestId}] Updated existing customer metadata for auto-recharge`);
+                  debugPaymentFlow(requestId, "Updated existing customer metadata for auto-recharge");
                 } catch (updateError) {
                   console.error(`[REQ-${requestId}] Error updating customer metadata:`, updateError);
+                  debugPaymentFlow(requestId, "Error updating customer metadata", updateError);
                 }
               }
             } catch (error) {
               console.error(`[REQ-${requestId}] Customer no longer exists in Stripe:`, error);
+              debugPaymentFlow(requestId, "Customer no longer exists in Stripe", error);
               existingCustomerId = null;
             }
           } else {
             console.log(`[REQ-${requestId}] No existing Stripe customer ID found for workspace`);
+            debugPaymentFlow(requestId, "No existing Stripe customer ID found for workspace");
           }
         } catch (lookupError) {
           console.error(`[REQ-${requestId}] Error looking up customer:`, lookupError);
+          debugPaymentFlow(requestId, "Error looking up customer", lookupError);
         }
       }
       
@@ -705,6 +900,7 @@ serve(async (req) => {
       const intentUniqueId = `intent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       
       console.log(`[REQ-${requestId}] Creating setup intent with unique ID: ${intentUniqueId}`);
+      debugPaymentFlow(requestId, "Creating setup intent with unique ID", { intentUniqueId });
       
       const setupIntentData = {
         payment_method_types: ['card'],
@@ -731,6 +927,7 @@ serve(async (req) => {
       };
       
       console.log(`[REQ-${requestId}] Setup intent data:`, JSON.stringify(setupIntentData));
+      debugPaymentFlow(requestId, "Setup intent data", setupIntentData);
       
       let setupIntent;
       try {
@@ -742,9 +939,30 @@ serve(async (req) => {
           customerId: existingCustomerId
         });
         console.log(`[REQ-${requestId}] Setup intent created successfully: ${setupIntent.id}, Client Secret: ${setupIntent.client_secret?.substring(0, 10)}...`);
+        debugPaymentFlow(requestId, "Setup intent created successfully", { 
+          setupIntentId: setupIntent.id,
+          clientSecretStart: setupIntent.client_secret?.substring(0, 10) + "..." 
+        });
         console.log(`[REQ-${requestId}] Added setup intent to tracker`);
+        debugPaymentFlow(requestId, "Added setup intent to tracker");
+        
+        // Verify setup intent immediately to make sure it exists
+        try {
+          console.log(`[REQ-${requestId}] Verifying setup intent exists immediately after creation`);
+          debugPaymentFlow(requestId, "Verifying setup intent exists immediately after creation");
+          const verifiedIntent = await stripe.setupIntents.retrieve(setupIntent.id);
+          console.log(`[REQ-${requestId}] Setup intent verified: ${verifiedIntent.id}, Status: ${verifiedIntent.status}`);
+          debugPaymentFlow(requestId, "Setup intent verified", { 
+            id: verifiedIntent.id, 
+            status: verifiedIntent.status 
+          });
+        } catch (verifyError) {
+          console.error(`[REQ-${requestId}] Error verifying setup intent:`, verifyError);
+          debugPaymentFlow(requestId, "Error verifying setup intent", verifyError);
+        }
       } catch (siError) {
         console.error(`[REQ-${requestId}] Error creating setup intent:`, siError);
+        debugPaymentFlow(requestId, "Error creating setup intent", siError);
         console.error(`[REQ-${requestId}] Error type: ${siError.type}, code: ${siError.code}`);
         console.error(`[REQ-${requestId}] Error message: ${siError.message}`);
         throw siError;
@@ -754,6 +972,7 @@ serve(async (req) => {
       if (!forceNewIntent) {
         rateLimiter.set(rateKey, now);
         console.log(`[REQ-${requestId}] Rate limiter updated for key: ${rateKey}`);
+        debugPaymentFlow(requestId, "Rate limiter updated", { rateKey });
       }
       
       const responseData = {
@@ -771,6 +990,10 @@ serve(async (req) => {
         ...responseData,
         clientSecret: responseData.clientSecret ? `${responseData.clientSecret.substring(0, 10)}...` : null
       });
+      debugPaymentFlow(requestId, "Response data", {
+        ...responseData,
+        clientSecret: responseData.clientSecret ? `${responseData.clientSecret.substring(0, 10)}...` : null
+      });
       
       return new Response(
         JSON.stringify(responseData),
@@ -782,6 +1005,7 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error(`[REQ-${requestId}] Unhandled error:`, error);
+    debugPaymentFlow(requestId, "Unhandled error", error);
     console.error(`[REQ-${requestId}] Error stack:`, error.stack);
     
     return new Response(
@@ -798,5 +1022,6 @@ serve(async (req) => {
   } finally {
     const requestEnd = Date.now();
     console.log(`[REQ-${requestId}] Request completed in ${requestEnd - requestStart}ms`);
+    debugPaymentFlow(requestId, "Request completed", { durationMs: requestEnd - requestStart });
   }
 });
