@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { calculateTokenPrice, calculateTotalPrice } from './components/onboarding/utils';
+import { calculateTokenPrice, calculateTotalPrice } from '@/components/onboarding/utils';
 
 // Import components
 import ProgressBar from '@/components/onboarding/ProgressBar';
