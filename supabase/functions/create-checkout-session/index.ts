@@ -152,10 +152,11 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
       },
-      // Removed expires_at as it was causing issues
+      // Increased expiration time to 2 hours 
+      expires_at: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
     });
     
-    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at: ${new Date(paymentIntent.expires_at * 1000).toISOString()}`);
     
     return {
       id: paymentIntent.id,
@@ -163,6 +164,7 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       customerId,
       timestamp: new Date().toISOString(),
       amount: amount / 100, // Send back the calculated amount in currency units
+      expiresAt: paymentIntent.expires_at
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);
@@ -454,4 +456,3 @@ serve(async (req) => {
     );
   }
 });
-

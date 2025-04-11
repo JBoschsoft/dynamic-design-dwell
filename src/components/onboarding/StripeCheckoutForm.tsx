@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -287,14 +286,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitForDelay(500, 'Before payment confirmation');
         
-        // Create a payment method from card element
+        // First create a payment method
         log('Creating payment method from card element');
         const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
-          billing_details: {
-            name: 'Customer Name',
-          },
         });
         
         if (pmError) {
@@ -302,9 +298,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error(`Błąd tworzenia metody płatności: ${pmError.message}`);
         }
         
-        log('Payment method created successfully:', paymentMethod.id);
+        log(`Payment method created successfully: ${paymentMethod.id}`);
         
-        // Confirm the payment with the created payment method
+        // Now directly confirm the payment with the payment method
         log(`Confirming payment with method: ${paymentMethod.id}`);
         const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
           paymentIntent.clientSecret!,
@@ -374,6 +370,45 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           });
         } else if (confirmedIntent && confirmedIntent.status === 'requires_action') {
           log('3D Secure authentication required...');
+          
+          // Handle 3D Secure flow if needed
+          const { error, paymentIntent: authenticatedIntent } = await stripe.handleCardAction(confirmedIntent.client_secret!);
+          
+          if (error) {
+            log('3D Secure authentication error:', error);
+            throw new Error(`Błąd uwierzytelniania 3D Secure: ${error.message}`);
+          }
+          
+          if (authenticatedIntent && authenticatedIntent.status === 'succeeded') {
+            log('3D Secure authentication successful! Updating token balance.');
+            const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
+            
+            if (!balanceUpdated) {
+              log('Failed to update token balance');
+              throw new Error("Nie udało się zaktualizować salda tokenów");
+            }
+            
+            log('Token balance updated successfully');
+            
+            if (onSuccess) {
+              log('Calling onSuccess callback');
+              onSuccess(paymentType, tokenAmount[0]);
+            }
+            
+            log('Closing payment dialog');
+            onOpenChange(false);
+            
+            log('Navigating to success page');
+            navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+            
+            toast({
+              title: "Płatność zrealizowana",
+              description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+            });
+          } else {
+            log(`Unexpected payment status after 3D Secure: ${authenticatedIntent?.status}`);
+            throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${authenticatedIntent?.status || 'nieznany'}`);
+          }
         } else {
           log(`Unexpected payment status: ${confirmedIntent?.status}`);
           throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${confirmedIntent?.status || 'nieznany'}`);
@@ -857,4 +892,3 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 };
 
 export default StripeCheckoutForm;
-

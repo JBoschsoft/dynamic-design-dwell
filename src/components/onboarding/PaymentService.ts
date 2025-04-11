@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -399,4 +398,3 @@ export const createInitialCharge = async (
     throw error;
   }
 };
-
