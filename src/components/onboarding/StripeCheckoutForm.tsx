@@ -40,6 +40,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     timestamp: string;
     customerId?: string;
   } | null>(null);
+  const [intentFetchTime, setIntentFetchTime] = useState<Date | null>(null);
   
   // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
@@ -50,14 +51,30 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   }, [sessionId]);
   
+  // Check if the payment intent is still valid (not expired)
+  const isIntentValid = useCallback(() => {
+    if (!intentFetchTime) return false;
+    
+    // Consider intents older than 5 minutes as potentially invalid
+    const MAX_INTENT_AGE_MS = 5 * 60 * 1000;
+    const now = new Date();
+    const timeDiff = now.getTime() - intentFetchTime.getTime();
+    
+    const isValid = timeDiff <= MAX_INTENT_AGE_MS;
+    if (!isValid) {
+      log(`Payment intent is too old (${timeDiff}ms), refreshing`);
+    }
+    return isValid;
+  }, [intentFetchTime, log]);
+  
   useEffect(() => {
-    if (open && !paymentIntent) {
+    if (open && (!paymentIntent || !isIntentValid())) {
       log('Checkout dialog opened');
       setError(null);
       setLoading(false);
       createPaymentIntent();
     }
-  }, [open, paymentIntent]);
+  }, [open, paymentIntent, isIntentValid]);
 
   // Clean up when the dialog closes
   useEffect(() => {
@@ -67,14 +84,15 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       // when the component re-renders but stays mounted
       setTimeout(() => {
         setPaymentIntent(null);
+        setIntentFetchTime(null);
       }, 500);
       setCardElementReady(false);
       setError(null);
     }
-  }, [open]);
+  }, [open, log]);
 
   const createPaymentIntent = async () => {
-    if (loading || paymentIntent) return;
+    if (loading) return;
     
     setLoading(true);
     try {
@@ -115,6 +133,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         timestamp: new Date().toISOString(),
         customerId: data.customerId
       });
+      setIntentFetchTime(new Date());
     } catch (error) {
       log('Error creating payment intent:', error);
       setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
@@ -148,6 +167,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
+    if (!isIntentValid()) {
+      log('Intent no longer valid, creating a new one before confirming');
+      await createPaymentIntent();
+      // If creating a new intent fails, the error will be set by createPaymentIntent
+      if (!paymentIntent?.clientSecret) return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -160,7 +186,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       log(`Confirming payment with card element for intent: ${paymentIntent.id.substring(0, 10)}...`);
       
       // Use the card element and the client secret to confirm the payment
-      const { paymentIntent: confirmedIntent, error: confirmError } = await stripe.confirmCardPayment(
+      const result = await stripe.confirmCardPayment(
         paymentIntent.clientSecret,
         {
           payment_method: {
@@ -172,18 +198,28 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
       );
       
-      if (confirmError) {
-        log('Payment confirmation error:', confirmError);
-        throw new Error(confirmError.message || "Payment confirmation failed");
+      if (result.error) {
+        log('Payment confirmation error:', result.error);
+        
+        if (result.error.type === 'invalid_request_error' && 
+            result.error.message.includes('No such payment_intent')) {
+          // The payment intent doesn't exist anymore, create a new one
+          log('Payment intent not found, creating a new one');
+          setPaymentIntent(null);
+          setError('Sesja płatności wygasła. Proszę spróbować ponownie.');
+          return;
+        }
+        
+        throw new Error(result.error.message || "Payment confirmation failed");
       }
       
-      if (!confirmedIntent) {
+      if (!result.paymentIntent) {
         throw new Error("No payment intent returned after confirmation");
       }
       
-      log('Payment intent confirmed:', confirmedIntent);
+      log('Payment intent confirmed:', result.paymentIntent);
       
-      if (confirmedIntent.status === 'succeeded') {
+      if (result.paymentIntent.status === 'succeeded') {
         log('Payment successful! Updating token balance.');
         const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
         
@@ -206,10 +242,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
         });
       } else {
-        log('Payment requires further action:', confirmedIntent.status);
+        log('Payment requires further action:', result.paymentIntent.status);
         
-        if (confirmedIntent.status === 'requires_action' || 
-            confirmedIntent.status === 'requires_confirmation') {
+        if (result.paymentIntent.status === 'requires_action' || 
+            result.paymentIntent.status === 'requires_confirmation') {
           
           log('Handling additional authentication steps');
           
@@ -242,7 +278,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             throw new Error(`Payment not completed. Status: ${updatedIntent?.status || 'unknown'}`);
           }
         } else {
-          throw new Error(`Płatność wymaga dodatkowej weryfikacji. Status: ${confirmedIntent.status || 'nieznany'}`);
+          throw new Error(`Płatność wymaga dodatkowej weryfikacji. Status: ${result.paymentIntent.status || 'nieznany'}`);
         }
       }
     } catch (error) {
