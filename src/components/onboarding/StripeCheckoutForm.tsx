@@ -107,8 +107,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
-    // Reducing the max intent age to 30 seconds for faster refresh
-    const maxIntentAge = 30 * 1000;
+    // Reducing the max intent age to 20 seconds for faster refresh
+    const maxIntentAge = 20 * 1000;
     
     return timeDiff > maxIntentAge;
   };
@@ -402,7 +402,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
       } else {
         console.log("Using confirmCardSetup for subscription setup");
-        const result = await stripe.confirmCardSetup(paymentIntent.clientSecret!, {
+        // For subscription, first get a fresh setup intent if needed
+        if (isIntentStale()) {
+          console.log("Setup intent may be stale, fetching a new one before confirmation");
+          await fetchPaymentIntent();
+        }
+        
+        if (!paymentIntent?.clientSecret) {
+          throw new Error("Nie udało się uzyskać klucza dla konfiguracji płatności");
+        }
+        
+        const result = await stripe.confirmCardSetup(paymentIntent.clientSecret, {
           payment_method: {
             card: cardElement,
             billing_details: {
@@ -413,6 +423,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         if (result.error) {
           console.error("Setup confirmation error:", result.error);
+          console.error("Error code:", result.error.code);
           
           if (result.error.message?.includes("No such setupintent") || 
               result.error.code === 'resource_missing') {
@@ -420,8 +431,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             setPaymentIntent(null);
             await fetchPaymentIntent();
             
+            // After fetching new intent, re-check if we have a valid client secret
             if (paymentIntent?.clientSecret) {
-              setError("Sesja konfiguracji płatności wygasła i została odświeżona. Proszę spróbować ponownie.");
+              setError("Sesja konfiguracji płatności wygasła i została odświeżona. Proszę spróbować ponownie z nowym kluczem.");
             } else {
               throw new Error("Nie udało się odnowić sesji płatności. Proszę odświeżyć stronę i spróbować ponownie.");
             }
@@ -518,7 +530,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setPaymentIntent(null);
         fetchPaymentIntent();
       }
-    }, 10000); // Check more frequently - every 10 seconds
+    }, 10000); // Check every 10 seconds
     
     return () => clearInterval(checkInterval);
   }, [open, intentFetchTime, loading, processingSetupConfirmation]);
