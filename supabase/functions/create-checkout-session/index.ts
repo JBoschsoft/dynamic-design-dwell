@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -499,12 +498,14 @@ serve(async (req) => {
       createCharge: shouldCreateCharge,
       attachMethod: shouldAttachMethod,
       confirmIntent: shouldConfirmIntent,
-      sessionId
+      sessionId,
+      timestamp
     } = reqBody;
     
     log(sessionId, "Received request", { 
       paymentType, 
       tokenAmount, 
+      timestamp,
       customerId: existingCustomerId ? `${existingCustomerId.substring(0, 5)}...` : null,
       paymentMethodId: paymentMethodId ? `${paymentMethodId.substring(0, 5)}...` : null,
       paymentIntentId: paymentIntentId ? `${paymentIntentId.substring(0, 5)}...` : null,

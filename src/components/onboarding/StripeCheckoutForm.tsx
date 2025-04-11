@@ -66,7 +66,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             body: {
               paymentType,
               tokenAmount: tokenAmount[0],
-              sessionId
+              sessionId,
+              timestamp: Date.now() // Add timestamp to prevent caching issues
             }
           });
           
@@ -141,30 +142,15 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      // Step 1: Create a payment method from the card element
-      log('Creating payment method from card');
-      const { error: createMethodError, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-        billing_details: {
-          name: 'Lovable Customer',
-        },
-      });
-      
-      if (createMethodError) {
-        throw createMethodError;
-      }
-      
-      if (!paymentMethod) {
-        throw new Error("Nie udało się utworzyć metody płatności");
-      }
-      
-      log('Payment method created:', paymentMethod.id);
-      
-      // Step 2: Confirm the payment with the payment method
-      log('Confirming payment with Stripe');
+      // For one-time payment, directly confirm with the card element
+      log('Confirming payment with card element');
       const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: paymentMethod.id
+        payment_method: { 
+          card: cardElement,
+          billing_details: {
+            name: 'Lovable Customer',
+          },
+        }
       });
       
       if (result.error) {
