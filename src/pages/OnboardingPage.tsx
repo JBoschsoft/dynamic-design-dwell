@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -257,18 +258,20 @@ const OnboardingPage = () => {
         
         console.log("Workspace created with ID:", data);
         
-        // Update the workspace with admin email directly using update function
+        // Now that we have proper RLS policies, update the workspace admin details
         if (data && userEmail) {
-          // Use a direct update query that won't be affected by type checking
+          const updateData: Partial<Workspace> = {
+            admin_email: userEmail,
+            admin_phone: phoneNumber
+          };
+          
           const { error: updateError } = await supabase.from('workspaces')
-            .update({
-              admin_email: userEmail,
-              admin_phone: phoneNumber
-            } as Partial<Workspace>)
+            .update(updateData)
             .eq('id', data);
           
           if (updateError) {
             console.error("Error updating workspace with admin details:", updateError);
+            // Continue with the flow even if this update fails
           }
         }
         

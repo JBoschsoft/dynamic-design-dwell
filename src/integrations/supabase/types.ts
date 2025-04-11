@@ -164,6 +164,13 @@ export type Database = {
         }
         Returns: string
       }
+      get_user_workspace_roles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          workspace_id: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
