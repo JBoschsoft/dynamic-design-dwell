@@ -286,7 +286,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitForDelay(500, 'Before payment confirmation');
         
-        // First create a payment method
+        // IMPORTANT CHANGE: First create a payment method
         log('Creating payment method from card element');
         const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
@@ -300,7 +300,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         log(`Payment method created successfully: ${paymentMethod.id}`);
         
-        // Now directly confirm the payment with the payment method
+        // Now directly confirm the payment with the payment method ID
         log(`Confirming payment with method: ${paymentMethod.id}`);
         const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
           paymentIntent.clientSecret!,

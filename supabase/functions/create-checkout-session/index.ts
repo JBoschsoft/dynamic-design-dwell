@@ -1,4 +1,3 @@
-
 // supabase/functions/create-checkout-session/index.ts
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
@@ -26,7 +25,6 @@ const cleanRateLimiters = () => {
   }
 };
 
-// Schedule cleaning of rate limiters every minute
 setInterval(cleanRateLimiters, RATE_LIMIT_RESET_MS);
 
 const checkRateLimit = (ip: string): { allowed: boolean, retryAfter?: number } => {
@@ -38,7 +36,6 @@ const checkRateLimit = (ip: string): { allowed: boolean, retryAfter?: number } =
     rateLimiters.set(ip, data);
   }
   
-  // Reset counter if more than a minute has passed
   if (now - data.lastReset > RATE_LIMIT_RESET_MS) {
     data.count = 0;
     data.lastReset = now;
@@ -55,7 +52,6 @@ const checkRateLimit = (ip: string): { allowed: boolean, retryAfter?: number } =
   return { allowed: true };
 };
 
-// Helper function to calculate token price
 const calculateTokenPrice = (quantity: number): number => {
   if (quantity >= 150) return 5;
   if (quantity >= 100) return 6;
@@ -63,7 +59,6 @@ const calculateTokenPrice = (quantity: number): number => {
   return 8;
 };
 
-// Initialize Stripe with API key from environment variable
 const initStripe = () => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
   if (!stripeKey) {
@@ -72,7 +67,6 @@ const initStripe = () => {
   return new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 };
 
-// Log helper with session ID
 function log(sessionId: string | undefined, message: string, data?: any) {
   const prefix = sessionId ? `[STRIPE-${sessionId}]` : '[STRIPE]';
   if (data !== undefined) {
@@ -86,7 +80,6 @@ async function createCustomerIfNeeded(stripe: Stripe, email: string, sessionId?:
   try {
     log(sessionId, `Looking for existing customer with email: ${email}`);
     
-    // Look for existing customer
     const customers = await stripe.customers.list({ email, limit: 1 });
     if (customers.data.length > 0) {
       const customerId = customers.data[0].id;
@@ -94,7 +87,6 @@ async function createCustomerIfNeeded(stripe: Stripe, email: string, sessionId?:
       return customerId;
     }
     
-    // Create a new customer if none exists
     log(sessionId, `Creating new customer for email: ${email}`);
     const customer = await stripe.customers.create({ email });
     log(sessionId, `Created new customer: ${customer.id}`);
@@ -106,7 +98,6 @@ async function createCustomerIfNeeded(stripe: Stripe, email: string, sessionId?:
   }
 }
 
-// Create a setup intent for auto-recharge option (save card for future)
 async function createSetupIntent(stripe: Stripe, customerId: string, sessionId?: string) {
   try {
     log(sessionId, `Creating setup intent for customer: ${customerId}`);
@@ -131,24 +122,19 @@ async function createSetupIntent(stripe: Stripe, customerId: string, sessionId?:
   }
 }
 
-// Create a payment intent for one-time payment
 async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmount: number, sessionId?: string) {
   try {
-    // Calculate price based on token amount
     const pricePerToken = calculateTokenPrice(tokenAmount);
     const amount = Math.round(tokenAmount * pricePerToken * 100); // Convert to smallest currency unit (cents)
     
     log(sessionId, `Creating payment intent for customer: ${customerId}, token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
     
-    // Create the payment intent with an expiration set through expires_at
-    // FIXED: Removed the expires_at parameter that was causing the error
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: 'pln',
       customer: customerId,
       capture_method: 'automatic',
       payment_method_types: ['card'],
-      setup_future_usage: 'off_session', // Allow saving the payment method for future use
       metadata: {
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
@@ -156,7 +142,6 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       }
     });
     
-    // Instead of using expires_at, we'll just log when it would expire
     const expiresAtTimestamp = Math.floor(Date.now() / 1000) + 7200; // 2 hours from now
     const expiryDate = new Date(expiresAtTimestamp * 1000).toISOString();
     log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at (not set in API): ${expiryDate}`);
@@ -166,8 +151,8 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       clientSecret: paymentIntent.client_secret,
       customerId,
       timestamp: new Date().toISOString(),
-      amount: amount / 100, // Send back the calculated amount in currency units
-      expiresAt: expiresAtTimestamp // Still return this for the frontend
+      amount: amount / 100,
+      expiresAt: expiresAtTimestamp
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);
@@ -175,7 +160,6 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
   }
 }
 
-// Process immediate charge for auto-recharge option
 async function processAutoRechargePayment(
   stripe: Stripe, 
   customerId: string, 
@@ -186,7 +170,6 @@ async function processAutoRechargePayment(
   try {
     log(sessionId, `Processing auto-recharge payment for customer: ${customerId}, payment method: ${paymentMethodId}`);
     
-    // First, attach the payment method to the customer if it's not already
     let paymentMethod;
     try {
       paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
@@ -204,7 +187,6 @@ async function processAutoRechargePayment(
       throw error;
     }
     
-    // Set this payment method as the default for the customer
     log(sessionId, `Setting payment method ${paymentMethodId} as default for customer ${customerId}`);
     await stripe.customers.update(customerId, {
       invoice_settings: {
@@ -212,11 +194,9 @@ async function processAutoRechargePayment(
       },
     });
     
-    // Calculate price based on token amount
     const pricePerToken = calculateTokenPrice(tokenAmount);
     const amount = Math.round(tokenAmount * pricePerToken * 100); // Convert to smallest currency unit (cents)
     
-    // Create and confirm a PaymentIntent
     log(sessionId, `Creating payment intent for customer ${customerId} with amount ${amount}`);
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
@@ -237,10 +217,9 @@ async function processAutoRechargePayment(
     return {
       status: paymentIntent.status,
       paymentIntentId: paymentIntent.id,
-      amount: amount / 100, // Convert back to currency units
+      amount: amount / 100
     };
   } catch (error) {
-    // Check if the payment requires authentication
     if (error.type === 'StripeCardError' && error.code === 'authentication_required') {
       log(sessionId, `Payment requires authentication: ${error.payment_intent.id}`);
       return {
@@ -256,12 +235,10 @@ async function processAutoRechargePayment(
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
   
-  // Apply rate limiting
   const clientIp = req.headers.get("x-forwarded-for") || "unknown";
   const rateLimit = checkRateLimit(clientIp);
   
@@ -284,7 +261,6 @@ serve(async (req) => {
   }
   
   try {
-    // Parse the request body
     const reqBody = await req.json();
     const { 
       paymentType, 
@@ -305,13 +281,9 @@ serve(async (req) => {
       createCharge: shouldCreateCharge
     });
     
-    // Initialize Stripe
     const stripe = initStripe();
     
-    // Handle direct charge creation for auto-recharge
     if (shouldCreateCharge && paymentMethodId) {
-      log(sessionId, "Creating charge with payment method");
-      
       if (!existingCustomerId) {
         return new Response(
           JSON.stringify({
@@ -357,7 +329,6 @@ serve(async (req) => {
       }
     }
     
-    // Get user email from authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -369,12 +340,10 @@ serve(async (req) => {
       );
     }
     
-    // Extract the JWT token
     const token = authHeader.split(" ")[1];
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     
-    // Validate token with Supabase
     const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -407,7 +376,6 @@ serve(async (req) => {
     
     log(sessionId, `Processing for user email: ${userEmail}`);
     
-    // Create or retrieve customer
     let customerId = existingCustomerId;
     if (!customerId) {
       customerId = await createCustomerIfNeeded(stripe, userEmail, sessionId);
@@ -415,7 +383,6 @@ serve(async (req) => {
       log(sessionId, `Using provided customer ID: ${customerId}`);
     }
     
-    // Create the appropriate intent based on payment type
     let intentResult;
     if (paymentType === "one-time") {
       intentResult = await createPaymentIntent(stripe, customerId, tokenAmount, sessionId);

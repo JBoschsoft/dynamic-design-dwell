@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -59,6 +58,7 @@ export const fetchPaymentIntent = async (
   sessionId: string,
   waitFn: (ms: number, reason: string) => Promise<void>
 ) => {
+  
   // Check if we can use cached intent to avoid creating new ones unnecessarily
   if (!forceNewIntent && cachedIntent && 
       cachedIntent.paymentType === paymentType && 
@@ -239,6 +239,7 @@ export const fetchPaymentIntent = async (
 
 // Update token balance after payment
 export const updateTokenBalance = async (amount: number, paymentType: 'one-time' | 'auto-recharge', logFn: (message: string, data?: any) => void) => {
+  
   try {
     logFn(`Updating token balance: +${amount}`);
     logFn('Getting current user');
@@ -316,6 +317,7 @@ export const createInitialCharge = async (
   waitForFn: (ms: number, reason: string) => Promise<void>,
   sessionId: string
 ) => {
+  
   logFn(`Creating initial charge with payment method: ${paymentMethodId.substring(0, 5)}...`);
   
   try {
