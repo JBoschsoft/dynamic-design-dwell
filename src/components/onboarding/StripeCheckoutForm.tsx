@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -56,6 +57,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [retryAfter, setRetryAfter] = useState(0);
   const [forceNewIntent, setForceNewIntent] = useState(false);
   const [purposelyDelaying, setPurposelyDelaying] = useState(false);
+  const [cardElementReady, setCardElementReady] = useState(false);
   const operationTimestamps = useRef<{[key: string]: number}>({});
   const intentCreationLock = useRef<boolean>(false);
 
@@ -98,6 +100,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setRetryAfter(0);
       setForceNewIntent(true);
       setPurposelyDelaying(false);
+      setCardElementReady(false);
       
       log('Setting timeout to fetch payment intent');
       const timeout = setTimeout(() => {
@@ -158,19 +161,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     checkStripeAccess();
   }, [networkBlockDetected, log]);
   
-  const waitFor = async (ms: number, reason: string): Promise<void> => {
-    log(`Purposely delaying for ${ms}ms: ${reason}`);
-    setPurposelyDelaying(true);
-    return new Promise(resolve => {
-      setTimeout(() => {
-        log(`Delay of ${ms}ms complete: ${reason}`);
-        setPurposelyDelaying(false);
-        resolve();
-      }, ms);
-    });
-  };
-
-  const waitForIntentReady = async (ms: number, reason: string): Promise<void> => {
+  const waitForDelay = async (ms: number, reason: string): Promise<void> => {
     log(`Purposely delaying for ${ms}ms: ${reason}`);
     setPurposelyDelaying(true);
     return new Promise(resolve => {
@@ -210,7 +201,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setForceNewIntent,
         log,
         sessionId,
-        waitFor
+        waitForDelay
       ).then(result => {
         if (result?.customerId) {
           setCustomerId(result.customerId);
@@ -239,6 +230,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
+    if (!cardElementReady) {
+      log('Card element not ready');
+      setError('Element karty nie jest gotowy. Proszę poczekać lub odświeżyć stronę.');
+      endTracking();
+      return;
+    }
+    
     const cardElement = elements.getElement(CardElement);
     
     if (!cardElement) {
@@ -263,7 +261,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           
           await fetchInitialIntent();
           
-          await waitFor(1000, 'After fetching fresh intent');
+          await waitForDelay(1000, 'After fetching fresh intent');
           
           if (!paymentIntent?.clientSecret) {
             log('Failed to get new payment intent client secret');
@@ -287,8 +285,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         log('Intent ID:', paymentIntent.id);
         log('Client secret starts with:', paymentIntent.clientSecret?.slice(0, 10));
         
-        await waitFor(500, 'Before payment confirmation');
+        await waitForDelay(500, 'Before payment confirmation');
         
+        // Create a payment method from card element
         log('Creating payment method from card element');
         const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
@@ -305,6 +304,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         log('Payment method created successfully:', paymentMethod.id);
         
+        // Confirm the payment with the created payment method
+        log(`Confirming payment with method: ${paymentMethod.id}`);
         const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
           paymentIntent.clientSecret!,
           {
@@ -323,7 +324,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             
             if (!intentCreationLock.current) {
               await fetchInitialIntent();
-              await waitFor(1000, 'After fetching new payment intent');
+              await waitForDelay(1000, 'After fetching new payment intent');
               
               if (paymentIntent?.clientSecret) {
                 log('New payment intent fetched successfully');
@@ -572,7 +573,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setForceNewIntent(true);
         
         log('Waiting before fetching new intent');
-        await waitFor(2000, 'Before fetching new intent after expiration');
+        await waitForDelay(2000, 'Before fetching new intent after expiration');
         
         log('Fetching new payment intent');
         await fetchPaymentIntent(
@@ -593,10 +594,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           setForceNewIntent,
           log,
           sessionId,
-          waitFor
+          waitForDelay
         );
         
-        await waitFor(1000, 'After fetching new intent after expiration');
+        await waitForDelay(1000, 'After fetching new intent after expiration');
         
         setError("Sesja płatności została odświeżona. Proszę spróbować ponownie.");
       } else if (error.message?.includes('ERR_BLOCKED_BY_CLIENT') || 
@@ -758,12 +759,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 onChange={(e) => {
                   if (e.error) {
                     log('Card element error:', e.error);
+                    setError(e.error.message || null);
+                  } else {
+                    setError(null);
                   }
+                  setCardElementReady(e.complete);
                   if (e.complete) {
                     log('Card element complete');
                   }
                 }}
-                onReady={() => log('Card element ready')}
+                onReady={() => {
+                  log('Card element ready');
+                  setCardElementReady(true);
+                }}
               />
             </div>
             <div className="text-xs text-gray-500">
@@ -809,6 +817,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             {intentFetchTime && ` (Age: ${new Date().getTime() - intentFetchTime.getTime()}ms)`}
             {paymentIntent?.expiresAt && ` Expires: ${new Date(paymentIntent.expiresAt * 1000).toLocaleTimeString()}`}
             {intentCreationLock.current && ' [LOCKED]'}
+            {cardElementReady ? ' [CARD READY]' : ' [CARD NOT READY]'}
           </div>
           
           <DialogFooter>
@@ -825,7 +834,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !stripe || !elements || processingSetupConfirmation || connectionError || networkBlockDetected || isIntentFetching || purposelyDelaying || !paymentIntent?.clientSecret || intentCreationLock.current}
+              disabled={loading || !stripe || !elements || !cardElementReady || processingSetupConfirmation || connectionError || networkBlockDetected || isIntentFetching || purposelyDelaying || !paymentIntent?.clientSecret || intentCreationLock.current}
             >
               {loading || processingSetupConfirmation || isIntentFetching || purposelyDelaying || intentCreationLock.current ? (
                 <>
@@ -848,3 +857,4 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 };
 
 export default StripeCheckoutForm;
+

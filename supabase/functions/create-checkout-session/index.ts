@@ -1,3 +1,4 @@
+
 // supabase/functions/create-checkout-session/index.ts
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
@@ -145,6 +146,7 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       customer: customerId,
       capture_method: 'automatic',
       payment_method_types: ['card'],
+      setup_future_usage: 'off_session', // Allow saving the payment method for future use
       metadata: {
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
@@ -183,7 +185,10 @@ async function processAutoRechargePayment(
     let paymentMethod;
     try {
       paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
-      if (paymentMethod.customer !== customerId) {
+      
+      log(sessionId, `Retrieved payment method: ${paymentMethodId} for customer ${customerId}`);
+      
+      if (!paymentMethod.customer || paymentMethod.customer !== customerId) {
         log(sessionId, `Attaching payment method ${paymentMethodId} to customer ${customerId}`);
         paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
           customer: customerId,
@@ -215,6 +220,11 @@ async function processAutoRechargePayment(
       payment_method: paymentMethodId,
       off_session: true,
       confirm: true,
+      metadata: {
+        tokenAmount: tokenAmount.toString(),
+        pricePerToken: pricePerToken.toString(),
+        timestamp: new Date().toISOString()
+      }
     });
     
     log(sessionId, `Payment intent status: ${paymentIntent.status}`);
@@ -444,3 +454,4 @@ serve(async (req) => {
     );
   }
 });
+
