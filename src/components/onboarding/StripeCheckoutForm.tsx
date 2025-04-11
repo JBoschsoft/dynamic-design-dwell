@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -48,8 +47,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [intentFailures, setIntentFailures] = useState(0);
   const [isIntentFetching, setIsIntentFetching] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState(0);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [retryAfter, setRetryAfter] = useState(0);
   
-  // Clean up state when modal is opened/closed
   useEffect(() => {
     if (open) {
       setPaymentIntent(null);
@@ -63,8 +63,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setIntentFetchTime(null);
       setIsIntentFetching(false);
       setLastFetchTimestamp(0);
+      setRateLimited(false);
+      setRetryAfter(0);
       
-      // Add a small delay before fetching to ensure state is reset
       const timeout = setTimeout(() => {
         fetchPaymentIntent();
       }, 300);
@@ -73,7 +74,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   }, [open]);
   
-  // Check for network issues related to Stripe domains
   useEffect(() => {
     if (networkBlockDetected) return;
     
@@ -109,31 +109,35 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     checkStripeAccess();
   }, [networkBlockDetected]);
   
-  // Checks if the current intent is stale and should be refreshed
   const isIntentStale = useCallback((): boolean => {
     if (!intentFetchTime) return true;
     
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
-    // Reducing the max intent age to 15 seconds for even faster refresh
-    const maxIntentAge = 15 * 1000;
+    const maxIntentAge = 120 * 1000;
     
     return timeDiff > maxIntentAge;
   }, [intentFetchTime]);
   
-  // Fetch a new payment intent from the server, with rate limiting
   const fetchPaymentIntent = useCallback(async () => {
-    // Prevent multiple simultaneous fetch requests
     if (isIntentFetching) {
       console.log("Intent fetch already in progress, skipping duplicate request");
       return;
     }
     
-    // Add rate limiting to prevent too many requests in rapid succession
     const now = Date.now();
-    if (now - lastFetchTimestamp < 2000) { // 2 second cooldown
+    if (now - lastFetchTimestamp < 5000) {
       console.log("Fetch requests too frequent, adding delay");
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      if (rateLimited && retryAfter > 0) {
+        console.log(`Rate limited by server, waiting ${retryAfter} seconds`);
+        setError(`Zbyt wiele żądań. Odczekaj ${retryAfter} sekund przed ponowną próbą.`);
+        return;
+      }
+      
+      const waitTime = 5000 - (now - lastFetchTimestamp);
+      setError(`Odczekaj ${Math.ceil(waitTime/1000)} sekund przed odświeżeniem sesji płatności.`);
+      return;
     }
     
     setIsIntentFetching(true);
@@ -164,6 +168,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (data?.error) {
         console.error("Payment service error:", data.error);
+        
+        if (data.rateLimited) {
+          setRateLimited(true);
+          setRetryAfter(data.retryAfter || 10);
+          throw new Error(`Zbyt wiele żądań. Odczekaj ${data.retryAfter || 10} sekund przed ponowną próbą.`);
+        }
+        
         throw new Error(data.error);
       }
       
@@ -179,6 +190,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         setIntentFetchTime(new Date());
         setIntentFailures(0);
+        setRateLimited(false);
+        setRetryAfter(0);
         
         if (data.customerId) {
           setCustomerId(data.customerId);
@@ -218,9 +231,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setLoading(false);
       setIsIntentFetching(false);
     }
-  }, [paymentType, tokenAmount, customerId, isIntentFetching, lastFetchTimestamp]);
+  }, [paymentType, tokenAmount, customerId, isIntentFetching, lastFetchTimestamp, rateLimited, retryAfter]);
   
-  // Update token balance after successful payment
   const updateTokenBalance = async (amount: number) => {
     try {
       const { data: memberData, error: memberError } = await supabase
@@ -272,7 +284,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
-  // Create initial charge for subscription setup
   const createInitialCharge = async (paymentMethodId: string) => {
     setProcessingSetupConfirmation(true);
     
@@ -336,7 +347,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
-  // Handle form submission for payment processing
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -356,10 +366,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      // Clear any previous validation state
       cardElement.update({});
       
-      // Ensure we have a fresh intent before proceeding
       if (isIntentStale() || !paymentIntent?.clientSecret) {
         console.log("Intent is stale or missing, fetching fresh intent before confirmation");
         await fetchPaymentIntent();
@@ -372,7 +380,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       console.log(`Processing ${paymentType} payment with client secret starting with ${paymentIntent.clientSecret?.slice(0, 10)}...`);
       
       if (paymentType === 'one-time') {
-        console.log("Using confirmCardPayment for one-time payment");
         const result = await stripe.confirmCardPayment(paymentIntent.clientSecret!, {
           payment_method: {
             card: cardElement,
@@ -432,20 +439,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
       } else {
         console.log("Using confirmCardSetup for subscription setup");
-        // For subscription, first get a fresh setup intent if needed
-        if (isIntentStale()) {
-          console.log("Setup intent may be stale, fetching a new one before confirmation");
-          await fetchPaymentIntent();
-          
-          // Wait a moment to ensure the new intent is ready
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          if (!paymentIntent?.clientSecret) {
-            throw new Error("Nie udało się uzyskać klucza dla konfiguracji płatności");
-          }
-        }
         
-        // Double check we have a valid client secret before proceeding
         if (!paymentIntent?.clientSecret) {
           throw new Error("Brak klucza klienta dla konfiguracji płatności. Odśwież stronę i spróbuj ponownie.");
         }
@@ -469,13 +463,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               console.log("Setup intent no longer valid, fetching a new one...");
               setPaymentIntent(null);
               
-              // Fetch a new intent
               await fetchPaymentIntent();
               
-              // Add a small delay to ensure the new intent is registered
               await new Promise(resolve => setTimeout(resolve, 1000));
               
-              // After fetching new intent, re-check if we have a valid client secret
               if (paymentIntent?.clientSecret) {
                 setError("Sesja konfiguracji płatności wygasła i została odświeżona. Proszę spróbować ponownie z nowym kluczem.");
               } else {
@@ -505,7 +496,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             throw new Error(`Nieudane ustawienie metody płatności. Status: ${setupIntent?.status || 'nieznany'}`);
           }
         } catch (error) {
-          // Check if the error is related to the setup intent
           if (error.message?.includes("No such setupintent") || 
               error.code === 'resource_missing') {
             console.log("Setup intent issue detected:", error);
@@ -513,7 +503,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             setPaymentIntent(null);
             setError("Wystąpił problem z sesją płatności - spróbujemy ponownie...");
             
-            // Get a fresh intent and try again
             await fetchPaymentIntent();
             throw new Error("Sesja płatności wygasła. Proszę spróbować ponownie z odświeżoną sesją.");
           } else {
@@ -549,7 +538,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         setPaymentIntent(null);
         
-        // Add a small delay before fetching new intent
         await new Promise(resolve => setTimeout(resolve, 1000));
         await fetchPaymentIntent();
         
@@ -583,24 +571,20 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
-  // Auto-refresh stale intents
   useEffect(() => {
     if (!open || !intentFetchTime || isIntentFetching) return;
     
-    const checkInterval = setInterval(() => {
-      const now = new Date();
-      const timeSinceLastFetch = now.getTime() - intentFetchTime.getTime();
+    if (isIntentStale()) {
+      const refreshTimeout = setTimeout(() => {
+        if (!loading && !processingSetupConfirmation && !isIntentFetching) {
+          console.log("Intent is stale, refreshing...");
+          fetchPaymentIntent();
+        }
+      }, 2000);
       
-      // If intent is older than 10 seconds and we're not already loading or processing,
-      // refresh it proactively to prevent expiration issues
-      if (timeSinceLastFetch > 10000 && !loading && !processingSetupConfirmation && !isIntentFetching) {
-        console.log("Intent is getting stale, refreshing proactively...");
-        fetchPaymentIntent();
-      }
-    }, 5000); // Check every 5 seconds
-    
-    return () => clearInterval(checkInterval);
-  }, [open, intentFetchTime, loading, processingSetupConfirmation, isIntentFetching, fetchPaymentIntent]);
+      return () => clearTimeout(refreshTimeout);
+    }
+  }, [open, intentFetchTime, loading, processingSetupConfirmation, isIntentFetching, isIntentStale, fetchPaymentIntent]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

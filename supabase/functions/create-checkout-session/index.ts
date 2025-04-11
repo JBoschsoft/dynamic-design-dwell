@@ -8,6 +8,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiter
+const rateLimiter = new Map();
+
+// Clear rate limiter entries periodically to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of rateLimiter.entries()) {
+    if (now - timestamp > 60000) { // Remove entries older than 1 minute
+      rateLimiter.delete(key);
+    }
+  }
+}, 60000);
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -366,6 +379,28 @@ serve(async (req) => {
     } else {
       console.log("Creating setup intent for subscription payments");
       
+      // Apply rate limiting for setup intent creation
+      // Create a unique key based on userId or a client identifier
+      const clientId = userId || req.headers.get('X-Client-Info') || req.headers.get('User-Agent') || 'anonymous';
+      const rateKey = `${clientId}:${paymentType}:${tokenAmount}`;
+      
+      // Check if we've created an intent for this user recently
+      const lastCreation = rateLimiter.get(rateKey);
+      if (lastCreation && Date.now() - lastCreation < 10000) { // 10-second rate limit
+        console.log("Rate limited: Setup intent creation too frequent for client", clientId);
+        return new Response(
+          JSON.stringify({ 
+            error: "Rate limited. Please wait before requesting another setup intent.",
+            rateLimited: true,
+            retryAfter: Math.ceil((lastCreation + 10000 - Date.now()) / 1000)
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429
+          }
+        );
+      }
+      
       // Get user email if available
       let userEmail = null;
       if (userId) {
@@ -418,6 +453,9 @@ serve(async (req) => {
         usage: 'off_session',
         description: `Setup payment method for automatic recharge of ${tokenAmount} tokens`,
       });
+      
+      // Update rate limiter
+      rateLimiter.set(rateKey, Date.now());
       
       console.log("Setup intent created successfully:", setupIntent.id, "Client Secret:", setupIntent.client_secret?.substring(0, 10) + "...");
       
