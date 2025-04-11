@@ -286,7 +286,7 @@ serve(async (req) => {
           workspaceId: workspaceId || undefined,
           userId: userId || undefined
         },
-        // For one-time payments, explicitly set this to null
+        // For one-time payments, explicitly set future_usage to undefined
         setup_future_usage: undefined,
       });
       
@@ -309,6 +309,7 @@ serve(async (req) => {
       );
     } else {
       console.log("Creating setup intent for subscription payments");
+      
       // Create a setup intent for subscription payments to securely collect card details
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],

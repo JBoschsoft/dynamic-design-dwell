@@ -65,12 +65,16 @@ const OnboardingPage = () => {
         borderRadius: '4px',
       },
     },
+    loader: 'auto' as const,
   };
   
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      setCurrentStep(parseInt(stepParam));
+      const stepNumber = parseInt(stepParam);
+      if (!isNaN(stepNumber) && stepNumber >= 1 && stepNumber <= 6) {
+        setCurrentStep(stepNumber);
+      }
     }
     
     const canceled = searchParams.get('canceled');
@@ -92,7 +96,9 @@ const OnboardingPage = () => {
       setPaymentSuccess(true);
       setTimeout(() => {
         setCurrentStep(3);
-      }, 2000);
+        // Update URL to reflect new step
+        navigate(`/onboarding?step=3`, { replace: true });
+      }, 1000);
     }
   }, [searchParams, navigate, paymentType, tokenAmount, subscriptionAmount]);
   
@@ -134,7 +140,9 @@ const OnboardingPage = () => {
     setPaymentSuccess(true);
     setTimeout(() => {
       setCurrentStep(3);
-    }, 2000);
+      // Update URL to reflect new step
+      navigate(`/onboarding?step=3`, { replace: true });
+    }, 1000);
   };
   
   const handleOpenCheckout = () => {

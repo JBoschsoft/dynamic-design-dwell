@@ -57,9 +57,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   
   // Prevent using stale payment intents
   useEffect(() => {
-    // If the intent is more than 30 minutes old, refresh it
+    // If the intent is more than 5 minutes old, refresh it
+    // Reduced from 30 minutes to 5 minutes to prevent stale intent errors
     const checkIntentValidity = () => {
-      if (intentTimestamp && Date.now() - intentTimestamp > 30 * 60 * 1000) {
+      if (intentTimestamp && Date.now() - intentTimestamp > 5 * 60 * 1000) {
         console.log("Payment intent may be stale, refreshing...");
         fetchPaymentIntent();
       }
@@ -149,18 +150,18 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (memberError || !memberData?.workspace_id) {
         console.error("Error finding workspace:", memberError);
-        return;
+        return false;
       }
       
       const { data: workspaceData, error: workspaceError } = await supabase
         .from('workspaces')
-        .select('*')
+        .select('token_balance')
         .eq('id', memberData.workspace_id)
         .maybeSingle();
       
       if (workspaceError) {
         console.error("Error fetching workspace data:", workspaceError);
-        return;
+        return false;
       }
       
       // Default to 0 if no current balance exists
@@ -179,12 +180,15 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (updateError) {
         console.error("Error updating token balance:", updateError);
+        return false;
       } else {
         console.log(`Token balance updated from ${currentBalance} to ${newBalance}`);
         console.log(`Auto-topup set to ${paymentType === 'subscription'}`);
+        return true;
       }
     } catch (error) {
       console.error("Error updating token balance:", error);
+      return false;
     }
   };
   
@@ -215,7 +219,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       console.log("Initial charge created:", data);
       
-      await updateTokenBalance(tokenAmount[0]);
+      const balanceUpdated = await updateTokenBalance(tokenAmount[0]);
+      if (!balanceUpdated) {
+        throw new Error("Nie udało się zaktualizować salda tokenów");
+      }
       
       if (onSuccess) {
         onSuccess(paymentType, tokenAmount[0]);
@@ -263,10 +270,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
+      // Clear any previous card errors
       cardElement.update({});
       
-      // Check if we need to refresh the payment intent (over 20 minutes old)
-      if (intentTimestamp && Date.now() - intentTimestamp > 20 * 60 * 1000) {
+      // Check if we need to refresh the payment intent (over 5 minutes old)
+      if (intentTimestamp && Date.now() - intentTimestamp > 5 * 60 * 1000) {
         console.log("Payment intent is too old, refreshing before confirmation...");
         await fetchPaymentIntent();
         
@@ -284,6 +292,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (paymentType === 'one-time') {
         // For one-time payments, use confirmCardPayment
+        console.log("Using confirmCardPayment for one-time payment");
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -300,7 +309,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
           console.log("Payment successful! Updating token balance.");
-          await updateTokenBalance(tokenAmount[0]);
+          const balanceUpdated = await updateTokenBalance(tokenAmount[0]);
+          
+          if (!balanceUpdated) {
+            throw new Error("Nie udało się zaktualizować salda tokenów");
+          }
           
           if (onSuccess) {
             onSuccess(paymentType, tokenAmount[0]);
@@ -323,7 +336,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
       } else {
         // For subscriptions, use confirmCardSetup
-        console.log("Confirming subscription setup with card element");
+        console.log("Using confirmCardSetup for subscription setup");
         const result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -367,21 +380,25 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         console.log("Stripe error code:", stripeErrorCode);
       }
       
+      // Check for intent expiration errors
       const intentExpiredError = 
         error.message?.includes("No such setupintent") || 
         error.message?.includes("No such payment_intent") ||
         error.message?.includes("expired") ||
-        error.message?.includes("Intent with id pi_");
+        error.message?.includes("Intent with id pi_") ||
+        error.message?.includes("Intent with id seti_");
       
-      if (intentExpiredError && retryCount < 3) {
+      if (intentExpiredError && retryCount < 2) {
         setRetryCount(prev => prev + 1);
-        setError("Sesja płatności wygasła - odświeżamy dane płatności, spróbuj ponownie za chwilę.");
+        setError("Sesja płatności wygasła - odświeżamy dane płatności, proszę poczekać...");
         
         if (cardElement) {
           cardElement.clear();
         }
         
         await fetchPaymentIntent();
+        
+        setError("Sesja płatności została odświeżona. Proszę spróbować ponownie.");
       } else {
         setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
         
