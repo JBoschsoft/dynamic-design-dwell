@@ -268,6 +268,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitFor(500, 'Before payment confirmation');
         
+        // Create a payment method from the card element
         const { error: createPaymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
@@ -283,6 +284,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
         log('Payment method created:', paymentMethod.id);
 
+        // Confirm the payment with the created payment method
         const result = await stripe.confirmCardPayment(paymentIntent.clientSecret!, {
           payment_method: paymentMethod.id
         });
@@ -468,7 +470,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               
               await waitFor(500, 'Before creating initial charge');
               
-              await createInitialCharge(paymentMethodId);
+              await createInitialCharge(
+                paymentMethodId,
+                customerId,
+                tokenAmount[0],
+                onSuccess,
+                onOpenChange,
+                navigate,
+                log,
+                waitFor,
+                sessionId
+              );
             } else {
               log(`Setup failed. Status: ${setupIntent?.status || 'unknown'}`);
               throw new Error(`Nieudane ustawienie metody płatności. Status: ${setupIntent?.status || 'nieznany'}`);
