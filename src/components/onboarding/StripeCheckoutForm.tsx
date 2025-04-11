@@ -38,6 +38,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [processingSetupConfirmation, setProcessingSetupConfirmation] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [networkBlockDetected, setNetworkBlockDetected] = useState(false);
   
   // Reset form when dialog is opened
   useEffect(() => {
@@ -50,23 +51,71 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setProcessingSetupConfirmation(false);
       setConnectionError(false);
       setCustomerId(null);
+      setNetworkBlockDetected(false);
       
-      fetchPaymentIntent();
+      // Add a short delay before fetching to ensure dialog is visible
+      const timeout = setTimeout(() => {
+        fetchPaymentIntent();
+      }, 300);
+      
+      return () => clearTimeout(timeout);
     }
   }, [open]);
   
+  // Monitor network requests to detect blocks
+  useEffect(() => {
+    // Check if we already detected network blocks
+    if (networkBlockDetected) return;
+    
+    // Function to check if Stripe domains are accessible
+    const checkStripeAccess = async () => {
+      try {
+        // Use a simple fetch with a timeout to check connectivity
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        await fetch('https://js.stripe.com/v3/', {
+          method: 'HEAD',
+          mode: 'no-cors',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        // If we get here without error, connection is likely working
+      } catch (error) {
+        console.log("Error checking Stripe domains:", error);
+        // AbortError could be timeout or blocked by client
+        if (error.name === 'AbortError' || 
+            error.message?.includes('ERR_BLOCKED_BY_CLIENT') || 
+            error.message?.includes('Failed to fetch')) {
+          console.log("Detected potential network blocking of Stripe domains");
+          setNetworkBlockDetected(true);
+          setConnectionError(true);
+          toast({
+            variant: "destructive",
+            title: "Blokada połączenia do Stripe",
+            description: "Wykryto możliwą blokadę połączeń do systemu płatności. Wyłącz AdBlock i inne blokady, aby kontynuować."
+          });
+        }
+      }
+    };
+    
+    // Run the check when component mounts
+    checkStripeAccess();
+  }, [networkBlockDetected]);
+  
   // Prevent using stale payment intents
   useEffect(() => {
-    // If the intent is more than 5 minutes old, refresh it
-    // Reduced from 30 minutes to 5 minutes to prevent stale intent errors
+    // If the intent is more than 3 minutes old, refresh it
+    // Reduced from 5 minutes to 3 minutes to prevent stale intent errors
     const checkIntentValidity = () => {
-      if (intentTimestamp && Date.now() - intentTimestamp > 5 * 60 * 1000) {
+      if (intentTimestamp && Date.now() - intentTimestamp > 3 * 60 * 1000) {
         console.log("Payment intent may be stale, refreshing...");
         fetchPaymentIntent();
       }
     };
     
-    const intervalId = setInterval(checkIntentValidity, 60000); // Check every minute
+    const intervalId = setInterval(checkIntentValidity, 30000); // Check every 30 seconds
     
     return () => clearInterval(intervalId);
   }, [intentTimestamp]);
@@ -115,26 +164,32 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       } else {
         throw new Error("Nie otrzymano klucza klienta od serwera płatności");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching payment intent:', error);
       
+      // Check for network-related errors
       if (error.message?.includes('Failed to fetch') || 
           error.message?.includes('Network Error') ||
           error.message?.includes('ERR_BLOCKED_BY_CLIENT') ||
           error.message?.includes('AbortError')) {
         setConnectionError(true);
+        setNetworkBlockDetected(true);
         setError('Błąd połączenia z systemem płatności. Proszę sprawdzić połączenie internetowe lub wyłączyć blokady (np. adblock).');
+        
+        toast({
+          variant: "destructive",
+          title: "Błąd połączenia",
+          description: "Wykryto blokadę połączenia do Stripe. Wyłącz AdBlock i inne blokady, aby kontynuować płatność."
+        });
       } else {
         setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
+        
+        toast({
+          variant: "destructive",
+          title: "Błąd inicjalizacji płatności",
+          description: error.message || "Nie można nawiązać połączenia z systemem płatności. Spróbuj ponownie."
+        });
       }
-      
-      toast({
-        variant: "destructive",
-        title: "Błąd inicjalizacji płatności",
-        description: error.message?.includes('ERR_BLOCKED_BY_CLIENT') 
-          ? "Wykryto blokadę połączenia do Stripe (ERR_BLOCKED_BY_CLIENT). Wyłącz AdBlock i inne blokady, aby kontynuować."
-          : (error.message || "Nie można nawiązać połączenia z systemem płatności. Spróbuj ponownie."),
-      });
     } finally {
       setLoading(false);
     }
@@ -219,6 +274,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       console.log("Initial charge created:", data);
       
+      if (data?.status !== 'succeeded') {
+        throw new Error(`Payment not successful. Status: ${data?.status || 'unknown'}`);
+      }
+      
       const balanceUpdated = await updateTokenBalance(tokenAmount[0]);
       if (!balanceUpdated) {
         throw new Error("Nie udało się zaktualizować salda tokenów");
@@ -237,7 +296,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów. Automatyczne doładowywanie zostało aktywowane.`,
       });
       
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating initial charge:", error);
       setError(error.message || "Wystąpił błąd podczas przetwarzania płatności początkowej");
       
@@ -273,8 +332,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       // Clear any previous card errors
       cardElement.update({});
       
-      // Check if we need to refresh the payment intent (over 5 minutes old)
-      if (intentTimestamp && Date.now() - intentTimestamp > 5 * 60 * 1000) {
+      // Check if we need to refresh the payment intent (over 3 minutes old)
+      if (intentTimestamp && Date.now() - intentTimestamp > 3 * 60 * 1000) {
         console.log("Payment intent is too old, refreshing before confirmation...");
         await fetchPaymentIntent();
         
@@ -288,7 +347,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Brak klucza klienta do autoryzacji płatności");
       }
       
-      console.log(`Processing ${paymentType} payment with client secret`);
+      console.log(`Processing ${paymentType} payment with client secret starting with ${clientSecret.slice(0, 10)}...`);
       
       if (paymentType === 'one-time') {
         // For one-time payments, use confirmCardPayment
@@ -296,7 +355,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         const result = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
-            billing_details: {}, // Add empty billing details to meet API requirements
+            billing_details: {
+              name: 'Test Customer', // Add basic billing details to improve acceptance rate
+            }
           }
         });
         
@@ -340,7 +401,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         const result = await stripe.confirmCardSetup(clientSecret, {
           payment_method: {
             card: cardElement,
-            billing_details: {}, // Add empty billing details to meet API requirements
+            billing_details: {
+              name: 'Test Customer', // Add basic billing details to improve acceptance rate
+            }
           }
         });
         
@@ -350,27 +413,25 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         console.log("Setup result:", result);
         
-        const setupResult = result.setupIntent;
+        const setupIntent = result.setupIntent;
         
-        if (setupResult && setupResult.status === 'succeeded' && setupResult.payment_method) {
-          // Fix the TypeScript error: Handle payment_method that could be string or object
-          let paymentMethodId: string;
-          
-          if (typeof setupResult.payment_method === 'string') {
-            paymentMethodId = setupResult.payment_method;
-          } else if (setupResult.payment_method && 'id' in setupResult.payment_method) {
-            paymentMethodId = setupResult.payment_method.id;
-          } else {
+        if (setupIntent && setupIntent.status === 'succeeded') {
+          // Properly handle the payment_method which could be string or object
+          const paymentMethodId = typeof setupIntent.payment_method === 'string' 
+            ? setupIntent.payment_method 
+            : setupIntent.payment_method?.id;
+            
+          if (!paymentMethodId) {
             throw new Error("Nie można uzyskać identyfikatora metody płatności");
           }
-            
+          
           await createInitialCharge(paymentMethodId);
         } else {
-          throw new Error(`Nieudane ustawienie metody płatności. Status: ${setupResult?.status || 'nieznany'}`);
+          throw new Error(`Nieudane ustawienie metody płatności. Status: ${setupIntent?.status || 'nieznany'}`);
         }
       }
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Payment error:', error);
       
       // Check for common Stripe errors that might need special handling
@@ -386,7 +447,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         error.message?.includes("No such payment_intent") ||
         error.message?.includes("expired") ||
         error.message?.includes("Intent with id pi_") ||
-        error.message?.includes("Intent with id seti_");
+        error.message?.includes("Intent with id seti_") ||
+        error.message?.includes("resource_missing");
       
       if (intentExpiredError && retryCount < 2) {
         setRetryCount(prev => prev + 1);
@@ -399,6 +461,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         await fetchPaymentIntent();
         
         setError("Sesja płatności została odświeżona. Proszę spróbować ponownie.");
+      } else if (error.message?.includes('ERR_BLOCKED_BY_CLIENT') || 
+                error.message?.includes('Failed to fetch')) {
+        setNetworkBlockDetected(true);
+        setConnectionError(true);
+        setError("Wykryto blokadę połączenia do Stripe. Wyłącz AdBlock lub inne blokady sieciowe i spróbuj ponownie.");
+        
+        toast({
+          variant: "destructive",
+          title: "Blokada połączenia",
+          description: "Wykryto blokadę połączenia do systemu płatności. Wyłącz AdBlock i inne blokady, aby kontynuować."
+        });
       } else {
         setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
         
@@ -450,7 +523,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </CardContent>
           </Card>
           
-          {connectionError && (
+          {(connectionError || networkBlockDetected) && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md">
               <div className="flex items-start">
                 <AlertCircle className="h-5 w-5 mr-2 mt-0.5" />
@@ -463,7 +536,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                     <li>Wyłącz rozszerzenia blokujące reklamy (AdBlock, uBlock Origin itp.)</li>
                     <li>Wyłącz blokady JavaScript i ciasteczek</li>
                     <li>Sprawdź czy zapora sieciowa nie blokuje połączeń</li>
-                    <li>Spróbuj odświeżyć stronę lub użyć trybu incognito</li>
+                    <li>Spróbuj otworzyć w trybie incognito lub użyj innej przeglądarki</li>
                   </ul>
                   <div className="mt-3">
                     <Button
@@ -506,11 +579,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               />
             </div>
             <div className="text-xs text-gray-500">
-              Do testów użyj numeru karty: 4242 4242 4242 4242, dowolnej przyszłej daty ważności i dowolnego CVC
+              Do testów użyj numeru karty: 4242 4242 4242 4242, dowolnej przyszłej daty ważności (MM/RR) i dowolnego CVC (3 cyfry)
             </div>
           </div>
           
-          {error && !connectionError && (
+          {error && !connectionError && !networkBlockDetected && (
             <div className="text-sm text-red-500">
               {error}
             </div>
@@ -534,7 +607,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !clientSecret || processingSetupConfirmation || connectionError}
+              disabled={loading || !clientSecret || processingSetupConfirmation || connectionError || networkBlockDetected}
             >
               {loading || processingSetupConfirmation ? (
                 <>
