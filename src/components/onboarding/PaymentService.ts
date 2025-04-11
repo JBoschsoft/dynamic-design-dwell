@@ -1,3 +1,4 @@
+
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -243,7 +244,7 @@ export const attachPaymentMethod = async (
   paymentMethodId: string,
   sessionId: string,
   logFn: (message: string, data?: any) => void
-): Promise<{ updated: boolean, status: string }> => {
+): Promise<{ updated: boolean, status: string, paymentMethodId?: string }> => {
   logFn(`Attaching payment method ${paymentMethodId.substring(0, 5)}... to payment intent ${paymentIntentId.substring(0, 5)}...`);
   
   try {
