@@ -23,6 +23,21 @@ setInterval(() => {
   }
 }, 60000);
 
+// In-memory intent tracker to detect if intents are being used too quickly
+const intentTracker = new Map();
+
+// Clean up intent tracker periodically
+setInterval(() => {
+  const now = Date.now();
+  console.log(`[DEBUG-${now}] Cleaning intent tracker. Current count: ${intentTracker.size}`);
+  for (const [intentId, data] of intentTracker.entries()) {
+    if (now - data.timestamp > 300000) { // Remove entries older than 5 minutes
+      console.log(`[DEBUG-${now}] Removing stale intent tracking: ${intentId}`);
+      intentTracker.delete(intentId);
+    }
+  }
+}, 120000);
+
 serve(async (req) => {
   const requestId = crypto.randomUUID();
   const requestStart = Date.now();
@@ -544,7 +559,14 @@ serve(async (req) => {
       let paymentIntent;
       try {
         paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
+        // Track this intent 
+        intentTracker.set(paymentIntent.id, {
+          timestamp: Date.now(),
+          type: 'payment_intent',
+          customerId: stripeCustomerId
+        });
         console.log(`[REQ-${requestId}] Payment intent created successfully: ${paymentIntent.id}, Client Secret: ${paymentIntent.client_secret?.substring(0, 10)}...`);
+        console.log(`[REQ-${requestId}] Added payment intent to tracker`);
       } catch (piError) {
         console.error(`[REQ-${requestId}] Error creating payment intent:`, piError);
         console.error(`[REQ-${requestId}] Error type: ${piError.type}, code: ${piError.code}`);
@@ -591,9 +613,9 @@ serve(async (req) => {
         const lastCreation = rateLimiter.get(rateKey);
         console.log(`[REQ-${requestId}] Last creation time: ${lastCreation ? new Date(lastCreation).toISOString() : 'none'}`);
         
-        if (lastCreation && (now - lastCreation) < 5000) { // 5-second rate limit (reduced from 10 seconds)
+        if (lastCreation && (now - lastCreation) < 3000) { // 3-second rate limit (reduced further)
           console.log(`[REQ-${requestId}] Rate limited: Setup intent creation too frequent for client ${clientId}`);
-          const retryAfter = Math.ceil((lastCreation + 5000 - now) / 1000);
+          const retryAfter = Math.ceil((lastCreation + 3000 - now) / 1000);
           console.log(`[REQ-${requestId}] Retry after: ${retryAfter} seconds`);
           
           return new Response(
@@ -713,7 +735,14 @@ serve(async (req) => {
       let setupIntent;
       try {
         setupIntent = await stripe.setupIntents.create(setupIntentData);
+        // Track this intent
+        intentTracker.set(setupIntent.id, {
+          timestamp: Date.now(),
+          type: 'setup_intent',
+          customerId: existingCustomerId
+        });
         console.log(`[REQ-${requestId}] Setup intent created successfully: ${setupIntent.id}, Client Secret: ${setupIntent.client_secret?.substring(0, 10)}...`);
+        console.log(`[REQ-${requestId}] Added setup intent to tracker`);
       } catch (siError) {
         console.error(`[REQ-${requestId}] Error creating setup intent:`, siError);
         console.error(`[REQ-${requestId}] Error type: ${siError.type}, code: ${siError.code}`);
@@ -771,4 +800,3 @@ serve(async (req) => {
     console.log(`[REQ-${requestId}] Request completed in ${requestEnd - requestStart}ms`);
   }
 });
-
