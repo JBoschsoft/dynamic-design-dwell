@@ -145,55 +145,28 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      // First create a payment method from the card element
-      log('Creating payment method from card element');
-      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-        billing_details: {
-          name: 'Lovable Customer',
-        },
-      });
-      
-      if (paymentMethodError) {
-        log('Error creating payment method:', paymentMethodError);
-        throw paymentMethodError;
-      }
-      
-      log('Payment method created successfully:', paymentMethod.id);
-      
-      // Now attach the payment method to the payment intent
-      log('Attaching payment method to payment intent');
-      const { error: attachError } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: paymentMethod.id,
-      });
-      
-      if (attachError) {
-        // Handle specific error for missing payment intent
-        if (attachError.type === 'invalid_request_error' && 
-            attachError.message?.includes('No such payment_intent')) {
-          
-          log('Payment intent not found, retrying with fresh intent');
-          // If we've tried less than 2 times, create a new payment intent and retry
-          if (retryCount < 2) {
-            setRetryCount(prev => prev + 1);
-            await createPaymentIntent();
-            setLoading(false);
-            return; // Exit this attempt and let the user retry with the new intent
-          }
+      // Simplify the flow by directly confirming with the card element
+      log('Directly confirming payment with card element');
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: 'Lovable Customer',
+            },
+          },
         }
-        
-        log('Payment confirmation error:', attachError);
-        throw attachError;
+      );
+      
+      if (confirmError) {
+        log('Payment confirmation error:', confirmError);
+        throw confirmError;
       }
       
-      // Check the payment intent status
-      log('Checking payment intent status');
-      const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+      log('Payment intent result:', paymentIntent);
       
-      log('Payment intent status:', paymentIntent?.status);
-      
-      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+      if (paymentIntent?.status === 'succeeded') {
         log('Payment successful! Updating token balance.');
         const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
         
@@ -216,6 +189,41 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
         });
       } else {
+        log('Payment requires further action:', paymentIntent?.status);
+        // Handle other payment statuses
+        if (paymentIntent?.status === 'requires_action' || 
+            paymentIntent?.status === 'requires_confirmation') {
+          
+          const { error, paymentIntent: updatedIntent } = await stripe.confirmCardPayment(clientSecret);
+          
+          if (error) {
+            throw new Error(`Failed to complete payment: ${error.message}`);
+          }
+          
+          if (updatedIntent?.status === 'succeeded') {
+            log('Payment completed after additional confirmation');
+            
+            const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
+            if (!balanceUpdated) {
+              throw new Error("Nie udało się zaktualizować salda tokenów");
+            }
+            
+            if (onSuccess) {
+              onSuccess(paymentType, tokenAmount[0]);
+            }
+            
+            onOpenChange(false);
+            navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+            
+            toast({
+              title: "Płatność zrealizowana",
+              description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+            });
+            
+            return;
+          }
+        }
+        
         throw new Error(`Płatność wymaga dodatkowej weryfikacji. Status: ${paymentIntent?.status || 'nieznany'}`);
       }
     } catch (error) {

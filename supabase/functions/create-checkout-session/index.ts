@@ -128,14 +128,12 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
     
     log(sessionId, `Creating payment intent for customer: ${customerId}, token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
     
-    // For one-time payments, don't set setup_future_usage
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: 'pln',
       customer: customerId,
       capture_method: 'automatic',
       payment_method_types: ['card'],
-      confirm: false, // Don't confirm immediately - let the frontend do it
       metadata: {
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
