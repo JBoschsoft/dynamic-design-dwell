@@ -1,5 +1,4 @@
 
-// supabase/functions/create-checkout-session/index.ts
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -140,7 +139,9 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
-      }
+      },
+      // Ensure the payment intent remains valid longer to avoid expiration issues during testing
+      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
     });
     
     log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
@@ -232,6 +233,58 @@ async function processAutoRechargePayment(
   }
 }
 
+// New function to attach payment method directly to a payment intent
+async function attachPaymentMethod(
+  stripe: Stripe,
+  paymentIntentId: string,
+  paymentMethodId: string,
+  sessionId?: string
+) {
+  try {
+    log(sessionId, `Attaching payment method ${paymentMethodId} directly to payment intent ${paymentIntentId}`);
+    
+    const updatedIntent = await stripe.paymentIntents.update(paymentIntentId, {
+      payment_method: paymentMethodId
+    });
+    
+    log(sessionId, `Payment method attached successfully to intent ${paymentIntentId}`);
+    
+    return {
+      updated: true,
+      status: updatedIntent.status
+    };
+    
+  } catch (error) {
+    log(sessionId, `Error attaching payment method to intent: ${error.message}`);
+    throw error;
+  }
+}
+
+// New function to confirm a payment intent with an attached payment method
+async function confirmPaymentIntent(
+  stripe: Stripe,
+  paymentIntentId: string,
+  sessionId?: string
+) {
+  try {
+    log(sessionId, `Confirming payment intent ${paymentIntentId}`);
+    
+    const confirmedIntent = await stripe.paymentIntents.confirm(paymentIntentId);
+    
+    log(sessionId, `Payment intent confirmation result: ${confirmedIntent.status}`);
+    
+    return {
+      status: confirmedIntent.status,
+      clientSecret: confirmedIntent.client_secret,
+      requiresAction: confirmedIntent.status === 'requires_action'
+    };
+    
+  } catch (error) {
+    log(sessionId, `Error confirming payment intent: ${error.message}`);
+    throw error;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -265,8 +318,11 @@ serve(async (req) => {
       tokenAmount, 
       customerId: existingCustomerId, 
       paymentMethodId,
+      paymentIntentId,
       forceNewIntent,
       createCharge: shouldCreateCharge,
+      attachMethod: shouldAttachMethod,
+      confirmIntent: shouldConfirmIntent,
       sessionId
     } = reqBody;
     
@@ -275,11 +331,81 @@ serve(async (req) => {
       tokenAmount, 
       customerId: existingCustomerId ? `${existingCustomerId.substring(0, 5)}...` : null,
       paymentMethodId: paymentMethodId ? `${paymentMethodId.substring(0, 5)}...` : null,
+      paymentIntentId: paymentIntentId ? `${paymentIntentId.substring(0, 5)}...` : null,
       forceNewIntent,
-      createCharge: shouldCreateCharge
+      createCharge: shouldCreateCharge,
+      attachMethod: shouldAttachMethod,
+      confirmIntent: shouldConfirmIntent
     });
     
     const stripe = initStripe();
+    
+    // Handle direct payment method attachment to existing payment intent
+    if (shouldAttachMethod && paymentIntentId && paymentMethodId) {
+      try {
+        const attachResult = await attachPaymentMethod(
+          stripe,
+          paymentIntentId,
+          paymentMethodId,
+          sessionId
+        );
+        
+        log(sessionId, "Payment method attachment result", attachResult);
+        
+        return new Response(
+          JSON.stringify(attachResult),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } catch (error) {
+        log(sessionId, `Error attaching payment method: ${error.message}`);
+        
+        return new Response(
+          JSON.stringify({
+            error: `Failed to attach payment method: ${error.message}`
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+    }
+    
+    // Handle direct payment intent confirmation
+    if (shouldConfirmIntent && paymentIntentId) {
+      try {
+        const confirmResult = await confirmPaymentIntent(
+          stripe,
+          paymentIntentId,
+          sessionId
+        );
+        
+        log(sessionId, "Payment intent confirmation result", confirmResult);
+        
+        return new Response(
+          JSON.stringify(confirmResult),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } catch (error) {
+        log(sessionId, `Error confirming payment intent: ${error.message}`);
+        
+        return new Response(
+          JSON.stringify({
+            error: `Failed to confirm payment intent: ${error.message}`
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+    }
     
     if (shouldCreateCharge && paymentMethodId) {
       if (!existingCustomerId) {

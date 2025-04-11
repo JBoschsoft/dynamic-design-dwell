@@ -9,7 +9,15 @@ import {
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
-import { fetchPaymentIntent, updateTokenBalance, isIntentStale, createInitialCharge, waitFor } from './PaymentService';
+import { 
+  fetchPaymentIntent, 
+  updateTokenBalance, 
+  isIntentStale, 
+  createInitialCharge, 
+  waitFor,
+  attachPaymentMethod,
+  confirmPaymentIntent
+} from './PaymentService';
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -62,6 +70,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const intentCreationLock = useRef<boolean>(false);
   const paymentLock = useRef<boolean>(false);
   const cardElementRef = useRef<any>(null);
+  const [isSecondStep, setIsSecondStep] = useState(false);
 
   const timeOperation = (operation: string) => {
     operationTimestamps.current[operation] = Date.now();
@@ -103,6 +112,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setForceNewIntent(true);
       setPurposelyDelaying(false);
       setCardElementReady(false);
+      setIsSecondStep(false);
       
       log('Setting timeout to fetch payment intent');
       const timeout = setTimeout(() => {
@@ -220,6 +230,42 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
 
+  // Step 1: Create a payment method from card element
+  const createPaymentMethod = async () => {
+    if (!stripe || !elements) {
+      log('Stripe not loaded');
+      throw new Error("Stripe nie został załadowany. Odśwież stronę i spróbuj ponownie.");
+    }
+    
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      log('Card element not found');
+      throw new Error('Nie można znaleźć elementu karty');
+    }
+    
+    log('Creating payment method from card element');
+    const { error, paymentMethod } = await stripe.createPaymentMethod({
+      type: 'card',
+      card: cardElement,
+      billing_details: { 
+        name: 'Lovable Customer' 
+      }
+    });
+    
+    if (error) {
+      log('Error creating payment method:', error);
+      throw error;
+    }
+    
+    if (!paymentMethod || !paymentMethod.id) {
+      log('No payment method ID returned');
+      throw new Error('Nie udało się utworzyć metody płatności');
+    }
+    
+    log(`Payment method created: ${paymentMethod.id}`);
+    return paymentMethod.id;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -250,22 +296,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         return;
       }
       
-      const cardElement = elements.getElement(CardElement);
-      
-      if (!cardElement) {
-        log('Card element not found');
-        setError('Nie można znaleźć elementu karty');
-        endTracking();
-        paymentLock.current = false;
-        return;
-      }
-      
       setLoading(true);
       setError(null);
       setPaymentInProgress(true);
       
       // Store reference to card element for possible reuse
-      cardElementRef.current = cardElement;
+      cardElementRef.current = elements.getElement(CardElement);
       
       // Make sure we have a fresh intent
       if (isIntentStale(intentFetchTime) || !paymentIntent?.clientSecret) {
@@ -292,42 +328,118 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           }
         }
       }
-      
-      log(`Processing ${paymentType} payment with client secret starting with ${paymentIntent.clientSecret?.slice(0, 10)}...`);
-      
-      // Handle one-time payment flow
+
       if (paymentType === 'one-time') {
-        log('Confirming one-time payment');
-        log('Intent ID:', paymentIntent.id);
-        log('Client secret starts with:', paymentIntent.clientSecret?.slice(0, 10));
-        
-        await waitForDelay(300, 'Before payment confirmation');
-        
-        try {
-          log('Confirming card payment with card element and client secret');
+        if (isSecondStep) {
+          // If we're in the second step, we've already created a payment method
+          // Just use the confirmCardPayment to complete the payment
+          log('Completing payment with client secret');
           
-          // This is the key step where we attach the payment method to the payment intent and confirm it
-          const result = await stripe.confirmCardPayment(
-            paymentIntent.clientSecret!,
-            {
-              payment_method: {
-                card: cardElement,
-                billing_details: { 
-                  name: 'Lovable Customer' 
-                }
-              }
-            }
-          );
+          if (!paymentIntent?.clientSecret) {
+            throw new Error("Brak klucza płatności");
+          }
           
-          log('Payment confirmation result:', result);
+          const result = await stripe.confirmCardPayment(paymentIntent.clientSecret);
           
           if (result.error) {
-            log('Payment confirmation error:', result.error);
+            log('Confirmation error:', result.error);
             throw result.error;
           }
           
-          // Payment succeeded
+          log('Payment confirmation result:', result);
+          
           if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+            log('Payment successful! Updating token balance.');
+            const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
+            
+            if (!balanceUpdated) {
+              log('Failed to update token balance');
+              throw new Error("Nie udało się zaktualizować salda tokenów");
+            }
+            
+            log('Token balance updated successfully');
+            
+            if (onSuccess) {
+              log('Calling onSuccess callback');
+              onSuccess(paymentType, tokenAmount[0]);
+            }
+            
+            log('Closing payment dialog');
+            onOpenChange(false);
+            
+            log('Navigating to success page');
+            navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+            
+            toast({
+              title: "Płatność zrealizowana",
+              description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+            });
+          }
+        } else {
+          log('Starting two-step payment flow for one-time payment');
+          setIsSecondStep(true);
+          
+          // Step 1: Create payment method
+          const paymentMethodId = await createPaymentMethod();
+          
+          // Step 2: Attach payment method to payment intent
+          if (!paymentIntent?.id) {
+            throw new Error("Brak ID intencji płatności");
+          }
+          
+          log(`Attaching payment method ${paymentMethodId} to intent ${paymentIntent.id}`);
+          await attachPaymentMethod(paymentIntent.id, paymentMethodId, sessionId, log);
+          
+          // Step 3: Confirm payment intent on the server
+          const confirmationResult = await confirmPaymentIntent(paymentIntent.id, sessionId, log);
+          log('Payment intent confirmation result:', confirmationResult);
+          
+          if (confirmationResult.requiresAction && confirmationResult.clientSecret) {
+            log('Payment requires additional action, handling with handleCardAction');
+            
+            const { error, paymentIntent: handledIntent } = await stripe.handleCardAction(confirmationResult.clientSecret);
+            
+            if (error) {
+              log('Handle card action error:', error);
+              throw error;
+            }
+            
+            log('Handle card action result:', handledIntent);
+            
+            if (handledIntent.status === 'requires_confirmation') {
+              log('Payment requires another confirmation, confirming again');
+              await confirmPaymentIntent(handledIntent.id, sessionId, log);
+            }
+            
+            if (handledIntent.status === 'succeeded') {
+              log('Payment successful via handleCardAction! Updating token balance.');
+              const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
+              
+              if (!balanceUpdated) {
+                log('Failed to update token balance');
+                throw new Error("Nie udało się zaktualizować salda tokenów");
+              }
+              
+              log('Token balance updated successfully');
+              
+              if (onSuccess) {
+                log('Calling onSuccess callback');
+                onSuccess(paymentType, tokenAmount[0]);
+              }
+              
+              log('Closing payment dialog');
+              onOpenChange(false);
+              
+              log('Navigating to success page');
+              navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+              
+              toast({
+                title: "Płatność zrealizowana",
+                description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+              });
+              return;
+            }
+          } else if (confirmationResult.status === 'succeeded') {
             log('Payment successful! Updating token balance.');
             const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
             
@@ -355,27 +467,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             });
             return;
           } else {
-            log(`Unexpected payment status: ${result.paymentIntent?.status}`);
-            throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${result.paymentIntent?.status || 'nieznany'}`);
+            // Payment is not yet complete - guide the user
+            setError("Płatność wymaga dodatkowej weryfikacji. Proszę kliknąć 'Zapłać' jeszcze raz, aby zakończyć transakcję.");
           }
-        } catch (confirmError) {
-          log('Error in confirmCardPayment:', confirmError);
-          
-          // Handle payment intent expiration
-          if (confirmError.message?.includes("No such payment_intent") || 
-              confirmError.code === 'resource_missing') {
-            log('Payment intent no longer valid, fetching a new one...');
-            setPaymentIntent(null);
-            setForceNewIntent(true);
-            
-            await fetchInitialIntent();
-            await waitForDelay(1000, 'After fetching new payment intent');
-            
-            setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
-            throw confirmError;
-          }
-          
-          throw confirmError;
         }
       } else {
         // Auto-recharge setup flow
@@ -397,7 +491,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             // Confirm the setup intent with the card element
             const result = await stripe.confirmCardSetup(paymentIntent.clientSecret, {
               payment_method: {
-                card: cardElement,
+                card: cardElementRef.current,
                 billing_details: {
                   name: 'Test Customer'
                 }
@@ -524,6 +618,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         setPaymentIntent(null);
         setForceNewIntent(true);
+        setIsSecondStep(false);
         
         log('Waiting before fetching new intent');
         await waitForDelay(2000, 'Before fetching new intent after expiration');
@@ -602,6 +697,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         if (!loading && !processingSetupConfirmation && !isIntentFetching && !purposelyDelaying && !intentCreationLock.current) {
           log('Refreshing stale intent automatically');
           setForceNewIntent(true);
+          setIsSecondStep(false);
           fetchInitialIntent();
         } else {
           log('Skipping auto-refresh due to ongoing operations', {
@@ -678,6 +774,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                       onClick={() => {
                         log('Manual retry after connection error');
                         setForceNewIntent(true);
+                        setIsSecondStep(false);
                         fetchInitialIntent();
                       }}
                       disabled={loading || isIntentFetching || purposelyDelaying}
@@ -748,6 +845,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                   onClick={() => {
                     log('Manual intent refresh requested');
                     setForceNewIntent(true);
+                    setIsSecondStep(false);
                     fetchInitialIntent();
                   }}
                   disabled={isIntentFetching || purposelyDelaying}
@@ -764,7 +862,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           
           <div className="text-xs text-gray-500 mt-2">
             {paymentType === 'one-time' 
-              ? 'Jednorazowa płatność bez zapisywania danych karty'
+              ? (isSecondStep 
+                ? 'Zatwierdzanie płatności...'
+                : 'Krok 1 z 2: Tworzenie metody płatności')
               : 'Zapisujemy dane Twojej karty, aby móc automatycznie doładowywać konto gdy liczba tokenów spadnie poniżej 10'
             }
           </div>
@@ -799,7 +899,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                    'Przygotowanie...'}
                 </>
               ) : (
-                `Zapłać ${calculateTotalPrice(tokenAmount[0])} PLN`
+                isSecondStep && paymentType === 'one-time' 
+                  ? `Zatwierdź płatność ${calculateTotalPrice(tokenAmount[0])} PLN` 
+                  : `Zapłać ${calculateTotalPrice(tokenAmount[0])} PLN`
               )}
             </Button>
           </DialogFooter>
