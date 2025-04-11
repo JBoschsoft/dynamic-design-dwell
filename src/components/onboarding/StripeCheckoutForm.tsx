@@ -290,7 +290,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         await waitFor(500, 'Before payment confirmation');
         
         log('Creating payment method from card element');
-        const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
           billing_details: {
@@ -298,9 +298,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           },
         });
         
-        if (paymentMethodError) {
-          log('Error creating payment method:', paymentMethodError);
-          throw paymentMethodError;
+        if (pmError) {
+          log('Error creating payment method:', pmError);
+          throw new Error(`Błąd tworzenia metody płatności: ${pmError.message}`);
         }
         
         log('Payment method created successfully:', paymentMethod.id);
