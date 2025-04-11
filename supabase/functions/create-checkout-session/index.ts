@@ -322,8 +322,8 @@ serve(async (req) => {
           userId: userId || undefined
         },
         description: `One-time purchase of ${tokenAmount} tokens`,
-        // For one-time payments, explicitly set future_usage to undefined
-        setup_future_usage: undefined,
+        // For one-time payments we set this to null rather than undefined
+        setup_future_usage: null,
       });
       
       console.log("Payment intent created successfully:", paymentIntent.id, "Client Secret:", paymentIntent.client_secret?.substring(0, 10) + "...");
@@ -336,7 +336,8 @@ serve(async (req) => {
           unitPrice,
           totalPrice: totalAmount,
           id: paymentIntent.id,
-          customerId: stripeCustomerId
+          customerId: stripeCustomerId,
+          createdAt: new Date().toISOString(), // Add timestamp to help track intent freshness
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -407,7 +408,8 @@ serve(async (req) => {
           unitPrice,
           totalPrice: totalAmount,
           id: setupIntent.id,
-          customerId: existingCustomerId
+          customerId: existingCustomerId,
+          createdAt: new Date().toISOString(), // Add timestamp to help track intent freshness
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
