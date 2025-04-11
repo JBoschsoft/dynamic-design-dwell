@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -68,7 +67,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   }, [intentFetchTime, log]);
   
   useEffect(() => {
-    // Get the current user's email
     const fetchUserEmail = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -392,7 +390,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                     billingDetails: {
                       name: 'never',
                       email: 'never',
-                      phone: 'never',
+                      phone: 'auto',
                       address: {
                         country: 'never',
                         postalCode: 'auto',
