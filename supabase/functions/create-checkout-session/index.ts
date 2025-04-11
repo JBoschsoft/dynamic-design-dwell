@@ -187,8 +187,7 @@ serve(async (req) => {
             autoRecharge: "true",
             workspaceId: workspaceId || undefined
           },
-          // For subscriptions, explicitly set this to true
-          setup_future_usage: isAutoTopupEnabled ? 'off_session' : undefined,
+          setup_future_usage: 'off_session', // Explicitly set this for subscriptions
           description: `Initial subscription charge for ${tokenAmount} tokens`,
         });
         
@@ -342,7 +341,7 @@ serve(async (req) => {
           userId: userId || undefined
         },
         description: `One-time purchase of ${tokenAmount} tokens`,
-        // For one-time payments we set this to null rather than undefined
+        // For one-time payments we don't want future usage
         setup_future_usage: null,
       });
       
