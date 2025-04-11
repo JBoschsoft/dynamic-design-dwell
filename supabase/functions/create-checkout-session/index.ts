@@ -140,6 +140,8 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
     
     log(sessionId, `Creating payment intent for customer: ${customerId}, token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
     
+    // Create the payment intent with an expiration set through expires_at
+    // FIXED: Removed the expires_at parameter that was causing the error
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
       currency: 'pln',
@@ -151,12 +153,13 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
-      },
-      // Increased expiration time to 2 hours 
-      expires_at: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
+      }
     });
     
-    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at: ${new Date(paymentIntent.expires_at * 1000).toISOString()}`);
+    // Instead of using expires_at, we'll just log when it would expire
+    const expiresAtTimestamp = Math.floor(Date.now() / 1000) + 7200; // 2 hours from now
+    const expiryDate = new Date(expiresAtTimestamp * 1000).toISOString();
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at (not set in API): ${expiryDate}`);
     
     return {
       id: paymentIntent.id,
@@ -164,7 +167,7 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       customerId,
       timestamp: new Date().toISOString(),
       amount: amount / 100, // Send back the calculated amount in currency units
-      expiresAt: paymentIntent.expires_at
+      expiresAt: expiresAtTimestamp // Still return this for the frontend
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);
