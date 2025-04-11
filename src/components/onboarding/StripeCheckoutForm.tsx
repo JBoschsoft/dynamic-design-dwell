@@ -37,6 +37,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0); // Track retry attempts
   
   // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
@@ -56,62 +57,64 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setClientSecret(null);
       setPaymentIntentId(null);
       setCustomerId(null);
+      setRetryCount(0);
       
       // Create payment intent when the dialog opens
-      const createPaymentIntent = async () => {
-        setLoading(true);
-        try {
-          log('Creating payment intent');
-          const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
-            body: {
-              paymentType,
-              tokenAmount: tokenAmount[0],
-              sessionId,
-              timestamp: Date.now() // Add timestamp to prevent caching issues
-            }
-          });
-          
-          if (functionError) {
-            log('Function error:', functionError);
-            throw new Error(`Error invoking payment function: ${functionError.message}`);
-          }
-          
-          if (!data || data.error) {
-            log('Payment service error:', data?.error || 'No data received');
-            throw new Error(data?.error || "Nie otrzymano odpowiedzi z serwera płatności");
-          }
-          
-          log('Payment intent received:', { 
-            id: data.id, 
-            clientSecret: data.clientSecret ? 'exists' : 'missing',
-            customerId: data.customerId
-          });
-          
-          if (!data.clientSecret) {
-            throw new Error("Brak klucza klienta dla płatności");
-          }
-          
-          setClientSecret(data.clientSecret);
-          setPaymentIntentId(data.id);
-          if (data.customerId) {
-            setCustomerId(data.customerId);
-          }
-        } catch (error) {
-          log('Error creating payment intent:', error);
-          setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
-          toast({
-            variant: "destructive",
-            title: "Błąd płatności",
-            description: error.message || "Wystąpił błąd podczas inicjalizacji płatności. Spróbuj ponownie.",
-          });
-        } finally {
-          setLoading(false);
-        }
-      };
-      
       createPaymentIntent();
     }
-  }, [open, log, tokenAmount, sessionId, paymentType]);
+  }, [open]);
+
+  const createPaymentIntent = async () => {
+    setLoading(true);
+    try {
+      log('Creating payment intent');
+      const timestamp = Date.now(); // Current timestamp to prevent caching
+      const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          paymentType,
+          tokenAmount: tokenAmount[0],
+          sessionId,
+          timestamp
+        }
+      });
+      
+      if (functionError) {
+        log('Function error:', functionError);
+        throw new Error(`Error invoking payment function: ${functionError.message}`);
+      }
+      
+      if (!data || data.error) {
+        log('Payment service error:', data?.error || 'No data received');
+        throw new Error(data?.error || "Nie otrzymano odpowiedzi z serwera płatności");
+      }
+      
+      log('Payment intent received:', { 
+        id: data.id, 
+        clientSecret: data.clientSecret ? 'exists' : 'missing',
+        customerId: data.customerId
+      });
+      
+      if (!data.clientSecret) {
+        throw new Error("Brak klucza klienta dla płatności");
+      }
+      
+      setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.id);
+      if (data.customerId) {
+        setCustomerId(data.customerId);
+      }
+    } catch (error) {
+      log('Error creating payment intent:', error);
+      setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
+      toast({
+        variant: "destructive",
+        title: "Błąd płatności",
+        description: error.message || "Wystąpił błąd podczas inicjalizacji płatności. Spróbuj ponownie.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,18 +145,48 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      // For one-time payment, directly confirm with the card element
-      log('Confirming payment with card element');
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { 
-          card: cardElement,
-          billing_details: {
-            name: 'Lovable Customer',
-          },
+      // Create a payment method explicitly instead of using confirmCardPayment directly
+      log('Creating payment method');
+      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: 'Lovable Customer'
         }
       });
       
+      if (paymentMethodError) {
+        log('Payment method error:', paymentMethodError);
+        throw paymentMethodError;
+      }
+      
+      if (!paymentMethod) {
+        throw new Error("Nie udało się utworzyć metody płatności");
+      }
+      
+      log('Payment method created:', paymentMethod.id);
+      
+      // Confirm the payment with the created payment method
+      log('Confirming payment with payment method');
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: paymentMethod.id
+      });
+      
       if (result.error) {
+        // Handle specific error for missing payment intent
+        if (result.error.type === 'invalid_request_error' && 
+            result.error.message?.includes('No such payment_intent')) {
+          
+          log('Payment intent not found, retrying with fresh intent');
+          // If we've tried less than 2 times, create a new payment intent and retry
+          if (retryCount < 2) {
+            setRetryCount(prev => prev + 1);
+            await createPaymentIntent();
+            setLoading(false);
+            return; // Exit this attempt and let the user retry with the new intent
+          }
+        }
+        
         log('Confirmation error:', result.error);
         throw result.error;
       }
