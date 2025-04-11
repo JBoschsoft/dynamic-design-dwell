@@ -34,6 +34,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cardElementReady, setCardElementReady] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   
   // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
@@ -50,8 +51,58 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setError(null);
       setLoading(false);
       setCardElementReady(false);
+      setClientSecret(null);
+      
+      // Create payment intent when the dialog opens
+      const createPaymentIntent = async () => {
+        setLoading(true);
+        try {
+          log('Creating payment intent');
+          const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
+            body: {
+              paymentType: 'direct-charge',
+              tokenAmount: tokenAmount[0],
+              sessionId
+            }
+          });
+          
+          if (functionError) {
+            log('Function error:', functionError);
+            throw new Error(`Error invoking payment function: ${functionError.message}`);
+          }
+          
+          if (!data || data.error) {
+            log('Payment service error:', data?.error || 'No data received');
+            throw new Error(data?.error || "Nie otrzymano odpowiedzi z serwera płatności");
+          }
+          
+          log('Payment intent received:', { 
+            id: data.id, 
+            clientSecret: data.clientSecret ? 'exists' : 'missing',
+            customerId: data.customerId
+          });
+          
+          if (!data.clientSecret) {
+            throw new Error("Brak klucza klienta dla płatności");
+          }
+          
+          setClientSecret(data.clientSecret);
+        } catch (error) {
+          log('Error creating payment intent:', error);
+          setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
+          toast({
+            variant: "destructive",
+            title: "Błąd płatności",
+            description: error.message || "Wystąpił błąd podczas inicjalizacji płatności. Spróbuj ponownie.",
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      createPaymentIntent();
     }
-  }, [open, log]);
+  }, [open, log, tokenAmount, sessionId]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +119,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
+    if (!clientSecret) {
+      setError('Brak klucza klienta. Proszę odświeżyć stronę i spróbować ponownie.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -77,35 +133,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      // Step 1: Create a payment intent
-      log('Creating payment intent');
-      const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          paymentType: 'direct-charge',
-          tokenAmount: tokenAmount[0],
-          sessionId
-        }
-      });
-      
-      if (functionError) {
-        log('Function error:', functionError);
-        throw new Error(`Error invoking payment function: ${functionError.message}`);
-      }
-      
-      if (!data || data.error) {
-        log('Payment service error:', data?.error || 'No data received');
-        throw new Error(data?.error || "Nie otrzymano odpowiedzi z serwera płatności");
-      }
-      
-      log('Payment intent received:', { id: data.id, clientSecret: data.clientSecret ? '[REDACTED]' : null });
-      
-      if (!data.clientSecret) {
-        throw new Error("Brak klucza klienta dla płatności");
-      }
-      
-      // Step 2: Confirm the payment with the card element
       log('Confirming payment with Stripe');
-      const result = await stripe.confirmCardPayment(data.clientSecret, {
+      const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
           billing_details: {
@@ -260,7 +289,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !stripe || !elements || !cardElementReady}
+              disabled={loading || !stripe || !elements || !cardElementReady || !clientSecret}
             >
               {loading ? (
                 <>
