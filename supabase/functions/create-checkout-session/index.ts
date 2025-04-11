@@ -398,7 +398,8 @@ serve(async (req) => {
         }
       }
       
-      // Create a setup intent with a longer expiration time
+      // Create a setup intent with a longer expiration time, but don't set expires_at
+      // since it's causing an issue with the Stripe API in this version
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],
         customer: existingCustomerId || undefined, // Attach to customer if one exists
@@ -417,8 +418,7 @@ serve(async (req) => {
         // Set to off_session to allow future off-session payments
         usage: 'off_session',
         description: `Setup payment method for automatic recharge of ${tokenAmount} tokens`,
-        // Extend timeout to reduce likelihood of expiration during checkout flow
-        expires_at: Math.floor(Date.now() / 1000) + 1800, // 30 minutes
+        // Removed expires_at as it's causing issues with the Stripe API version
       });
       
       console.log("Setup intent created successfully:", setupIntent.id, "Client Secret:", setupIntent.client_secret?.substring(0, 10) + "...");
