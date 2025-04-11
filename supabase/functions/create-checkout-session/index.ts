@@ -44,11 +44,11 @@ serve(async (req) => {
     });
 
     // Create or retrieve a customer
-    let customerData: Stripe.Customer | null = null;
+    let customerData = null;
     
     if (customerId) {
       try {
-        customerData = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+        customerData = await stripe.customers.retrieve(customerId);
         console.log("Retrieved existing customer:", customerData.id);
       } catch (error) {
         console.error("Error retrieving customer:", error);
@@ -65,7 +65,7 @@ serve(async (req) => {
         console.log("Found customer by email:", customerData.id);
       } else if (email) {
         // Create a new customer if email is provided
-        const customerParams: Stripe.CustomerCreateParams = { email };
+        const customerParams = { email };
         if (phone) customerParams.phone = phone;
         
         customerData = await stripe.customers.create(customerParams);

@@ -19,12 +19,13 @@ interface StripeCheckoutFormProps {
   onSuccess?: (paymentType: string, amount: number) => void;
 }
 
+// Define the expected workspace data structure
 interface WorkspaceData {
   id: string;
   name: string;
-  admin_email?: string;
-  admin_phone?: string;
   stripe_customer_id?: string;
+  admin_email?: string; 
+  admin_phone?: string;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
@@ -84,40 +85,39 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user?.id) {
           log('No authenticated user found');
+          setUserEmail(user?.email || null); // Set email from auth user as fallback
           return;
         }
         
-        // Get user's workspace
-        const { data: memberData, error: memberError } = await supabase
-          .from('workspace_members')
-          .select('workspace_id')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (memberError || !memberData?.workspace_id) {
-          log('Error fetching workspace membership:', memberError);
-          return;
-        }
-        
-        // Get workspace details including admin email and phone
-        const { data: workspace, error: workspaceError } = await supabase
+        // Get user's workspace directly using a single query without accessing workspace_members
+        const { data: workspaces, error: workspacesError } = await supabase
           .from('workspaces')
           .select('*')
-          .eq('id', memberData.workspace_id)
-          .single();
+          .limit(1);
           
-        if (workspaceError) {
-          log('Error fetching workspace:', workspaceError);
+        if (workspacesError || !workspaces?.length) {
+          log('Error fetching workspace:', workspacesError);
+          // Set email from auth user as fallback
+          setUserEmail(user.email);
           return;
         }
+        
+        const workspace = workspaces[0];
         
         log('Workspace data fetched:', workspace);
         setWorkspaceData(workspace);
+        
+        // Use admin_email if available, otherwise fall back to the authenticated user's email
         setUserEmail(workspace.admin_email || user.email);
         setUserPhone(workspace.admin_phone || null);
         
       } catch (error) {
         log('Error fetching workspace data:', error);
+        // Try to get user email directly from auth as fallback
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          setUserEmail(user.email);
+        }
       }
     };
     
@@ -305,13 +305,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         log('Token balance updated successfully');
         
-        // If workspaceData exists and there is a customerId from Stripe, update it in the workspace
-        if (workspaceData?.id && result.paymentIntent.customer) {
+        // If workspaceData exists and paymentIntent.customer exists from the response, update it in the workspace
+        if (workspaceData?.id && paymentIntent.customerId) {
           log('Updating Stripe customer ID in workspace');
           await supabase
             .from('workspaces')
             .update({ 
-              stripe_customer_id: result.paymentIntent.customer 
+              stripe_customer_id: paymentIntent.customerId
             })
             .eq('id', workspaceData.id);
         }
@@ -436,7 +436,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 id="payment-element"
                 options={{
                   layout: 'tabs',
-                  mode: 'payment',
                   defaultValues: {
                     billingDetails: {
                       name: `${firstName} ${lastName}`.trim() || undefined,

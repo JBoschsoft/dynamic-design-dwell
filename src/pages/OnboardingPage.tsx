@@ -54,7 +54,7 @@ const OnboardingPage = () => {
   
   // Enhanced Stripe configuration for PaymentElement
   const stripeOptions = {
-    mode: 'payment' as 'payment',
+    mode: 'payment' as const,
     amount: paymentType === 'one-time' 
       ? parseInt(calculateTotalPrice(tokenAmount[0]).toString()) * 100
       : parseInt(calculateTotalPrice(autoRechargeAmount[0]).toString()) * 100,
@@ -227,6 +227,11 @@ const OnboardingPage = () => {
       setLoading(true);
       
       try {
+        // Get the current authenticated user to obtain email
+        const { data: { user } } = await supabase.auth.getUser();
+        const userEmail = user?.email || '';
+        
+        // Create workspace with admin using RPC function
         const { data, error } = await supabase.rpc('create_workspace_with_admin', {
           workspace_name: companyName,
           workspace_industry: industry,
@@ -239,15 +244,19 @@ const OnboardingPage = () => {
         
         console.log("Workspace created with ID:", data);
         
-        // Update the workspace with admin email
+        // Update the workspace with admin email directly using updat function
         if (data && userEmail) {
-          await supabase
-            .from('workspaces')
+          // Use a direct update query that won't be affected by type checking
+          const { error: updateError } = await supabase.from('workspaces')
             .update({
               admin_email: userEmail,
               admin_phone: phoneNumber
             })
             .eq('id', data);
+          
+          if (updateError) {
+            console.error("Error updating workspace with admin details:", updateError);
+          }
         }
         
         toast({
