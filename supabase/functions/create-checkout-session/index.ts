@@ -153,11 +153,11 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
       },
-      // Increased expiration time to 1 hour
-      expires_at: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour from now
+      // Remove the expires_at field as it's causing the API error
+      // expires_at: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour from now
     });
     
-    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at: ${new Date((paymentIntent.expires_at || 0) * 1000).toISOString()}`);
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at: ${paymentIntent.expires_at ? new Date((paymentIntent.expires_at) * 1000).toISOString() : 'N/A'}`);
     
     return {
       id: paymentIntent.id,

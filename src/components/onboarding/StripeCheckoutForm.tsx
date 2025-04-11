@@ -8,7 +8,7 @@ import {
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
-import { fetchPaymentIntent, updateTokenBalance, isIntentStale } from './PaymentService';
+import { fetchPaymentIntent, updateTokenBalance, isIntentStale, createInitialCharge } from './PaymentService';
 
 interface StripeCheckoutFormProps {
   open: boolean;

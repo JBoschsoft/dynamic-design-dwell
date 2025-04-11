@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -73,7 +72,7 @@ export const fetchPaymentIntent = async (
         tokenAmount,
         customerId,
         forceNewIntent,
-        sessionId // Pass session ID for tracking
+        sessionId
       }
     });
     
