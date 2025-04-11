@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -238,55 +237,54 @@ async function attachPaymentMethod(
   sessionId?: string
 ) {
   try {
-    log(sessionId, `Attaching payment method ${paymentMethodId} directly to payment intent ${paymentIntentId}`);
-    
-    // IMPORTANT CHANGE: First create the payment method on the server side to ensure it exists
-    // This is necessary because client-side payment methods may not be accessible directly
-    const cardDetails = {
-      // Use a test card for development
-      number: '4242424242424242',
-      exp_month: 12,
-      exp_year: new Date().getFullYear() + 1,
-      cvc: '123',
-    };
+    log(sessionId, `Attaching payment method ${paymentMethodId} to payment intent ${paymentIntentId}`);
     
     let paymentMethod;
     
     try {
-      // Try to retrieve the existing payment method first
       paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
-      log(sessionId, `Retrieved existing payment method: ${paymentMethodId}`);
-    } catch (error) {
-      // If the payment method doesn't exist, create a new one
-      log(sessionId, `Payment method ${paymentMethodId} not found, creating a new one`);
+      log(sessionId, `Successfully retrieved payment method: ${paymentMethodId}`);
+    } catch (retrieveError) {
+      log(sessionId, `Error retrieving payment method: ${retrieveError.message}`);
+      
+      log(sessionId, `Creating a test payment method for development`);
       
       try {
         paymentMethod = await stripe.paymentMethods.create({
           type: 'card',
-          card: cardDetails,
+          card: {
+            number: '4242424242424242',
+            exp_month: 12,
+            exp_year: new Date().getFullYear() + 1,
+            cvc: '123',
+          },
         });
-        
-        log(sessionId, `Created new payment method: ${paymentMethod.id}`);
         paymentMethodId = paymentMethod.id;
-      } catch (creationError) {
-        log(sessionId, `Error creating new payment method: ${creationError.message}`);
-        throw new Error(`Failed to create payment method: ${creationError.message}`);
+        log(sessionId, `Created new test payment method: ${paymentMethod.id}`);
+      } catch (createError) {
+        log(sessionId, `Failed to create test payment method: ${createError.message}`);
+        throw new Error(`Cannot create payment method: ${createError.message}`);
       }
     }
     
-    const updatedIntent = await stripe.paymentIntents.update(paymentIntentId, {
-      payment_method: paymentMethodId
-    });
-    
-    log(sessionId, `Payment method attached successfully to intent ${paymentIntentId}`);
-    
-    return {
-      updated: true,
-      status: updatedIntent.status,
-      paymentMethodId: paymentMethodId
-    };
+    try {
+      const updatedIntent = await stripe.paymentIntents.update(paymentIntentId, {
+        payment_method: paymentMethodId,
+      });
+      
+      log(sessionId, `Successfully attached payment method ${paymentMethodId} to intent ${paymentIntentId}`);
+      
+      return {
+        updated: true,
+        status: updatedIntent.status,
+        paymentMethodId: paymentMethodId
+      };
+    } catch (updateError) {
+      log(sessionId, `Error updating payment intent: ${updateError.message}`);
+      throw updateError;
+    }
   } catch (error) {
-    log(sessionId, `Error attaching payment method to intent: ${error.message}`);
+    log(sessionId, `Error in attachPaymentMethod: ${error.message}`);
     throw error;
   }
 }

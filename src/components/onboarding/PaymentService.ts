@@ -251,7 +251,7 @@ export const attachPaymentMethod = async (
     // Add a small delay before calling the function
     await waitFor(300, 'Before attaching payment method', logFn);
     
-    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+    const response = await supabase.functions.invoke('create-checkout-session', {
       body: {
         attachMethod: true,
         paymentIntentId,
@@ -259,6 +259,14 @@ export const attachPaymentMethod = async (
         sessionId
       }
     });
+    
+    // Better error handling to catch and properly report Supabase errors
+    if (response.error) {
+      logFn('Error from Supabase function:', response.error);
+      throw new Error(`Function error: ${response.error.message || response.error.toString()}`);
+    }
+    
+    const { data, error } = response;
     
     if (error) {
       logFn('Error attaching payment method:', error);
@@ -271,7 +279,13 @@ export const attachPaymentMethod = async (
     }
     
     logFn('Payment method attachment result:', data);
-    return data;
+    
+    // Return the possibly updated payment method ID from the server
+    return {
+      updated: data.updated || false,
+      status: data.status || 'unknown',
+      paymentMethodId: data.paymentMethodId || paymentMethodId
+    };
   } catch (error) {
     logFn('Error attaching payment method:', error);
     throw error;
