@@ -64,7 +64,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           log('Creating payment intent');
           const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
             body: {
-              paymentType: 'direct-charge',
+              paymentType,
               tokenAmount: tokenAmount[0],
               sessionId
             }
@@ -110,7 +110,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       createPaymentIntent();
     }
-  }, [open, log, tokenAmount, sessionId]);
+  }, [open, log, tokenAmount, sessionId, paymentType]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +127,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
-    if (!clientSecret || !paymentIntentId) {
+    if (!clientSecret) {
       setError('Brak klucza klienta. Proszę odświeżyć stronę i spróbować ponownie.');
       return;
     }
@@ -176,7 +176,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
         log('Payment successful! Updating token balance.');
-        const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
+        const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
         
         if (!balanceUpdated) {
           log('Failed to update token balance');
@@ -186,7 +186,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         log('Token balance updated successfully');
         
         if (onSuccess) {
-          onSuccess('one-time', tokenAmount[0]);
+          onSuccess(paymentType, tokenAmount[0]);
         }
         
         onOpenChange(false);

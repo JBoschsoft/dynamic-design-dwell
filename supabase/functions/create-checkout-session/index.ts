@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -399,7 +400,8 @@ async function createDirectCharge(
   stripe: Stripe, 
   tokenAmount: number,
   sessionId?: string,
-  email?: string
+  email?: string,
+  paymentType: 'one-time' | 'auto-recharge' = 'one-time'
 ) {
   try {
     // Find or create a customer if email is provided
@@ -421,13 +423,13 @@ async function createDirectCharge(
     const pricePerToken = calculateTokenPrice(tokenAmount);
     const amount = Math.round(tokenAmount * pricePerToken * 100); // Convert to smallest currency unit (cents)
     
-    log(sessionId, `Creating payment intent for direct charge: token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
+    log(sessionId, `Creating payment intent for ${paymentType} charge: token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
     
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Only set setup_future_usage for auto-recharge
+    const paymentIntentOptions: any = {
       amount: amount,
       currency: 'pln',
       customer: customerId,
-      setup_future_usage: customerId ? 'off_session' : undefined, // Store for future payments if we have a customer
       capture_method: 'automatic',
       payment_method_types: ['card'],
       metadata: {
@@ -435,9 +437,16 @@ async function createDirectCharge(
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
       }
-    });
+    };
     
-    log(sessionId, `Payment intent created for direct charge: ${paymentIntent.id}, amount: ${amount}`);
+    // Only add setup_future_usage for auto-recharge payments
+    if (paymentType === 'auto-recharge' && customerId) {
+      paymentIntentOptions.setup_future_usage = 'off_session';
+    }
+    
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentOptions);
+    
+    log(sessionId, `Payment intent created for ${paymentType} charge: ${paymentIntent.id}, amount: ${amount}`);
     
     return {
       id: paymentIntent.id,
@@ -624,7 +633,7 @@ serve(async (req) => {
     }
     
     // Handle direct charge scenario (new simplified flow)
-    if (paymentType === 'direct-charge') {
+    if (paymentType === 'direct-charge' || paymentType === 'one-time' || paymentType === 'auto-recharge') {
       try {
         // For direct charges, we may or may not have authentication
         let userEmail = null;
@@ -655,7 +664,12 @@ serve(async (req) => {
           }
         }
         
-        const result = await createDirectCharge(stripe, tokenAmount, sessionId, userEmail);
+        // Use the actual payment type for direct charge to differentiate between one-time and auto-recharge
+        const actualPaymentType = paymentType === 'direct-charge' 
+          ? (reqBody.actualPaymentType || 'one-time') 
+          : paymentType;
+        
+        const result = await createDirectCharge(stripe, tokenAmount, sessionId, userEmail, actualPaymentType);
         
         return new Response(
           JSON.stringify(result),

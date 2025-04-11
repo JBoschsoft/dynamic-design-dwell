@@ -89,7 +89,7 @@ const OnboardingPage = () => {
       const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : autoRechargeAmount[0]);
       toast({
         title: "Płatność zakończona sukcesem",
-        description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
+        description: `Twoje konto zostało pomy��lnie doładowane o ${tokens} tokenów.`
       });
       setPaymentSuccess(true);
       setTimeout(() => {
