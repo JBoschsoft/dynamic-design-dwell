@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -287,26 +286,16 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitForDelay(500, 'Before payment confirmation');
         
-        // Create payment method from card element
-        log('Creating payment method from card element');
-        const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
-          type: 'card',
-          card: cardElement,
-        });
-        
-        if (pmError) {
-          log('Error creating payment method:', pmError);
-          throw new Error(`Błąd tworzenia metody płatności: ${pmError.message}`);
-        }
-        
-        log(`Payment method created successfully: ${paymentMethod.id}`);
-        
-        // Confirm the payment with the created payment method
-        log(`Confirming payment with method: ${paymentMethod.id}`);
+        log('Confirming card payment directly with card element');
         const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
           paymentIntent.clientSecret!,
           {
-            payment_method: paymentMethod.id,
+            payment_method: {
+              card: cardElement,
+              billing_details: { 
+                name: 'Lovable Customer' 
+              }
+            }
           }
         );
         
@@ -372,7 +361,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         } else if (confirmedIntent && confirmedIntent.status === 'requires_action') {
           log('3D Secure authentication required...');
           
-          // Handle 3D Secure flow if needed
           const { error, paymentIntent: authenticatedIntent } = await stripe.handleCardAction(confirmedIntent.client_secret!);
           
           if (error) {
