@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Button, Label, Loader2, Card, CardContent
+  Button, Label, Loader2, Card, CardContent, Input
 } from "@/components/ui";
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
@@ -40,6 +41,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     customerId?: string;
   } | null>(null);
   const [intentFetchTime, setIntentFetchTime] = useState<Date | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   
   const log = useCallback((message: string, data?: any) => {
     if (data) {
@@ -62,6 +66,25 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
     return isValid;
   }, [intentFetchTime, log]);
+  
+  useEffect(() => {
+    // Get the current user's email
+    const fetchUserEmail = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          setUserEmail(user.email);
+          log('User email fetched:', user.email);
+        } else {
+          log('No authenticated user email found');
+        }
+      } catch (error) {
+        log('Error fetching user:', error);
+      }
+    };
+    
+    fetchUserEmail();
+  }, [log]);
   
   const createPaymentIntent = async () => {
     if (loading) return;
@@ -165,6 +188,16 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Proszę podać imię i nazwisko.');
+      return;
+    }
+    
+    if (!userEmail) {
+      setError('Brak adresu email. Proszę odświeżyć stronę lub zalogować się ponownie.');
+      return;
+    }
+    
     if (!isIntentValid()) {
       log('Intent no longer valid, creating a new one before confirming');
       await createPaymentIntent();
@@ -183,6 +216,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error(submitError.message || "Payment submission failed");
       }
       
+      const fullName = `${firstName} ${lastName}`;
+      log('Using billing details:', { name: fullName, email: userEmail });
+      
       const result = await stripe.confirmPayment({
         elements,
         clientSecret: paymentIntent.clientSecret,
@@ -190,7 +226,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           return_url: `${window.location.origin}/onboarding?success=true&tokens=${tokenAmount[0]}`,
           payment_method_data: {
             billing_details: {
-              name: 'Lovable Customer',
+              name: fullName,
+              email: userEmail,
             },
           },
         },
@@ -310,6 +347,35 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           </Card>
           
           <div className="space-y-2">
+            <Label>Dane do faktury</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="firstName" className="text-xs mb-1 block">Imię</Label>
+                <Input 
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Podaj imię"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName" className="text-xs mb-1 block">Nazwisko</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Podaj nazwisko"
+                  required
+                />
+              </div>
+            </div>
+            <div className="text-xs text-gray-500">
+              Email: {userEmail || 'Brak - zaloguj się aby kontynuować'}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
             <Label>Dane płatności</Label>
             <div className="border rounded-md">
               <PaymentElement
@@ -318,12 +384,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                   layout: 'tabs',
                   defaultValues: {
                     billingDetails: {
-                      name: 'Lovable Customer',
+                      name: `${firstName} ${lastName}`.trim() || undefined,
+                      email: userEmail || undefined,
                     }
                   },
                   fields: {
                     billingDetails: {
-                      name: 'auto',
+                      name: 'never',
                       email: 'never',
                       phone: 'never',
                       address: {
@@ -385,7 +452,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !stripe || !elements || !paymentElementReady}
+              disabled={loading || !stripe || !elements || !paymentElementReady || !firstName.trim() || !lastName.trim() || !userEmail}
             >
               {loading ? (
                 <>
