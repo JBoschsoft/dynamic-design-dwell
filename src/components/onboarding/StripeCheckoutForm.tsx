@@ -24,7 +24,6 @@ interface PaymentIntent {
   timestamp?: string;
   customerId?: string | null;
   amount?: number;
-  expiresAt?: number;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
@@ -57,8 +56,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [forceNewIntent, setForceNewIntent] = useState(false);
   const [purposelyDelaying, setPurposelyDelaying] = useState(false);
   const [cardElementReady, setCardElementReady] = useState(false);
+  const [paymentInProgress, setPaymentInProgress] = useState(false);
   const operationTimestamps = useRef<{[key: string]: number}>({});
   const intentCreationLock = useRef<boolean>(false);
+  const paymentLock = useRef<boolean>(false);
 
   const timeOperation = (operation: string) => {
     operationTimestamps.current[operation] = Date.now();
@@ -218,6 +219,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (paymentLock.current) {
+      log('Payment already in progress, ignoring duplicate submission');
+      return;
+    }
+    
+    paymentLock.current = true;
     const endTracking = timeOperation('handleSubmit');
     
     log('Payment form submitted');
@@ -226,6 +234,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       log('Stripe not loaded');
       setError("Stripe nie został załadowany. Odśwież stronę i spróbuj ponownie.");
       endTracking();
+      paymentLock.current = false;
       return;
     }
     
@@ -233,6 +242,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       log('Card element not ready');
       setError('Element karty nie jest gotowy. Proszę poczekać lub odświeżyć stronę.');
       endTracking();
+      paymentLock.current = false;
       return;
     }
     
@@ -242,11 +252,13 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       log('Card element not found');
       setError('Nie można znaleźć elementu karty');
       endTracking();
+      paymentLock.current = false;
       return;
     }
     
     setLoading(true);
     setError(null);
+    setPaymentInProgress(true);
     
     try {
       log('Updating card element');
@@ -284,10 +296,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         log('Intent ID:', paymentIntent.id);
         log('Client secret starts with:', paymentIntent.clientSecret?.slice(0, 10));
         
-        await waitForDelay(500, 'Before payment confirmation');
+        await waitForDelay(300, 'Before payment confirmation');
         
         try {
-          log('Confirming card payment directly with card element');
+          log('Confirming card payment with card element and client secret');
+          
           const result = await stripe.confirmCardPayment(
             paymentIntent.clientSecret!,
             {
@@ -299,6 +312,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               }
             }
           );
+          
+          log('Payment confirmation result:', result);
           
           if (result.error) {
             log('Payment confirmation error:', result.error);
@@ -314,6 +329,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               
               setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
               endTracking();
+              paymentLock.current = false;
+              setPaymentInProgress(false);
               return;
             }
             
@@ -605,6 +622,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       }
     } finally {
       setLoading(false);
+      setPaymentInProgress(false);
+      paymentLock.current = false;
       log('Payment submission process completed');
       endTracking();
     }
@@ -792,8 +811,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           <div className="text-xs text-gray-500">
             Debug: {isIntentStale(intentFetchTime) ? 'Intent stale' : 'Intent fresh'} 
             {intentFetchTime && ` (Age: ${new Date().getTime() - intentFetchTime.getTime()}ms)`}
-            {paymentIntent?.expiresAt && ` Expires: ${new Date(paymentIntent.expiresAt * 1000).toLocaleTimeString()}`}
-            {intentCreationLock.current && ' [LOCKED]'}
+            {paymentInProgress ? ' [PAYMENT IN PROGRESS]' : ''}
+            {intentCreationLock.current ? ' [LOCKED]' : ''}
+            {paymentLock.current ? ' [PAYMENT LOCKED]' : ''}
             {cardElementReady ? ' [CARD READY]' : ' [CARD NOT READY]'}
           </div>
           
@@ -805,20 +825,24 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 log('Payment cancelled by user');
                 onOpenChange(false);
               }}
-              disabled={loading || processingSetupConfirmation || isIntentFetching || purposelyDelaying}
+              disabled={loading || processingSetupConfirmation || isIntentFetching || purposelyDelaying || paymentInProgress}
             >
               Anuluj
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !stripe || !elements || !cardElementReady || processingSetupConfirmation || connectionError || networkBlockDetected || isIntentFetching || purposelyDelaying || !paymentIntent?.clientSecret || intentCreationLock.current}
+              disabled={loading || !stripe || !elements || !cardElementReady || processingSetupConfirmation || 
+                       connectionError || networkBlockDetected || isIntentFetching || purposelyDelaying || 
+                       !paymentIntent?.clientSecret || intentCreationLock.current || paymentInProgress || paymentLock.current}
             >
-              {loading || processingSetupConfirmation || isIntentFetching || purposelyDelaying || intentCreationLock.current ? (
+              {loading || processingSetupConfirmation || isIntentFetching || purposelyDelaying || 
+               intentCreationLock.current || paymentInProgress ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {processingSetupConfirmation ? 'Przetwarzanie płatności...' : 
                    isIntentFetching ? 'Przygotowanie sesji...' : 
                    purposelyDelaying ? 'Łączenie z systemem...' :
+                   paymentInProgress ? 'Przetwarzanie płatności...' :
                    intentCreationLock.current ? 'Inicjalizacja płatności...' :
                    'Przygotowanie...'}
                 </>

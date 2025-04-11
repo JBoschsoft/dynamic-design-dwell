@@ -35,7 +35,6 @@ let cachedIntent: {
   id: string;
   timestamp: number;
   customerId?: string;
-  expiresAt?: number;
 } | null = null;
 
 // Fetch a new payment intent - for both one-time and auto-recharge options
@@ -76,8 +75,7 @@ export const fetchPaymentIntent = async (
       clientSecret: cachedIntent.clientSecret,
       timestamp: new Date(cachedIntent.timestamp).toISOString(),
       customerId: cachedIntent.customerId,
-      amount: cachedIntent.tokenAmount,
-      expiresAt: cachedIntent.expiresAt
+      amount: cachedIntent.tokenAmount
     });
     
     setIntentFetchTime(new Date(cachedIntent.timestamp));
@@ -86,8 +84,7 @@ export const fetchPaymentIntent = async (
       intentId: cachedIntent.id,
       customerId: cachedIntent.customerId,
       timestamp: new Date(cachedIntent.timestamp).toISOString(),
-      amount: cachedIntent.tokenAmount,
-      expiresAt: cachedIntent.expiresAt
+      amount: cachedIntent.tokenAmount
     };
   }
 
@@ -161,8 +158,7 @@ export const fetchPaymentIntent = async (
         clientSecret: data.clientSecret,
         id: data.id,
         timestamp: Date.now(),
-        customerId: data.customerId,
-        expiresAt: data.expiresAt
+        customerId: data.customerId
       };
       
       setPaymentIntent({
@@ -170,8 +166,7 @@ export const fetchPaymentIntent = async (
         clientSecret: data.clientSecret,
         timestamp: data.timestamp || new Date().toISOString(),
         customerId: data.customerId,
-        amount: data.amount,
-        expiresAt: data.expiresAt
+        amount: data.amount
       });
       
       setIntentFetchTime(new Date());
@@ -186,8 +181,7 @@ export const fetchPaymentIntent = async (
           clientSecret: data.clientSecret,
           intentId: data.id,
           timestamp: data.timestamp || new Date().toISOString(),
-          amount: data.amount,
-          expiresAt: data.expiresAt
+          amount: data.amount
         };
       }
       
@@ -195,8 +189,7 @@ export const fetchPaymentIntent = async (
         clientSecret: data.clientSecret,
         intentId: data.id,
         timestamp: data.timestamp || new Date().toISOString(),
-        amount: data.amount,
-        expiresAt: data.expiresAt
+        amount: data.amount
       };
     } else {
       logFn("No client secret received");
