@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { calculateTokenPrice, calculateTotalPrice } from './components/onboarding/utils';
 
 // Import components
 import ProgressBar from '@/components/onboarding/ProgressBar';
@@ -51,10 +52,10 @@ const OnboardingPage = () => {
   
   // Enhanced Stripe configuration for PaymentElement
   const stripeOptions = {
-    mode: 'payment',
+    mode: 'payment' as 'payment',
     amount: paymentType === 'one-time' 
-      ? parseInt(calculateTotalPrice(tokenAmount[0]).replace(/\D/g, '')) * 100
-      : parseInt(calculateTotalPrice(autoRechargeAmount[0]).replace(/\D/g, '')) * 100,
+      ? parseInt(calculateTotalPrice(tokenAmount[0]).toString()) * 100
+      : parseInt(calculateTotalPrice(autoRechargeAmount[0]).toString()) * 100,
     currency: 'pln',
     appearance: {
       theme: 'stripe' as const,
@@ -69,12 +70,6 @@ const OnboardingPage = () => {
       },
     },
     loader: 'auto' as const,
-  };
-  
-  // Helper function to calculate total price
-  const calculateTotalPrice = (tokens: number): string => {
-    const pricePerToken = tokens >= 150 ? 5 : tokens >= 100 ? 6 : tokens >= 50 ? 7 : 8;
-    return `${tokens * pricePerToken}`;
   };
 
   useEffect(() => {

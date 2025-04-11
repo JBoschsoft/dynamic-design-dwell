@@ -319,7 +319,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 id="payment-element"
                 options={{
                   layout: 'tabs',
-                  paymentMethodTypes: ['card', 'apple_pay', 'google_pay'],
+                  defaultValues: {
+                    billingDetails: {
+                      name: 'Lovable Customer',
+                    }
+                  },
                   fields: {
                     billingDetails: {
                       name: 'auto',
@@ -334,16 +338,15 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                         state: 'never',
                       }
                     }
+                  },
+                  wallets: {
+                    applePay: 'auto',
+                    googlePay: 'auto'
                   }
                 }}
                 onChange={(event) => {
                   setPaymentElementReady(event.complete);
-                  if (event.error) {
-                    log('Payment element error:', event.error);
-                    setError(event.error.message || null);
-                  } else {
-                    setError(null);
-                  }
+                  setError(null);
                   if (event.complete) {
                     log('Payment element complete');
                   }
