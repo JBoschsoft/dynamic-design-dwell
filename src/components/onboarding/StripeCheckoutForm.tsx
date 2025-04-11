@@ -49,6 +49,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState(0);
   const [rateLimited, setRateLimited] = useState(false);
   const [retryAfter, setRetryAfter] = useState(0);
+  const [forceNewIntent, setForceNewIntent] = useState(false);
   
   useEffect(() => {
     if (open) {
@@ -65,9 +66,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setLastFetchTimestamp(0);
       setRateLimited(false);
       setRetryAfter(0);
+      setForceNewIntent(false);
       
       const timeout = setTimeout(() => {
-        fetchPaymentIntent();
+        fetchPaymentIntent(true);
       }, 300);
       
       return () => clearTimeout(timeout);
@@ -114,19 +116,20 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
-    const maxIntentAge = 120 * 1000;
+    const maxIntentAge = 90 * 1000; // Reduce from 120 to 90 seconds
     
     return timeDiff > maxIntentAge;
   }, [intentFetchTime]);
   
-  const fetchPaymentIntent = useCallback(async () => {
+  const fetchPaymentIntent = useCallback(async (force = false) => {
     if (isIntentFetching) {
       console.log("Intent fetch already in progress, skipping duplicate request");
       return;
     }
     
+    // Don't fetch if we've recently done so, unless forced
     const now = Date.now();
-    if (now - lastFetchTimestamp < 5000) {
+    if (!force && now - lastFetchTimestamp < 5000) {
       console.log("Fetch requests too frequent, adding delay");
       
       if (rateLimited && retryAfter > 0) {
@@ -147,15 +150,19 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setConnectionError(false);
     
     try {
-      console.log(`Fetching ${paymentType} payment intent for ${tokenAmount[0]} tokens`);
+      console.log(`Fetching ${paymentType} payment intent for ${tokenAmount[0]} tokens${forceNewIntent ? ' (forcing new intent)' : ''}`);
       
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType: paymentType,
           tokenAmount: tokenAmount[0],
-          customerId: customerId
+          customerId: customerId,
+          forceNewIntent: forceNewIntent || force // Pass the force flag to the backend
         }
       });
+      
+      // Reset the force flag after use
+      setForceNewIntent(false);
       
       if (error) {
         console.error("Supabase function error:", error);
@@ -231,7 +238,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setLoading(false);
       setIsIntentFetching(false);
     }
-  }, [paymentType, tokenAmount, customerId, isIntentFetching, lastFetchTimestamp, rateLimited, retryAfter]);
+  }, [paymentType, tokenAmount, customerId, isIntentFetching, lastFetchTimestamp, rateLimited, retryAfter, forceNewIntent]);
   
   const updateTokenBalance = async (amount: number) => {
     try {
@@ -370,7 +377,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       if (isIntentStale() || !paymentIntent?.clientSecret) {
         console.log("Intent is stale or missing, fetching fresh intent before confirmation");
-        await fetchPaymentIntent();
+        await fetchPaymentIntent(true); // Force a fresh intent
         
         if (!paymentIntent?.clientSecret) {
           throw new Error("Nie udało się uzyskać nowego klucza płatności. Proszę spróbować ponownie.");
@@ -396,7 +403,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               result.error.code === 'resource_missing') {
             console.log("Payment intent no longer valid, fetching a new one...");
             setPaymentIntent(null);
-            await fetchPaymentIntent();
+            setForceNewIntent(true);
+            await fetchPaymentIntent(true);
             
             if (paymentIntent?.clientSecret) {
               setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
@@ -462,8 +470,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 result.error.code === 'resource_missing') {
               console.log("Setup intent no longer valid, fetching a new one...");
               setPaymentIntent(null);
+              setForceNewIntent(true);
               
-              await fetchPaymentIntent();
+              await fetchPaymentIntent(true);
               
               await new Promise(resolve => setTimeout(resolve, 1000));
               
@@ -501,9 +510,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             console.log("Setup intent issue detected:", error);
             
             setPaymentIntent(null);
+            setForceNewIntent(true);
             setError("Wystąpił problem z sesją płatności - spróbujemy ponownie...");
             
-            await fetchPaymentIntent();
+            await fetchPaymentIntent(true);
             throw new Error("Sesja płatności wygasła. Proszę spróbować ponownie z odświeżoną sesją.");
           } else {
             throw error;
@@ -537,9 +547,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
         
         setPaymentIntent(null);
+        setForceNewIntent(true);
         
         await new Promise(resolve => setTimeout(resolve, 1000));
-        await fetchPaymentIntent();
+        await fetchPaymentIntent(true);
         
         setError("Sesja płatności została odświeżona. Proszę spróbować ponownie.");
       } else if (error.message?.includes('ERR_BLOCKED_BY_CLIENT') || 

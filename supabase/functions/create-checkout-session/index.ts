@@ -29,9 +29,9 @@ serve(async (req) => {
   
   try {
     // Parse the request body
-    const { paymentType, tokenAmount, paymentMethodId, customerId } = await req.json();
+    const { paymentType, tokenAmount, paymentMethodId, customerId, forceNewIntent } = await req.json();
     
-    console.log("Received request with:", { paymentType, tokenAmount, paymentMethodId, customerId });
+    console.log("Received request with:", { paymentType, tokenAmount, paymentMethodId, customerId, forceNewIntent });
     
     // Initialize Stripe with secret key from environment variables
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -389,7 +389,8 @@ serve(async (req) => {
           paymentType,
           autoRecharge: "false",
           workspaceId: workspaceId || undefined,
-          userId: userId || undefined
+          userId: userId || undefined,
+          createdAt: new Date().toISOString() // Add creation timestamp
         },
         description: `One-time purchase of ${tokenAmount} tokens`,
         // For one-time payments, explicitly set to null (not an empty string)
@@ -415,28 +416,30 @@ serve(async (req) => {
         }
       );
     } else {
-      console.log("Creating setup intent for subscription payments");
+      console.log(`Creating setup intent for subscription payments${forceNewIntent ? ' (forcing new intent)' : ''}`);
       
       // Apply rate limiting for setup intent creation
       // Create a unique key based on userId or a client identifier
       const clientId = userId || req.headers.get('X-Client-Info') || req.headers.get('User-Agent') || 'anonymous';
       const rateKey = `${clientId}:${paymentType}:${tokenAmount}`;
       
-      // Check if we've created an intent for this user recently
-      const lastCreation = rateLimiter.get(rateKey);
-      if (lastCreation && Date.now() - lastCreation < 10000) { // 10-second rate limit
-        console.log("Rate limited: Setup intent creation too frequent for client", clientId);
-        return new Response(
-          JSON.stringify({ 
-            error: "Rate limited. Please wait before requesting another setup intent.",
-            rateLimited: true,
-            retryAfter: Math.ceil((lastCreation + 10000 - Date.now()) / 1000)
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429
-          }
-        );
+      // Check if we've created an intent for this user recently, unless we're forcing a new one
+      if (!forceNewIntent) {
+        const lastCreation = rateLimiter.get(rateKey);
+        if (lastCreation && Date.now() - lastCreation < 10000) { // 10-second rate limit
+          console.log("Rate limited: Setup intent creation too frequent for client", clientId);
+          return new Response(
+            JSON.stringify({ 
+              error: "Rate limited. Please wait before requesting another setup intent.",
+              rateLimited: true,
+              retryAfter: Math.ceil((lastCreation + 10000 - Date.now()) / 1000)
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 429
+            }
+          );
+        }
       }
       
       // Get user email if available
@@ -449,8 +452,9 @@ serve(async (req) => {
       }
       
       // If we have a workspaceId, check if there's an existing customer ID
-      let existingCustomerId = null;
-      if (workspaceId) {
+      let existingCustomerId = customerId || null;
+      
+      if (workspaceId && !existingCustomerId) {
         const { data: workspaceData, error: workspaceError } = await supabase
           .from('workspaces')
           .select('stripe_customer_id')
@@ -485,7 +489,7 @@ serve(async (req) => {
         }
       }
       
-      // Create a setup intent without expires_at to avoid API version compatibility issues
+      // Create a setup intent with additional metadata
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],
         customer: existingCustomerId || undefined, // Attach to customer if one exists
@@ -499,15 +503,18 @@ serve(async (req) => {
           workspaceId: workspaceId || undefined,
           userId: userId || undefined,
           userEmail: userEmail || undefined,
-          timestamp: new Date().toISOString(), // Add creation timestamp
+          createdAt: new Date().toISOString(), // Add creation timestamp
+          forceRefresh: forceNewIntent ? "true" : "false" // Indicate if this was a forced refresh
         },
         // Set to off_session to allow future off-session payments
         usage: 'off_session',
         description: `Setup payment method for automatic recharge of ${tokenAmount} tokens`,
       });
       
-      // Update rate limiter
-      rateLimiter.set(rateKey, Date.now());
+      // Update rate limiter (only if not forcing a new intent)
+      if (!forceNewIntent) {
+        rateLimiter.set(rateKey, Date.now());
+      }
       
       console.log("Setup intent created successfully:", setupIntent.id, "Client Secret:", setupIntent.client_secret?.substring(0, 10) + "...");
       
