@@ -145,22 +145,33 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      log('Confirming payment directly with card element');
-      
-      // Confirm the payment directly with the card element - this is the recommended approach
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name: 'Lovable Customer'
-          }
-        }
+      // First create a payment method from the card element
+      log('Creating payment method from card element');
+      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name: 'Lovable Customer',
+        },
       });
       
-      if (result.error) {
+      if (paymentMethodError) {
+        log('Error creating payment method:', paymentMethodError);
+        throw paymentMethodError;
+      }
+      
+      log('Payment method created successfully:', paymentMethod.id);
+      
+      // Now attach the payment method to the payment intent
+      log('Attaching payment method to payment intent');
+      const { error: attachError } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: paymentMethod.id,
+      });
+      
+      if (attachError) {
         // Handle specific error for missing payment intent
-        if (result.error.type === 'invalid_request_error' && 
-            result.error.message?.includes('No such payment_intent')) {
+        if (attachError.type === 'invalid_request_error' && 
+            attachError.message?.includes('No such payment_intent')) {
           
           log('Payment intent not found, retrying with fresh intent');
           // If we've tried less than 2 times, create a new payment intent and retry
@@ -172,13 +183,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           }
         }
         
-        log('Confirmation error:', result.error);
-        throw result.error;
+        log('Payment confirmation error:', attachError);
+        throw attachError;
       }
       
-      log('Payment confirmation result:', result);
+      // Check the payment intent status
+      log('Checking payment intent status');
+      const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
       
-      if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+      log('Payment intent status:', paymentIntent?.status);
+      
+      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
         log('Payment successful! Updating token balance.');
         const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
         
@@ -201,7 +216,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
         });
       } else {
-        throw new Error(`Płatność wymaga dodatkowej weryfikacji. Status: ${result.paymentIntent?.status || 'nieznany'}`);
+        throw new Error(`Płatność wymaga dodatkowej weryfikacji. Status: ${paymentIntent?.status || 'nieznany'}`);
       }
     } catch (error) {
       log('Payment error:', error);
