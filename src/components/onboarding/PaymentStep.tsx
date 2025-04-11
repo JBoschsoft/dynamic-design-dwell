@@ -19,12 +19,12 @@ import {
 } from './utils';
 
 interface PaymentStepProps {
-  paymentType: 'one-time' | 'subscription';
-  setPaymentType: (value: 'one-time' | 'subscription') => void;
+  paymentType: 'one-time' | 'auto-recharge';
+  setPaymentType: (value: 'one-time' | 'auto-recharge') => void;
   tokenAmount: number[];
   setTokenAmount: (value: number[]) => void;
-  subscriptionAmount: number[];
-  setSubscriptionAmount: (value: number[]) => void;
+  autoRechargeAmount: number[];
+  setAutoRechargeAmount: (value: number[]) => void;
   onNext: () => void;
   onPrevious: () => void;
   paymentLoading: boolean;
@@ -38,8 +38,8 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
   setPaymentType,
   tokenAmount,
   setTokenAmount,
-  subscriptionAmount,
-  setSubscriptionAmount,
+  autoRechargeAmount,
+  setAutoRechargeAmount,
   onNext,
   onPrevious,
   paymentLoading,
@@ -49,6 +49,9 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
 }) => {
   
   const formatSubscriptionValue = (value: number[]) => {
+    if (!value || !Array.isArray(value) || value.length === 0) {
+      return "0 tokenów (8 PLN/token)";
+    }
     const amount = value[0];
     const price = calculateTokenPrice(amount);
     return `${amount} tokenów (${price} PLN/token)`;
@@ -73,19 +76,19 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
       <div className="space-y-6">
         <RadioGroup 
           value={paymentType} 
-          onValueChange={(value) => setPaymentType(value as 'one-time' | 'subscription')}
+          onValueChange={(value) => setPaymentType(value as 'one-time' | 'auto-recharge')}
           className="space-y-4"
         >
-          <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'subscription' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
+          <div className={`border rounded-lg p-4 transition-all duration-300 ${paymentType === 'auto-recharge' ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
             <div className="flex items-start space-x-3">
-              <RadioGroupItem value="subscription" id="subscription" className="mt-1" />
+              <RadioGroupItem value="auto-recharge" id="auto-recharge" className="mt-1" />
               <div className="flex-1">
-                <Label htmlFor="subscription" className="text-base font-medium flex items-center">
+                <Label htmlFor="auto-recharge" className="text-base font-medium flex items-center">
                   <Repeat className="mr-2 h-5 w-5" />
                   Włącz automatyczne płatności
                 </Label>
                 
-                {paymentType === 'subscription' && (
+                {paymentType === 'auto-recharge' && (
                   <div className="mt-6 space-y-6 animate-fade-in">
                     <div className="bg-blue-50 border border-blue-100 rounded-md p-4 flex items-start text-sm">
                       <CheckCircle2 className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
@@ -98,8 +101,8 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
                         <span>1000 tokenów</span>
                       </div>
                       <Slider 
-                        value={subscriptionAmount} 
-                        onValueChange={setSubscriptionAmount}
+                        value={autoRechargeAmount} 
+                        onValueChange={setAutoRechargeAmount}
                         min={10}
                         max={1000}
                         step={5}
@@ -108,82 +111,88 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
                         className="py-4"
                       />
                     </div>
-
-                    <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
-                      <div className="flex items-center mb-2">
-                        <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
-                        <span className="text-sm font-medium">{getPriceTierDescription(subscriptionAmount[0])}</span>
-                        <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
-                          Zniżka {getDiscountPercentage(subscriptionAmount[0])}%
-                        </div>
-                      </div>
-                      
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
-                          style={{ width: `${Math.min((subscriptionAmount[0] / 200) * 100, 100)}%` }}
-                        ></div>
-                      </div>
-                      
-                      <div className="flex justify-between mt-2 text-xs text-gray-500">
-                        <span>8 PLN/token</span>
-                        <span>7 PLN/token</span>
-                        <span>6 PLN/token</span>
-                        <span>5 PLN/token</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-400">
-                        <span>1-49</span>
-                        <span>50-99</span>
-                        <span>100-149</span>
-                        <span>150+</span>
-                      </div>
-                    </div>
                     
-                    <Card className="border-primary/20 shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center">
-                          <Gauge className="mr-2 h-5 w-5 text-primary" />
-                          Automatyczne płatności
-                        </CardTitle>
-                        <CardDescription>
-                          Szczegóły doładowania tokenów
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2 pt-0">
-                        <div className="flex justify-between">
-                          <span>Próg doładowania:</span>
-                          <span className="font-medium">poniżej 10 tokenów</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Ilość tokenów:</span>
-                          <span className="font-medium">{subscriptionAmount[0]} tokenów</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Cena za token:</span>
-                          <span className="font-medium">{calculateTokenPrice(subscriptionAmount[0])} PLN</span>
-                        </div>
-                        <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
-                          <span>Kwota doładowania:</span>
-                          <span className="text-primary">{calculateTotalPrice(subscriptionAmount[0])} PLN</span>
-                        </div>
-                      </CardContent>
-                      
-                      <CardFooter className="flex flex-col gap-3 pt-0">
-                        <div className="bg-gray-50 p-3 rounded-md border border-gray-100 w-full">
-                          <h4 className="text-sm font-medium mb-2 flex items-center">
-                            <CreditCardIcon className="h-4 w-4 mr-1 text-gray-500" />
-                            Informacje o metodzie płatności
-                          </h4>
-                          <p className="text-xs text-gray-500 mb-3">
-                            Po kliknięciu przycisku "Zapłać i kontynuuj" zostaniesz przekierowany do bezpiecznej strony płatności Stripe.
-                          </p>
-                          <div className="flex items-center space-x-1 text-xs text-gray-600">
-                            <Lock className="h-3 w-3" />
-                            <span>Bezpieczna płatność przez Stripe</span>
+                    {/* Display pricing tier information */}
+                    {Array.isArray(autoRechargeAmount) && autoRechargeAmount.length > 0 && (
+                      <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                        <div className="flex items-center mb-2">
+                          <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
+                          <span className="text-sm font-medium">{getPriceTierDescription(autoRechargeAmount[0])}</span>
+                          <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                            Zniżka {getDiscountPercentage(autoRechargeAmount[0])}%
                           </div>
                         </div>
-                      </CardFooter>
-                    </Card>
+                        
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div 
+                            className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full"
+                            style={{ width: `${Math.min((autoRechargeAmount[0] / 200) * 100, 100)}%` }}
+                          ></div>
+                        </div>
+                        
+                        <div className="flex justify-between mt-2 text-xs text-gray-500">
+                          <span>8 PLN/token</span>
+                          <span>7 PLN/token</span>
+                          <span>6 PLN/token</span>
+                          <span>5 PLN/token</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-400">
+                          <span>1-49</span>
+                          <span>50-99</span>
+                          <span>100-149</span>
+                          <span>150+</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Summary card */}
+                    {Array.isArray(autoRechargeAmount) && autoRechargeAmount.length > 0 && (
+                      <Card className="border-primary/20 shadow-sm">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center">
+                            <Gauge className="mr-2 h-5 w-5 text-primary" />
+                            Automatyczne płatności
+                          </CardTitle>
+                          <CardDescription>
+                            Szczegóły doładowania tokenów
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2 pt-0">
+                          <div className="flex justify-between">
+                            <span>Próg doładowania:</span>
+                            <span className="font-medium">poniżej 10 tokenów</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Ilość tokenów:</span>
+                            <span className="font-medium">{autoRechargeAmount[0]} tokenów</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Cena za token:</span>
+                            <span className="font-medium">{calculateTokenPrice(autoRechargeAmount[0])} PLN</span>
+                          </div>
+                          <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
+                            <span>Kwota doładowania:</span>
+                            <span className="text-primary">{calculateTotalPrice(autoRechargeAmount[0])} PLN</span>
+                          </div>
+                        </CardContent>
+                        
+                        <CardFooter className="flex flex-col gap-3 pt-0">
+                          <div className="bg-gray-50 p-3 rounded-md border border-gray-100 w-full">
+                            <h4 className="text-sm font-medium mb-2 flex items-center">
+                              <CreditCardIcon className="h-4 w-4 mr-1 text-gray-500" />
+                              Informacje o metodzie płatności
+                            </h4>
+                            <p className="text-xs text-gray-500 mb-3">
+                              Po kliknięciu przycisku "Zapłać i kontynuuj" zostaniesz przekierowany do bezpiecznej strony płatności Stripe.
+                            </p>
+                            <div className="flex items-center space-x-1 text-xs text-gray-600">
+                              <Lock className="h-3 w-3" />
+                              <span>Bezpieczna płatność przez Stripe</span>
+                            </div>
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    )}
                   </div>
                 )}
               </div>
@@ -217,80 +226,86 @@ const PaymentStep: React.FC<PaymentStepProps> = ({
                         className="py-4"
                       />
                       
-                      <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
-                        <div className="flex items-center mb-2">
-                          <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
-                          <span className="text-sm font-medium">{getPriceTierDescription(tokenAmount[0])}</span>
-                          {tokenAmount[0] >= 50 && (
-                            <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
-                              Zniżka {getDiscountPercentage(tokenAmount[0])}%
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div 
-                            className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full transition-all duration-300 ease-out"
-                            style={{ width: `${Math.min(tokenAmount[0] / 200 * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                        
-                        <div className="flex justify-between mt-2 text-xs text-gray-500">
-                          <span>8 PLN/token</span>
-                          <span>7 PLN/token</span>
-                          <span>6 PLN/token</span>
-                          <span>5 PLN/token</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-400">
-                          <span>1-49</span>
-                          <span>50-99</span>
-                          <span>100-149</span>
-                          <span>150+</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Card className="border-primary/20 shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center">
-                          <Gauge className="mr-2 h-5 w-5 text-primary" />
-                          Podsumowanie zakupu
-                        </CardTitle>
-                        <CardDescription>
-                          Szczegóły transakcji
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2 pt-0">
-                        <div className="flex justify-between">
-                          <span>Ilość tokenów:</span>
-                          <span className="font-medium">{tokenAmount[0]}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Cena za token:</span>
-                          <span className="font-medium">{calculateTokenPrice(tokenAmount[0])} PLN</span>
-                        </div>
-                        <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
-                          <span>Razem do zapłaty:</span>
-                          <span className="text-primary">{calculateTotalPrice(tokenAmount[0])} PLN</span>
-                        </div>
-                      </CardContent>
-                      
-                      <CardFooter className="flex flex-col gap-3 pt-0">
-                        <div className="bg-gray-50 p-3 rounded-md border border-gray-100 w-full">
-                          <h4 className="text-sm font-medium mb-2 flex items-center">
-                            <CreditCardIcon className="h-4 w-4 mr-1 text-gray-500" />
-                            Informacje o płatności
-                          </h4>
-                          <p className="text-xs text-gray-500 mb-3">
-                            Po kliknięciu przycisku "Zapłać i kontynuuj" zostaniesz przekierowany do bezpiecznej strony płatności Stripe.
-                          </p>
-                          <div className="flex items-center space-x-1 text-xs text-gray-600">
-                            <Lock className="h-3 w-3" />
-                            <span>Bezpieczna płatność przez Stripe</span>
+                      {/* Display pricing tier information */}
+                      {Array.isArray(tokenAmount) && tokenAmount.length > 0 && (
+                        <div className="bg-gray-50 p-3 rounded-md border border-gray-100">
+                          <div className="flex items-center mb-2">
+                            <TrendingDown className="h-4 w-4 text-green-500 mr-2" />
+                            <span className="text-sm font-medium">{getPriceTierDescription(tokenAmount[0])}</span>
+                            {tokenAmount[0] >= 50 && (
+                              <div className="ml-auto bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                                Zniżka {getDiscountPercentage(tokenAmount[0])}%
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div 
+                              className="bg-gradient-to-r from-primary/50 to-primary h-2.5 rounded-full transition-all duration-300 ease-out"
+                              style={{ width: `${Math.min(tokenAmount[0] / 200 * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                          
+                          <div className="flex justify-between mt-2 text-xs text-gray-500">
+                            <span>8 PLN/token</span>
+                            <span>7 PLN/token</span>
+                            <span>6 PLN/token</span>
+                            <span>5 PLN/token</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-400">
+                            <span>1-49</span>
+                            <span>50-99</span>
+                            <span>100-149</span>
+                            <span>150+</span>
                           </div>
                         </div>
-                      </CardFooter>
-                    </Card>
+                      )}
+                    </div>
+                    
+                    {/* Summary card */}
+                    {Array.isArray(tokenAmount) && tokenAmount.length > 0 && (
+                      <Card className="border-primary/20 shadow-sm">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center">
+                            <Gauge className="mr-2 h-5 w-5 text-primary" />
+                            Podsumowanie zakupu
+                          </CardTitle>
+                          <CardDescription>
+                            Szczegóły transakcji
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2 pt-0">
+                          <div className="flex justify-between">
+                            <span>Ilość tokenów:</span>
+                            <span className="font-medium">{tokenAmount[0]}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Cena za token:</span>
+                            <span className="font-medium">{calculateTokenPrice(tokenAmount[0])} PLN</span>
+                          </div>
+                          <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
+                            <span>Razem do zapłaty:</span>
+                            <span className="text-primary">{calculateTotalPrice(tokenAmount[0])} PLN</span>
+                          </div>
+                        </CardContent>
+                        
+                        <CardFooter className="flex flex-col gap-3 pt-0">
+                          <div className="bg-gray-50 p-3 rounded-md border border-gray-100 w-full">
+                            <h4 className="text-sm font-medium mb-2 flex items-center">
+                              <CreditCardIcon className="h-4 w-4 mr-1 text-gray-500" />
+                              Informacje o płatności
+                            </h4>
+                            <p className="text-xs text-gray-500 mb-3">
+                              Po kliknięciu przycisku "Zapłać i kontynuuj" zostaniesz przekierowany do bezpiecznej strony płatności Stripe.
+                            </p>
+                            <div className="flex items-center space-x-1 text-xs text-gray-600">
+                              <Lock className="h-3 w-3" />
+                              <span>Bezpieczna płatność przez Stripe</span>
+                            </div>
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    )}
                   </div>
                 )}
               </div>

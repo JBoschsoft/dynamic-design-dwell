@@ -94,7 +94,6 @@ const OnboardingPage = () => {
       setPaymentSuccess(true);
       setTimeout(() => {
         setCurrentStep(3);
-        // Update URL to reflect new step
         navigate(`/onboarding?step=3`, { replace: true });
       }, 1000);
     }
@@ -138,18 +137,15 @@ const OnboardingPage = () => {
     setPaymentSuccess(true);
     setTimeout(() => {
       setCurrentStep(3);
-      // Update URL to reflect new step
       navigate(`/onboarding?step=3`, { replace: true });
     }, 1000);
   };
   
   const handleOpenCheckout = () => {
-    // Reset any previous errors before opening the checkout
     setCheckoutDialogOpen(true);
   };
   
   const skipPayment = async () => {
-    // Update token balance without payment
     try {
       setPaymentLoading(true);
       
@@ -160,7 +156,6 @@ const OnboardingPage = () => {
         .single();
           
       if (memberData?.workspace_id) {
-        // Add starter tokens (5)
         await supabase
           .from('workspaces')
           .update({ 
@@ -174,13 +169,10 @@ const OnboardingPage = () => {
           description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
         });
         
-        // Set payment success so we move to the next step
         setPaymentSuccess(true);
         
-        // Navigate to next step after a short delay
         setTimeout(() => {
           setCurrentStep(3);
-          // Update URL to reflect new step
           navigate(`/onboarding?step=3`, { replace: true });
         }, 500);
       }
@@ -216,7 +208,6 @@ const OnboardingPage = () => {
       setLoading(true);
       
       try {
-        // Call Supabase function to create workspace with admin
         const { data, error } = await supabase.rpc('create_workspace_with_admin', {
           workspace_name: companyName,
           workspace_industry: industry,
@@ -235,7 +226,6 @@ const OnboardingPage = () => {
         });
         
         setCurrentStep(2);
-        // Update URL with the new step
         navigate(`/onboarding?step=2`, { replace: true });
         
       } catch (error: any) {
@@ -249,19 +239,15 @@ const OnboardingPage = () => {
       }
     } else if (currentStep === 2) {
       setCurrentStep(3);
-      // Update URL with the new step
       navigate(`/onboarding?step=3`, { replace: true });
     } else if (currentStep === 3) {
       setCurrentStep(4);
-      // Update URL with the new step
       navigate(`/onboarding?step=4`, { replace: true });
     } else if (currentStep === 4) {
       setCurrentStep(5);
-      // Update URL with the new step
       navigate(`/onboarding?step=5`, { replace: true });
     } else if (currentStep === 5) {
       setCurrentStep(6);
-      // Update URL with the new step
       navigate(`/onboarding?step=6`, { replace: true });
     } else if (currentStep === 6) {
       navigate('/dashboard');
@@ -272,7 +258,6 @@ const OnboardingPage = () => {
     if (currentStep > 1) {
       const newStep = currentStep - 1;
       setCurrentStep(newStep);
-      // Update URL with the new step
       navigate(`/onboarding?step=${newStep}`, { replace: true });
     }
   };
@@ -316,7 +301,7 @@ const OnboardingPage = () => {
         {currentStep === 2 && (
           <PaymentStep 
             paymentType={paymentType}
-            setPaymentType={setPaymentType}
+            setPaymentType={setPaymentType as (value: 'one-time' | 'auto-recharge') => void}
             tokenAmount={tokenAmount}
             setTokenAmount={setTokenAmount}
             autoRechargeAmount={autoRechargeAmount}
@@ -374,7 +359,6 @@ const OnboardingPage = () => {
         onConfirm={handleConfirmOneTimePayment}
       />
       
-      {/* Each time the dialog is opened, a new Stripe Elements instance is created with fresh state */}
       {checkoutDialogOpen && (
         <Elements stripe={stripePromise} options={stripeOptions}>
           <StripeCheckoutForm
