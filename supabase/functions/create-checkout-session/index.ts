@@ -139,7 +139,8 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
-      }
+      },
+      // No setup_future_usage to ensure it's truly a one-time payment
     });
     
     log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
