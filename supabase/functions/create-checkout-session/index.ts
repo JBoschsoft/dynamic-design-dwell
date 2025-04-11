@@ -148,15 +148,24 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       payment_method_types: ['card'],
       // For future off-session charges (optional)
       // setup_future_usage: 'off_session', 
+      metadata: {
+        tokenAmount: tokenAmount.toString(),
+        pricePerToken: pricePerToken.toString(),
+        timestamp: new Date().toISOString()
+      },
+      // Increased expiration time to 1 hour
+      expires_at: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour from now
     });
     
-    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at: ${new Date((paymentIntent.expires_at || 0) * 1000).toISOString()}`);
     
     return {
       id: paymentIntent.id,
       clientSecret: paymentIntent.client_secret,
       customerId,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      amount: amount / 100, // Send back the calculated amount in currency units
+      expiresAt: paymentIntent.expires_at
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);
@@ -415,7 +424,8 @@ serve(async (req) => {
     log(sessionId, "Intent creation successful", { 
       id: intentResult.id,
       clientSecret: intentResult.clientSecret ? `${intentResult.clientSecret.substring(0, 5)}...` : null,
-      customerId
+      customerId,
+      amount: intentResult.amount
     });
     
     return new Response(

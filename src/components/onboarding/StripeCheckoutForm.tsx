@@ -8,6 +8,7 @@ import {
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPaymentIntent, updateTokenBalance, isIntentStale } from './PaymentService';
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -22,6 +23,8 @@ interface PaymentIntent {
   clientSecret: string | null;
   timestamp?: string;
   customerId?: string | null;
+  amount?: number;
+  expiresAt?: number;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
@@ -98,7 +101,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       log('Setting timeout to fetch payment intent');
       const timeout = setTimeout(() => {
         log('Initial intent fetch triggered');
-        fetchPaymentIntent(true);
+        fetchInitialIntent();
       }, 500);
       
       return () => {
@@ -153,21 +156,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     checkStripeAccess();
   }, [networkBlockDetected, log]);
   
-  const isIntentStale = useCallback((): boolean => {
-    if (!intentFetchTime) {
-      log('No intent fetch time recorded, considering intent stale');
-      return true;
-    }
-    
-    const now = new Date();
-    const timeDiff = now.getTime() - intentFetchTime.getTime();
-    const maxIntentAge = 20 * 1000;
-    
-    const isStale = timeDiff > maxIntentAge;
-    log(`Intent staleness check: age=${timeDiff}ms, max=${maxIntentAge}ms, isStale=${isStale}`);
-    return isStale;
-  }, [intentFetchTime, log]);
-  
   const waitFor = async (ms: number, reason: string): Promise<void> => {
     log(`Purposely delaying for ${ms}ms: ${reason}`);
     setPurposelyDelaying(true);
@@ -180,318 +168,35 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     });
   };
 
-  const fetchPaymentIntent = useCallback(async (force = false) => {
-    const endTracking = timeOperation('fetchPaymentIntent');
-
-    if (isIntentFetching) {
-      log("Intent fetch already in progress, skipping duplicate request");
-      endTracking();
-      return;
-    }
-    
-    const now = Date.now();
-    
-    log(`Fetch request received. Force=${force}, Last fetch=${lastFetchTimestamp ? new Date(lastFetchTimestamp).toISOString() : 'never'}`);
-    log(`Time since last fetch: ${now - lastFetchTimestamp}ms`);
-    
-    if (!force && now - lastFetchTimestamp < 3000) {
-      log("Fetch requests too frequent, adding delay");
-      
-      if (rateLimited && retryAfter > 0) {
-        log(`Rate limited by server, waiting ${retryAfter} seconds`);
-        setError(`Zbyt wiele żądań. Odczekaj ${retryAfter} sekund przed ponowną próbą.`);
-        endTracking();
-        return;
+  const fetchInitialIntent = async () => {
+    await fetchPaymentIntent(
+      paymentType,
+      tokenAmount[0],
+      customerId,
+      true,
+      setIsIntentFetching,
+      setLastFetchTimestamp,
+      setLoading,
+      setError,
+      setConnectionError,
+      setPaymentIntent,
+      setIntentFetchTime,
+      setIntentFailures,
+      setRateLimited,
+      setRetryAfter,
+      setForceNewIntent,
+      log,
+      sessionId,
+      waitFor
+    ).then(result => {
+      if (result?.customerId) {
+        setCustomerId(result.customerId);
       }
-      
-      const waitTime = 3000 - (now - lastFetchTimestamp);
-      log(`Enforcing local rate limit, wait time: ${waitTime}ms`);
-      setError(`Odczekaj ${Math.ceil(waitTime/1000)} sekund przed odświeżeniem sesji płatności.`);
-      endTracking();
-      return;
-    }
-    
-    setIsIntentFetching(true);
-    setLastFetchTimestamp(Date.now());
-    setLoading(true);
-    setError(null);
-    setConnectionError(false);
-    
-    try {
-      log(`Fetching ${paymentType} payment intent for ${tokenAmount[0]} tokens${forceNewIntent ? ' (forcing new intent)' : ''}`);
-      
-      const requestStart = Date.now();
-      log('Invoking create-checkout-session function', {
-        paymentType,
-        tokenAmount: tokenAmount[0],
-        customerId,
-        forceNewIntent: forceNewIntent || force
-      });
-      
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          paymentType: paymentType,
-          tokenAmount: tokenAmount[0],
-          customerId: customerId,
-          forceNewIntent: forceNewIntent || force,
-          sessionId
-        }
-      });
-      
-      log(`Function response received after ${Date.now() - requestStart}ms`);
-      
-      setForceNewIntent(false);
-      
-      if (error) {
-        log("Supabase function error:", error);
-        throw new Error(`Error invoking payment function: ${error.message}`);
-      }
-      
-      if (!data) {
-        log("No data received from payment service");
-        throw new Error("No data received from payment service");
-      }
-      
-      if (data?.error) {
-        log("Payment service error:", data.error);
-        
-        if (data.rateLimited) {
-          log(`Rate limited by server: retry after ${data.retryAfter || 10}s`);
-          setRateLimited(true);
-          setRetryAfter(data.retryAfter || 10);
-          throw new Error(`Zbyt wiele żądań. Odczekaj ${data.retryAfter || 10} sekund przed ponowną próbą.`);
-        }
-        
-        throw new Error(data.error);
-      }
-      
-      if (data?.clientSecret) {
-        log(`Received new client secret: ${data.clientSecret.substring(0, 10)}...`);
-        log(`Intent ID: ${data.id}`);
-        
-        await waitFor(200, 'After receiving client secret');
-        
-        setPaymentIntent({
-          id: data.id,
-          clientSecret: data.clientSecret,
-          timestamp: data.timestamp || new Date().toISOString(),
-          customerId: data.customerId
-        });
-        
-        setIntentFetchTime(new Date());
-        setIntentFailures(0);
-        setRateLimited(false);
-        setRetryAfter(0);
-        
-        if (data.customerId) {
-          log(`Customer ID received: ${data.customerId}`);
-          setCustomerId(data.customerId);
-        }
-      } else {
-        log("No client secret received");
-        throw new Error("Nie otrzymano klucza klienta od serwera płatności");
-      }
-    } catch (error) {
-      log('Error fetching payment intent:', error);
-      
-      setIntentFailures(prev => prev + 1);
-      log(`Intent failures increased to ${intentFailures + 1}`);
-      
-      if (error.message?.includes('Failed to fetch') || 
-          error.message?.includes('Network Error') ||
-          error.message?.includes('ERR_BLOCKED_BY_CLIENT') ||
-          error.message?.includes('AbortError')) {
-        log('Network or connectivity error detected');
-        setConnectionError(true);
-        setNetworkBlockDetected(true);
-        setError('Błąd połączenia z systemem płatności. Proszę sprawdzić połączenie internetowe lub wyłączyć blokady (np. adblock).');
-        
-        toast({
-          variant: "destructive",
-          title: "Błąd połączenia",
-          description: "Wykryto blokadę połączenia do Stripe. Wyłącz AdBlock i inne blokady, aby kontynuować płatność."
-        });
-      } else {
-        setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
-        
-        toast({
-          variant: "destructive",
-          title: "Błąd inicjalizacji płatności",
-          description: error.message || "Nie można nawiązać połączenia z systemem płatności. Spróbuj ponownie."
-        });
-      }
-    } finally {
-      setLoading(false);
-      setIsIntentFetching(false);
-      log('Intent fetch completed');
-      endTracking();
-    }
-  }, [paymentType, tokenAmount, customerId, isIntentFetching, lastFetchTimestamp, rateLimited, retryAfter, forceNewIntent, intentFailures, log, waitFor]);
-  
-  const updateTokenBalance = async (amount: number) => {
-    const endTracking = timeOperation('updateTokenBalance');
-
-    try {
-      log(`Updating token balance: +${amount}`);
-      log('Getting current user');
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        log('No authenticated user found');
-        endTracking();
-        return false;
-      }
-      
-      log(`Finding workspace for user: ${user.id}`);
-      const { data: memberData, error: memberError } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (memberError || !memberData?.workspace_id) {
-        log('Error finding workspace:', memberError);
-        endTracking();
-        return false;
-      }
-      
-      const workspaceId = memberData.workspace_id;
-      log(`Found workspace: ${workspaceId}`);
-      
-      log('Fetching current workspace token balance');
-      const { data: workspaceData, error: workspaceError } = await supabase
-        .from('workspaces')
-        .select('token_balance')
-        .eq('id', workspaceId)
-        .maybeSingle();
-      
-      if (workspaceError) {
-        log('Error fetching workspace data:', workspaceError);
-        endTracking();
-        return false;
-      }
-      
-      const currentBalance = workspaceData?.token_balance ?? 0;
-      const newBalance = currentBalance + amount;
-      
-      log(`Updating token balance: Current=${currentBalance}, Adding=${amount}, New=${newBalance}`);
-      
-      log(`Setting auto-topup to ${paymentType === 'auto-recharge'}`);
-      const { error: updateError } = await supabase
-        .from('workspaces')
-        .update({ 
-          token_balance: newBalance,
-          balance_auto_topup: paymentType === 'auto-recharge'
-        })
-        .eq('id', workspaceId);
-      
-      if (updateError) {
-        log('Error updating token balance:', updateError);
-        endTracking();
-        return false;
-      } else {
-        log(`Token balance updated from ${currentBalance} to ${newBalance}`);
-        log(`Auto-topup set to ${paymentType === 'auto-recharge'}`);
-        endTracking();
-        return true;
-      }
-    } catch (error) {
-      log('Error updating token balance:', error);
-      endTracking();
-      return false;
-    }
+    }).catch(err => {
+      log(`Error in initial fetch: ${err.message}`);
+    });
   };
-  
-  const createInitialCharge = async (paymentMethodId: string) => {
-    const endTracking = timeOperation('createInitialCharge');
-    
-    log(`Creating initial charge with payment method: ${paymentMethodId.substring(0, 5)}...`);
-    setProcessingSetupConfirmation(true);
-    
-    try {
-      await waitFor(300, 'Before initial charge');
-      
-      log('Invoking create-checkout-session for initial charge', {
-        paymentType: 'auto-recharge',
-        tokenAmount: tokenAmount[0],
-        paymentMethodId: `${paymentMethodId.substring(0, 5)}...`,
-        customerId: customerId ? `${customerId.substring(0, 5)}...` : null
-      });
-      
-      const requestStart = Date.now();
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          paymentType: 'auto-recharge',
-          tokenAmount: tokenAmount[0],
-          paymentMethodId,
-          customerId,
-          createCharge: true,
-          sessionId
-        }
-      });
-      
-      log(`Initial charge response received after ${Date.now() - requestStart}ms`);
-      
-      if (error) {
-        log('Supabase function error:', error);
-        throw new Error(`Error processing payment: ${error.message}`);
-      }
-      
-      if (data?.error) {
-        log('Payment service error:', data.error);
-        throw new Error(data.error);
-      }
-      
-      log('Initial charge created:', data);
-      
-      if (data?.status !== 'succeeded') {
-        log(`Payment not successful. Status: ${data?.status || 'unknown'}`);
-        throw new Error(`Payment not successful. Status: ${data?.status || 'unknown'}`);
-      }
-      
-      log('Updating token balance');
-      const balanceUpdated = await updateTokenBalance(tokenAmount[0]);
-      if (!balanceUpdated) {
-        log('Failed to update token balance');
-        throw new Error("Nie udało się zaktualizować salda tokenów");
-      }
-      
-      log('Token balance updated successfully');
-      
-      if (onSuccess) {
-        log('Calling onSuccess callback');
-        onSuccess(paymentType, tokenAmount[0]);
-      }
-      
-      log('Closing payment dialog');
-      onOpenChange(false);
-      
-      log('Navigating to success page');
-      navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-      
-      toast({
-        title: "Płatność zrealizowana",
-        description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów. ${
-          paymentType === 'auto-recharge' ? 'Automatyczne doładowywanie zostało aktywowane.' : ''
-        }`,
-      });
-      
-    } catch (error) {
-      log('Error creating initial charge:', error);
-      setError(error.message || "Wystąpił błąd podczas przetwarzania płatności początkowej");
-      
-      toast({
-        variant: "destructive",
-        title: "Błąd płatności",
-        description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
-      });
-    } finally {
-      setProcessingSetupConfirmation(false);
-      log('Initial charge process completed');
-      endTracking();
-    }
-  };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const endTracking = timeOperation('handleSubmit');
@@ -521,10 +226,30 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       log('Updating card element');
       cardElement.update({});
       
-      if (isIntentStale() || !paymentIntent?.clientSecret) {
+      if (isIntentStale(intentFetchTime) || !paymentIntent?.clientSecret) {
         log('Intent is stale or missing, fetching fresh intent before confirmation');
         setForceNewIntent(true);
-        await fetchPaymentIntent(true);
+        
+        await fetchPaymentIntent(
+          paymentType,
+          tokenAmount[0],
+          customerId,
+          true,
+          setIsIntentFetching,
+          setLastFetchTimestamp,
+          setLoading,
+          setError,
+          setConnectionError,
+          setPaymentIntent,
+          setIntentFetchTime,
+          setIntentFailures,
+          setRateLimited,
+          setRetryAfter,
+          setForceNewIntent,
+          log,
+          sessionId,
+          waitFor
+        );
         
         await waitFor(1000, 'After fetching fresh intent');
         
@@ -543,13 +268,23 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitFor(500, 'Before payment confirmation');
         
+        const { error: createPaymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+          billing_details: {
+            name: 'Customer Name',
+          },
+        });
+
+        if (createPaymentMethodError) {
+          log('Error creating payment method:', createPaymentMethodError);
+          throw createPaymentMethodError;
+        }
+
+        log('Payment method created:', paymentMethod.id);
+
         const result = await stripe.confirmCardPayment(paymentIntent.clientSecret!, {
-          payment_method: {
-            card: cardElement,
-            billing_details: {
-              name: 'Test Customer'
-            }
-          }
+          payment_method: paymentMethod.id
         });
         
         log('Payment confirmation result:', result);
@@ -565,7 +300,26 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             setPaymentIntent(null);
             setForceNewIntent(true);
             
-            await fetchPaymentIntent(true);
+            await fetchPaymentIntent(
+              paymentType,
+              tokenAmount[0],
+              customerId,
+              true,
+              setIsIntentFetching,
+              setLastFetchTimestamp,
+              setLoading,
+              setError,
+              setConnectionError,
+              setPaymentIntent,
+              setIntentFetchTime,
+              setIntentFailures,
+              setRateLimited,
+              setRetryAfter,
+              setForceNewIntent,
+              log,
+              sessionId,
+              waitFor
+            );
             
             await waitFor(1000, 'After fetching new payment intent');
             
@@ -587,7 +341,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
           log('Payment successful! Updating token balance.');
-          const balanceUpdated = await updateTokenBalance(tokenAmount[0]);
+          const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
           
           if (!balanceUpdated) {
             log('Failed to update token balance');
@@ -658,7 +412,26 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 setForceNewIntent(true);
                 
                 log('Fetching new setup intent');
-                await fetchPaymentIntent(true);
+                await fetchPaymentIntent(
+                  paymentType,
+                  tokenAmount[0],
+                  customerId,
+                  true,
+                  setIsIntentFetching,
+                  setLastFetchTimestamp,
+                  setLoading,
+                  setError,
+                  setConnectionError,
+                  setPaymentIntent,
+                  setIntentFetchTime,
+                  setIntentFailures,
+                  setRateLimited,
+                  setRetryAfter,
+                  setForceNewIntent,
+                  log,
+                  sessionId,
+                  waitFor
+                );
                 
                 log('Waiting before continuing');
                 await waitFor(2000, 'After fetching new setup intent due to resource missing');
@@ -713,7 +486,26 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               setError("Wystąpił problem z sesją płatności - odświeżamy dane...");
               
               log('Fetching new setup intent');
-              await fetchPaymentIntent(true);
+              await fetchPaymentIntent(
+                paymentType,
+                tokenAmount[0],
+                customerId,
+                true,
+                setIsIntentFetching,
+                setLastFetchTimestamp,
+                setLoading,
+                setError,
+                setConnectionError,
+                setPaymentIntent,
+                setIntentFetchTime,
+                setIntentFailures,
+                setRateLimited,
+                setRetryAfter,
+                setForceNewIntent,
+                log,
+                sessionId,
+                waitFor
+              );
               
               log('Waiting before continuing');
               await waitFor(2000, 'After fetching new setup intent due to error');
@@ -763,7 +555,26 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         await waitFor(2000, 'Before fetching new intent after expiration');
         
         log('Fetching new payment intent');
-        await fetchPaymentIntent(true);
+        await fetchPaymentIntent(
+          paymentType,
+          tokenAmount[0],
+          customerId,
+          true,
+          setIsIntentFetching,
+          setLastFetchTimestamp,
+          setLoading,
+          setError,
+          setConnectionError,
+          setPaymentIntent,
+          setIntentFetchTime,
+          setIntentFailures,
+          setRateLimited,
+          setRetryAfter,
+          setForceNewIntent,
+          log,
+          sessionId,
+          waitFor
+        );
         
         await waitFor(1000, 'After fetching new intent after expiration');
         
@@ -800,20 +611,20 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       endTracking();
     }
   };
-  
+
   useEffect(() => {
     if (!open || !intentFetchTime || isIntentFetching) {
       return;
     }
     
-    if (isIntentStale()) {
+    if (isIntentStale(intentFetchTime)) {
       log('Intent refresh check: intent is stale, scheduling refresh');
       
       const refreshTimeout = setTimeout(() => {
         if (!loading && !processingSetupConfirmation && !isIntentFetching && !purposelyDelaying) {
           log('Refreshing stale intent automatically');
           setForceNewIntent(true);
-          fetchPaymentIntent();
+          fetchInitialIntent();
         } else {
           log('Skipping auto-refresh due to ongoing operations', {
             loading,
@@ -831,7 +642,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } else {
       log('Intent refresh check: intent is still fresh');
     }
-  }, [open, intentFetchTime, loading, processingSetupConfirmation, isIntentFetching, isIntentStale, fetchPaymentIntent, log, purposelyDelaying]);
+  }, [open, intentFetchTime, loading, processingSetupConfirmation, isIntentFetching, isIntentStale, fetchInitialIntent, log, purposelyDelaying]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -888,7 +699,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                       onClick={() => {
                         log('Manual retry after connection error');
                         setForceNewIntent(true);
-                        fetchPaymentIntent(true);
+                        fetchInitialIntent();
                       }}
                       disabled={loading || isIntentFetching || purposelyDelaying}
                       className="text-xs"
@@ -942,7 +753,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           {error && !connectionError && !networkBlockDetected && (
             <div className="text-sm text-red-500">
               {error}
-              {(isIntentStale() || !paymentIntent?.clientSecret) && (
+              {(isIntentStale(intentFetchTime) || !paymentIntent?.clientSecret) && (
                 <Button 
                   type="button" 
                   size="sm" 
@@ -951,7 +762,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                   onClick={() => {
                     log('Manual intent refresh requested');
                     setForceNewIntent(true);
-                    fetchPaymentIntent(true);
+                    fetchInitialIntent();
                   }}
                   disabled={isIntentFetching || purposelyDelaying}
                 >
@@ -971,10 +782,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               : 'Zapisujemy dane Twojej karty, aby móc automatycznie doładowywać konto gdy liczba tokenów spadnie poniżej 10'
             }
           </div>
-
+          
           <div className="text-xs text-gray-500">
-            Debug: {isIntentStale() ? 'Intent stale' : 'Intent fresh'} 
+            Debug: {isIntentStale(intentFetchTime) ? 'Intent stale' : 'Intent fresh'} 
             {intentFetchTime && ` (Age: ${new Date().getTime() - intentFetchTime.getTime()}ms)`}
+            {paymentIntent?.expiresAt && ` Expires: ${new Date(paymentIntent.expiresAt * 1000).toLocaleTimeString()}`}
           </div>
           
           <DialogFooter>

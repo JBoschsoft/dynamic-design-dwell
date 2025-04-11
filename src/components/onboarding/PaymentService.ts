@@ -63,7 +63,8 @@ export const fetchPaymentIntent = async (
       paymentType,
       tokenAmount,
       customerId,
-      forceNewIntent
+      forceNewIntent,
+      sessionId
     });
     
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
@@ -114,7 +115,9 @@ export const fetchPaymentIntent = async (
         id: data.id,
         clientSecret: data.clientSecret,
         timestamp: data.timestamp || new Date().toISOString(),
-        customerId: data.customerId
+        customerId: data.customerId,
+        amount: data.amount,
+        expiresAt: data.expiresAt
       });
       
       setIntentFetchTime(new Date());
@@ -128,14 +131,18 @@ export const fetchPaymentIntent = async (
           customerId: data.customerId,
           clientSecret: data.clientSecret,
           intentId: data.id,
-          timestamp: data.timestamp || new Date().toISOString()
+          timestamp: data.timestamp || new Date().toISOString(),
+          amount: data.amount,
+          expiresAt: data.expiresAt
         };
       }
       
       return {
         clientSecret: data.clientSecret,
         intentId: data.id,
-        timestamp: data.timestamp || new Date().toISOString()
+        timestamp: data.timestamp || new Date().toISOString(),
+        amount: data.amount,
+        expiresAt: data.expiresAt
       };
     } else {
       logFn("No client secret received");
