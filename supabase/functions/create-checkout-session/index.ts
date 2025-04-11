@@ -341,7 +341,7 @@ serve(async (req) => {
           userId: userId || undefined
         },
         description: `One-time purchase of ${tokenAmount} tokens`,
-        // For one-time payments we explicitly set to null to avoid passing empty string
+        // For one-time payments, explicitly set to null (not an empty string)
         setup_future_usage: null,
       });
       
@@ -356,7 +356,7 @@ serve(async (req) => {
           totalPrice: totalAmount,
           id: paymentIntent.id,
           customerId: stripeCustomerId,
-          createdAt: new Date().toISOString(), // Add timestamp to help track intent freshness
+          timestamp: new Date().toISOString(), // Add timestamp to help track intent freshness
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -375,29 +375,7 @@ serve(async (req) => {
         }
       }
       
-      // Create a setup intent for subscription payments to securely collect card details
-      const setupIntent = await stripe.setupIntents.create({
-        payment_method_types: ['card'],
-        metadata: {
-          tokenAmount: tokenAmount.toString(),
-          unitPrice: unitPrice.toString(),
-          paymentType,
-          autoRecharge: "true",
-          rechargeThreshold: "10",
-          rechargeAmount: tokenAmount.toString(),
-          workspaceId: workspaceId || undefined,
-          userId: userId || undefined,
-          userEmail: userEmail || undefined,
-          createdAt: new Date().toISOString(), // Add creation timestamp
-        },
-        // Set to off_session to allow future off-session payments
-        usage: 'off_session',
-        description: `Setup payment method for automatic recharge of ${tokenAmount} tokens`,
-      });
-      
-      console.log("Setup intent created successfully:", setupIntent.id, "Client Secret:", setupIntent.client_secret?.substring(0, 10) + "...");
-      
-      // If we have a workspaceId, get the customer ID
+      // If we have a workspaceId, check if there's an existing customer ID
       let existingCustomerId = null;
       if (workspaceId) {
         const { data: workspaceData, error: workspaceError } = await supabase
@@ -420,6 +398,31 @@ serve(async (req) => {
         }
       }
       
+      // Create a setup intent with a longer expiration time
+      const setupIntent = await stripe.setupIntents.create({
+        payment_method_types: ['card'],
+        customer: existingCustomerId || undefined, // Attach to customer if one exists
+        metadata: {
+          tokenAmount: tokenAmount.toString(),
+          unitPrice: unitPrice.toString(),
+          paymentType,
+          autoRecharge: "true",
+          rechargeThreshold: "10",
+          rechargeAmount: tokenAmount.toString(),
+          workspaceId: workspaceId || undefined,
+          userId: userId || undefined,
+          userEmail: userEmail || undefined,
+          timestamp: new Date().toISOString(), // Add creation timestamp
+        },
+        // Set to off_session to allow future off-session payments
+        usage: 'off_session',
+        description: `Setup payment method for automatic recharge of ${tokenAmount} tokens`,
+        // Extend timeout to reduce likelihood of expiration during checkout flow
+        expires_at: Math.floor(Date.now() / 1000) + 1800, // 30 minutes
+      });
+      
+      console.log("Setup intent created successfully:", setupIntent.id, "Client Secret:", setupIntent.client_secret?.substring(0, 10) + "...");
+      
       return new Response(
         JSON.stringify({
           clientSecret: setupIntent.client_secret,
@@ -429,7 +432,7 @@ serve(async (req) => {
           totalPrice: totalAmount,
           id: setupIntent.id,
           customerId: existingCustomerId,
-          createdAt: new Date().toISOString(), // Add timestamp to help track intent freshness
+          timestamp: new Date().toISOString(), 
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
