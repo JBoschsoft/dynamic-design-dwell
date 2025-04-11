@@ -426,13 +426,13 @@ serve(async (req) => {
       // Check if we've created an intent for this user recently, unless we're forcing a new one
       if (!forceNewIntent) {
         const lastCreation = rateLimiter.get(rateKey);
-        if (lastCreation && Date.now() - lastCreation < 10000) { // 10-second rate limit
+        if (lastCreation && Date.now() - lastCreation < 5000) { // 5-second rate limit (reduced from 10 seconds)
           console.log("Rate limited: Setup intent creation too frequent for client", clientId);
           return new Response(
             JSON.stringify({ 
               error: "Rate limited. Please wait before requesting another setup intent.",
               rateLimited: true,
-              retryAfter: Math.ceil((lastCreation + 10000 - Date.now()) / 1000)
+              retryAfter: Math.ceil((lastCreation + 5000 - Date.now()) / 1000)
             }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -490,6 +490,7 @@ serve(async (req) => {
       }
       
       // Create a setup intent with additional metadata
+      const intentUniqueId = `intent-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const setupIntent = await stripe.setupIntents.create({
         payment_method_types: ['card'],
         customer: existingCustomerId || undefined, // Attach to customer if one exists
@@ -504,11 +505,13 @@ serve(async (req) => {
           userId: userId || undefined,
           userEmail: userEmail || undefined,
           createdAt: new Date().toISOString(), // Add creation timestamp
-          forceRefresh: forceNewIntent ? "true" : "false" // Indicate if this was a forced refresh
+          forceRefresh: forceNewIntent ? "true" : "false", // Indicate if this was a forced refresh
+          uniqueId: intentUniqueId // Add a unique ID to prevent collisions
         },
         // Set to off_session to allow future off-session payments
         usage: 'off_session',
         description: `Setup payment method for automatic recharge of ${tokenAmount} tokens`,
+        expand: ['payment_method'], // Get full payment method data
       });
       
       // Update rate limiter (only if not forcing a new intent)
