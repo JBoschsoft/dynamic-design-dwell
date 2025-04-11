@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2 } from 'lucide-react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -43,13 +41,13 @@ const OnboardingPage = () => {
   const [msaAgreed, setMsaAgreed] = useState(false);
   
   // Payment state
-  const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('subscription');
+  const [paymentType, setPaymentType] = useState<'one-time' | 'auto-recharge'>('auto-recharge');
   const [tokenAmount, setTokenAmount] = useState([50]);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
-  const [subscriptionAmount, setSubscriptionAmount] = useState([50]);
+  const [autoRechargeAmount, setAutoRechargeAmount] = useState([50]);
   
   // Stripe configuration
   const stripeOptions = {
@@ -88,7 +86,7 @@ const OnboardingPage = () => {
     
     const success = searchParams.get('success');
     if (success === 'true') {
-      const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0]);
+      const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : autoRechargeAmount[0]);
       toast({
         title: "Płatność zakończona sukcesem",
         description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
@@ -100,7 +98,7 @@ const OnboardingPage = () => {
         navigate(`/onboarding?step=3`, { replace: true });
       }, 1000);
     }
-  }, [searchParams, navigate, paymentType, tokenAmount, subscriptionAmount]);
+  }, [searchParams, navigate, paymentType, tokenAmount, autoRechargeAmount]);
   
   const handleAgreeToCurrentAgreement = () => {
     if (currentAgreement === 'tos') {
@@ -321,8 +319,8 @@ const OnboardingPage = () => {
             setPaymentType={setPaymentType}
             tokenAmount={tokenAmount}
             setTokenAmount={setTokenAmount}
-            subscriptionAmount={subscriptionAmount}
-            setSubscriptionAmount={setSubscriptionAmount}
+            autoRechargeAmount={autoRechargeAmount}
+            setAutoRechargeAmount={setAutoRechargeAmount}
             onNext={handleNextStep}
             onPrevious={handlePreviousStep}
             paymentLoading={paymentLoading}
@@ -336,7 +334,7 @@ const OnboardingPage = () => {
           <SuccessStep 
             paymentType={paymentType}
             tokenAmount={tokenAmount}
-            subscriptionAmount={subscriptionAmount}
+            autoRechargeAmount={autoRechargeAmount}
             onNext={handleNextStep}
           />
         )}
@@ -383,7 +381,7 @@ const OnboardingPage = () => {
             open={checkoutDialogOpen}
             onOpenChange={setCheckoutDialogOpen}
             paymentType={paymentType}
-            tokenAmount={paymentType === 'one-time' ? tokenAmount : subscriptionAmount}
+            tokenAmount={paymentType === 'one-time' ? tokenAmount : autoRechargeAmount}
             onSuccess={handlePaymentSuccess}
           />
         </Elements>

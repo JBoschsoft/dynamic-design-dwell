@@ -28,9 +28,9 @@ export const isIntentStale = (intentFetchTime: Date | null, staleness = 20000, l
   return isStale;
 };
 
-// Fetch a new payment intent
+// Fetch a new payment intent - for both one-time and auto-recharge options
 export const fetchPaymentIntent = async (
-  paymentType: 'one-time' | 'subscription',
+  paymentType: 'one-time' | 'auto-recharge',
   tokenAmount: number,
   customerId: string | null,
   forceNewIntent: boolean,
@@ -181,7 +181,7 @@ export const fetchPaymentIntent = async (
 };
 
 // Update token balance after payment
-export const updateTokenBalance = async (amount: number, paymentType: 'one-time' | 'subscription', logFn: (message: string, data?: any) => void) => {
+export const updateTokenBalance = async (amount: number, paymentType: 'one-time' | 'auto-recharge', logFn: (message: string, data?: any) => void) => {
   try {
     logFn(`Updating token balance: +${amount}`);
     logFn('Getting current user');
@@ -224,12 +224,12 @@ export const updateTokenBalance = async (amount: number, paymentType: 'one-time'
     
     logFn(`Updating token balance: Current=${currentBalance}, Adding=${amount}, New=${newBalance}`);
     
-    logFn(`Setting auto-topup to ${paymentType === 'subscription'}`);
+    logFn(`Setting auto-topup to ${paymentType === 'auto-recharge'}`);
     const { error: updateError } = await supabase
       .from('workspaces')
       .update({ 
         token_balance: newBalance,
-        balance_auto_topup: paymentType === 'subscription'
+        balance_auto_topup: paymentType === 'auto-recharge'
       })
       .eq('id', workspaceId);
     
@@ -238,7 +238,7 @@ export const updateTokenBalance = async (amount: number, paymentType: 'one-time'
       return false;
     } else {
       logFn(`Token balance updated from ${currentBalance} to ${newBalance}`);
-      logFn(`Auto-topup set to ${paymentType === 'subscription'}`);
+      logFn(`Auto-topup set to ${paymentType === 'auto-recharge'}`);
       return true;
     }
   } catch (error) {
@@ -247,7 +247,7 @@ export const updateTokenBalance = async (amount: number, paymentType: 'one-time'
   }
 };
 
-// Create initial charge for subscription
+// Process initial charge for auto-recharge
 export const createInitialCharge = async (
   paymentMethodId: string,
   customerId: string | null,
@@ -266,7 +266,7 @@ export const createInitialCharge = async (
     await waitForFn(300, 'Before initial charge');
     
     logFn('Invoking create-checkout-session for initial charge', {
-      paymentType: 'subscription',
+      paymentType: 'auto-recharge',
       tokenAmount,
       paymentMethodId: `${paymentMethodId.substring(0, 5)}...`,
       customerId: customerId ? `${customerId.substring(0, 5)}...` : null,
@@ -276,7 +276,7 @@ export const createInitialCharge = async (
     const requestStart = Date.now();
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
       body: {
-        paymentType: 'subscription',
+        paymentType: 'auto-recharge',
         tokenAmount,
         paymentMethodId,
         customerId,
@@ -305,7 +305,7 @@ export const createInitialCharge = async (
     }
     
     logFn('Updating token balance');
-    const balanceUpdated = await updateTokenBalance(tokenAmount, 'subscription', logFn);
+    const balanceUpdated = await updateTokenBalance(tokenAmount, 'auto-recharge', logFn);
     if (!balanceUpdated) {
       logFn('Failed to update token balance');
       throw new Error("Nie udało się zaktualizować salda tokenów");
@@ -315,7 +315,7 @@ export const createInitialCharge = async (
     
     if (onSuccess) {
       logFn('Calling onSuccess callback');
-      onSuccess('subscription', tokenAmount);
+      onSuccess('auto-recharge', tokenAmount);
     }
     
     logFn('Closing payment dialog');

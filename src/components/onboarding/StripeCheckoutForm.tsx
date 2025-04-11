@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface StripeCheckoutFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  paymentType: 'one-time' | 'subscription';
+  paymentType: 'one-time' | 'auto-recharge';
   tokenAmount: number[];
   onSuccess?: (paymentType: string, amount: number) => void;
 }
@@ -236,7 +236,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           paymentType: paymentType,
           tokenAmount: tokenAmount[0],
           customerId: customerId,
-          forceNewIntent: forceNewIntent || force
+          forceNewIntent: forceNewIntent || force,
+          sessionId
         }
       });
       
@@ -379,12 +380,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       log(`Updating token balance: Current=${currentBalance}, Adding=${amount}, New=${newBalance}`);
       
-      log(`Setting auto-topup to ${paymentType === 'subscription'}`);
+      log(`Setting auto-topup to ${paymentType === 'auto-recharge'}`);
       const { error: updateError } = await supabase
         .from('workspaces')
         .update({ 
           token_balance: newBalance,
-          balance_auto_topup: paymentType === 'subscription'
+          balance_auto_topup: paymentType === 'auto-recharge'
         })
         .eq('id', workspaceId);
       
@@ -394,7 +395,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         return false;
       } else {
         log(`Token balance updated from ${currentBalance} to ${newBalance}`);
-        log(`Auto-topup set to ${paymentType === 'subscription'}`);
+        log(`Auto-topup set to ${paymentType === 'auto-recharge'}`);
         endTracking();
         return true;
       }
@@ -416,7 +417,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       await waitFor(300, 'Before initial charge');
       
       log('Invoking create-checkout-session for initial charge', {
-        paymentType: 'subscription',
+        paymentType: 'auto-recharge',
         tokenAmount: tokenAmount[0],
         paymentMethodId: `${paymentMethodId.substring(0, 5)}...`,
         customerId: customerId ? `${customerId.substring(0, 5)}...` : null
@@ -425,10 +426,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       const requestStart = Date.now();
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
-          paymentType: 'subscription',
+          paymentType: 'auto-recharge',
           tokenAmount: tokenAmount[0],
           paymentMethodId,
-          customerId
+          customerId,
+          createCharge: true,
+          sessionId
         }
       });
       
@@ -473,7 +476,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       toast({
         title: "Płatność zrealizowana",
-        description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów. Automatyczne doładowywanie zostało aktywowane.`,
+        description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów. ${
+          paymentType === 'auto-recharge' ? 'Automatyczne doładowywanie zostało aktywowane.' : ''
+        }`,
       });
       
     } catch (error) {
@@ -621,7 +626,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${result.paymentIntent?.status || 'nieznany'}`);
         }
       } else {
-        log('Using confirmCardSetup for subscription setup');
+        // Auto-recharge option processing
+        log('Using confirmCardSetup for auto-recharge setup');
         
         if (!paymentIntent?.clientSecret) {
           log('No client secret for setup confirmation');
@@ -846,7 +852,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           <DialogDescription>
             {paymentType === 'one-time' 
               ? 'Finalizacja jednorazowego zakupu tokenów'
-              : 'Ustawienie automatycznej płatności miesięcznej'
+              : 'Ustawienie automatycznego doładowywania tokenów'
             }
           </DialogDescription>
         </DialogHeader>

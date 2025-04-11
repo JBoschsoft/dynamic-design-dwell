@@ -98,6 +98,7 @@ async function createCustomerIfNeeded(stripe: Stripe, email: string, sessionId?:
   }
 }
 
+// Create a setup intent for auto-recharge option (save card for future)
 async function createSetupIntent(stripe: Stripe, customerId: string, sessionId?: string) {
   try {
     log(sessionId, `Creating setup intent for customer: ${customerId}`);
@@ -122,6 +123,7 @@ async function createSetupIntent(stripe: Stripe, customerId: string, sessionId?:
   }
 }
 
+// Create a payment intent for one-time payment
 async function createPaymentIntent(stripe: Stripe, customerId: string, amount: number, sessionId?: string) {
   try {
     log(sessionId, `Creating payment intent for customer: ${customerId}, amount: ${amount}`);
@@ -133,7 +135,6 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, amount: n
       amount: amountInSmallestUnit,
       currency: 'pln',
       customer: customerId,
-      setup_future_usage: 'off_session',
       capture_method: 'automatic',
       payment_method_types: ['card'],
     });
@@ -152,7 +153,8 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, amount: n
   }
 }
 
-async function createCharge(
+// Process immediate charge for auto-recharge option
+async function processAutoRechargePayment(
   stripe: Stripe, 
   customerId: string, 
   paymentMethodId: string, 
@@ -160,7 +162,7 @@ async function createCharge(
   sessionId?: string
 ) {
   try {
-    log(sessionId, `Creating charge for customer: ${customerId}, payment method: ${paymentMethodId}`);
+    log(sessionId, `Processing auto-recharge payment for customer: ${customerId}, payment method: ${paymentMethodId}`);
     
     // First, attach the payment method to the customer if it's not already
     let paymentMethod;
@@ -218,7 +220,7 @@ async function createCharge(
       };
     }
     
-    log(sessionId, `Error creating charge: ${error.message}`);
+    log(sessionId, `Error processing payment: ${error.message}`);
     throw error;
   }
 }
@@ -276,7 +278,7 @@ serve(async (req) => {
     // Initialize Stripe
     const stripe = initStripe();
     
-    // Handle direct charge creation for subscriptions
+    // Handle direct charge creation for auto-recharge
     if (shouldCreateCharge && paymentMethodId) {
       log(sessionId, "Creating charge with payment method");
       
@@ -293,7 +295,7 @@ serve(async (req) => {
       }
       
       try {
-        const chargeResult = await createCharge(
+        const chargeResult = await processAutoRechargePayment(
           stripe, 
           existingCustomerId, 
           paymentMethodId, 
@@ -387,8 +389,16 @@ serve(async (req) => {
     let intentResult;
     if (paymentType === "one-time") {
       intentResult = await createPaymentIntent(stripe, customerId, tokenAmount, sessionId);
-    } else {
+    } else if (paymentType === "auto-recharge") {
       intentResult = await createSetupIntent(stripe, customerId, sessionId);
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Invalid payment type. Must be 'one-time' or 'auto-recharge'" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
     }
     
     log(sessionId, "Intent creation successful", { 
