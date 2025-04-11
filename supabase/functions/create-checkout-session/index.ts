@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
 
@@ -396,6 +395,63 @@ async function confirmPaymentIntent(
   }
 }
 
+async function createDirectCharge(
+  stripe: Stripe, 
+  tokenAmount: number,
+  sessionId?: string,
+  email?: string
+) {
+  try {
+    // Find or create a customer if email is provided
+    let customerId;
+    if (email) {
+      log(sessionId, `Looking for existing customer with email: ${email}`);
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+        log(sessionId, `Found existing customer: ${customerId}`);
+      } else if (email) {
+        log(sessionId, `Creating new customer for email: ${email}`);
+        const customer = await stripe.customers.create({ email });
+        customerId = customer.id;
+        log(sessionId, `Created new customer: ${customerId}`);
+      }
+    }
+    
+    const pricePerToken = calculateTokenPrice(tokenAmount);
+    const amount = Math.round(tokenAmount * pricePerToken * 100); // Convert to smallest currency unit (cents)
+    
+    log(sessionId, `Creating payment intent for direct charge: token amount: ${tokenAmount}, price per token: ${pricePerToken}, total amount: ${amount}`);
+    
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: 'pln',
+      customer: customerId,
+      setup_future_usage: customerId ? 'off_session' : undefined, // Store for future payments if we have a customer
+      capture_method: 'automatic',
+      payment_method_types: ['card'],
+      metadata: {
+        tokenAmount: tokenAmount.toString(),
+        pricePerToken: pricePerToken.toString(),
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    log(sessionId, `Payment intent created for direct charge: ${paymentIntent.id}, amount: ${amount}`);
+    
+    return {
+      id: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
+      customerId,
+      timestamp: new Date().toISOString(),
+      amount: amount / 100
+    };
+  } catch (error) {
+    log(sessionId, `Error creating direct charge: ${error.message}`);
+    throw error;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -451,6 +507,7 @@ serve(async (req) => {
     
     const stripe = initStripe();
     
+    // Handle existing methods (attach, confirm, etc.)
     if (shouldAttachMethod && paymentIntentId && paymentMethodId) {
       try {
         log(sessionId, `Processing payment method attachment request for intent: ${paymentIntentId.substring(0, 10)}...`);
@@ -566,6 +623,7 @@ serve(async (req) => {
       }
     }
     
+    // Auth check for standard operations (not for direct charge)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -613,6 +671,32 @@ serve(async (req) => {
     
     log(sessionId, `Processing for user email: ${userEmail}`);
     
+    // Handle direct charge scenario (new simplified flow)
+    if (paymentType === 'direct-charge') {
+      try {
+        const result = await createDirectCharge(stripe, tokenAmount, sessionId, userEmail);
+        
+        return new Response(
+          JSON.stringify(result),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            error: `Failed to create payment: ${error.message}`
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+    }
+    
+    // Normal flow continues here
     let customerId = existingCustomerId;
     if (!customerId) {
       customerId = await createCustomerIfNeeded(stripe, userEmail, sessionId);
@@ -627,7 +711,7 @@ serve(async (req) => {
       intentResult = await createSetupIntent(stripe, customerId, sessionId);
     } else {
       return new Response(
-        JSON.stringify({ error: "Invalid payment type. Must be 'one-time' or 'auto-recharge'" }),
+        JSON.stringify({ error: "Invalid payment type. Must be 'one-time', 'auto-recharge', or 'direct-charge'" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
