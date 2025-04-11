@@ -161,19 +161,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       log('Payment method created:', paymentMethod.id);
       
-      // Step 2: Attach payment method to the payment intent
-      if (customerId) {
-        log('Attaching payment method to customer:', customerId);
-        try {
-          await stripe.paymentMethods.attach(paymentMethod.id, { customer: customerId });
-          log('Payment method attached to customer');
-        } catch (attachError) {
-          log('Error attaching payment method to customer:', attachError);
-          // Continue anyway, as Stripe will attach it during confirmation
-        }
-      }
-      
-      // Step 3: Confirm the payment with the payment method
+      // Step 2: Confirm the payment with the payment method
       log('Confirming payment with Stripe');
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: paymentMethod.id
