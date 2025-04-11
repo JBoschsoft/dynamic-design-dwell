@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -8,16 +9,16 @@ import {
 } from "@/components/ui";
 
 interface SuccessStepProps {
-  paymentType: 'one-time' | 'subscription';
+  paymentType: 'one-time' | 'auto-recharge';
   tokenAmount: number[];
-  subscriptionAmount: number[];
+  autoRechargeAmount: number[];
   onNext: () => void;
 }
 
 const SuccessStep: React.FC<SuccessStepProps> = ({
   paymentType,
   tokenAmount,
-  subscriptionAmount,
+  autoRechargeAmount,
   onNext
 }) => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const SuccessStep: React.FC<SuccessStepProps> = ({
     return amount * tokenPrice;
   };
   
-  const amount = paymentType === 'one-time' ? tokenAmount[0] : subscriptionAmount[0];
+  const amount = paymentType === 'one-time' ? tokenAmount[0] : autoRechargeAmount[0];
   const totalPrice = calculateTotalPrice(amount);
   
   const handleNextStep = () => {

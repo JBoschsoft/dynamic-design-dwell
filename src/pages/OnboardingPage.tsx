@@ -301,7 +301,7 @@ const OnboardingPage = () => {
         {currentStep === 2 && (
           <PaymentStep 
             paymentType={paymentType}
-            setPaymentType={setPaymentType as (value: 'one-time' | 'auto-recharge') => void}
+            setPaymentType={setPaymentType}
             tokenAmount={tokenAmount}
             setTokenAmount={setTokenAmount}
             autoRechargeAmount={autoRechargeAmount}
