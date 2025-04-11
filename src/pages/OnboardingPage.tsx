@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -21,6 +20,20 @@ import TeamInvitationStep from '@/components/onboarding/TeamInvitationStep';
 
 // Load Stripe
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
+
+// Define a workspace type with the new fields
+interface Workspace {
+  id: string;
+  name: string;
+  industry: string;
+  company_size: string;
+  token_balance?: number;
+  balance_auto_topup?: boolean;
+  stripe_customer_id?: string;
+  admin_email?: string;
+  admin_phone?: string;
+  created_at?: string;
+}
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -244,14 +257,14 @@ const OnboardingPage = () => {
         
         console.log("Workspace created with ID:", data);
         
-        // Update the workspace with admin email directly using updat function
+        // Update the workspace with admin email directly using update function
         if (data && userEmail) {
           // Use a direct update query that won't be affected by type checking
           const { error: updateError } = await supabase.from('workspaces')
             .update({
               admin_email: userEmail,
               admin_phone: phoneNumber
-            })
+            } as Partial<Workspace>)
             .eq('id', data);
           
           if (updateError) {

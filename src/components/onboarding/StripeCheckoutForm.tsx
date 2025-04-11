@@ -19,13 +19,19 @@ interface StripeCheckoutFormProps {
   onSuccess?: (paymentType: string, amount: number) => void;
 }
 
-// Define the expected workspace data structure
+// Define the expected workspace data structure with optional fields for admin_email and admin_phone
 interface WorkspaceData {
   id: string;
   name: string;
   stripe_customer_id?: string;
   admin_email?: string; 
   admin_phone?: string;
+  // Include other fields from the workspaces table
+  industry: string;
+  company_size: string;
+  token_balance?: number;
+  balance_auto_topup?: boolean;
+  created_at?: string;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
@@ -102,7 +108,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           return;
         }
         
-        const workspace = workspaces[0];
+        const workspace = workspaces[0] as WorkspaceData;
         
         log('Workspace data fetched:', workspace);
         setWorkspaceData(workspace);

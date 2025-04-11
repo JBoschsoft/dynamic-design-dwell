@@ -108,6 +108,8 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          admin_email: string | null
+          admin_phone: string | null
           balance_auto_topup: boolean | null
           company_size: string
           created_at: string | null
@@ -118,6 +120,8 @@ export type Database = {
           token_balance: number | null
         }
         Insert: {
+          admin_email?: string | null
+          admin_phone?: string | null
           balance_auto_topup?: boolean | null
           company_size: string
           created_at?: string | null
@@ -128,6 +132,8 @@ export type Database = {
           token_balance?: number | null
         }
         Update: {
+          admin_email?: string | null
+          admin_phone?: string | null
           balance_auto_topup?: boolean | null
           company_size?: string
           created_at?: string | null
