@@ -27,6 +27,16 @@ export const isIntentStale = (intentFetchTime: Date | null, staleness = 20000, l
   return isStale;
 };
 
+// Cached intent to prevent redundant calls
+let cachedIntent: {
+  paymentType: string;
+  tokenAmount: number;
+  clientSecret: string;
+  id: string;
+  timestamp: number;
+  customerId?: string;
+} | null = null;
+
 // Fetch a new payment intent - for both one-time and auto-recharge options
 export const fetchPaymentIntent = async (
   paymentType: 'one-time' | 'auto-recharge',
@@ -48,6 +58,33 @@ export const fetchPaymentIntent = async (
   sessionId: string,
   waitFn: (ms: number, reason: string) => Promise<void>
 ) => {
+  // Check if we can use cached intent to avoid creating new ones unnecessarily
+  if (!forceNewIntent && cachedIntent && 
+      cachedIntent.paymentType === paymentType && 
+      cachedIntent.tokenAmount === tokenAmount &&
+      (Date.now() - cachedIntent.timestamp < 15000)) { // Use cache if less than 15 seconds old
+    
+    logFn(`Using cached ${paymentType} payment intent from ${Date.now() - cachedIntent.timestamp}ms ago`);
+    
+    setPaymentIntent({
+      id: cachedIntent.id,
+      clientSecret: cachedIntent.clientSecret,
+      timestamp: new Date(cachedIntent.timestamp).toISOString(),
+      customerId: cachedIntent.customerId,
+      amount: cachedIntent.tokenAmount
+    });
+    
+    setIntentFetchTime(new Date(cachedIntent.timestamp));
+    return {
+      clientSecret: cachedIntent.clientSecret,
+      intentId: cachedIntent.id,
+      customerId: cachedIntent.customerId,
+      timestamp: new Date(cachedIntent.timestamp).toISOString(),
+      amount: cachedIntent.tokenAmount
+    };
+  }
+
+  // If we're not using cache, proceed with new intent creation
   if (setIsIntentFetching) setIsIntentFetching(true);
   setLastFetchTimestamp(Date.now());
   setLoading(true);
@@ -110,6 +147,16 @@ export const fetchPaymentIntent = async (
       // Add a small delay before setting the new intent
       await waitFn(200, 'After receiving client secret');
       
+      // Update cache with new intent
+      cachedIntent = {
+        paymentType,
+        tokenAmount,
+        clientSecret: data.clientSecret,
+        id: data.id,
+        timestamp: Date.now(),
+        customerId: data.customerId
+      };
+      
       setPaymentIntent({
         id: data.id,
         clientSecret: data.clientSecret,
@@ -155,6 +202,9 @@ export const fetchPaymentIntent = async (
       logFn(`Intent failures increased to ${newVal}`);
       return newVal;
     });
+    
+    // Clear cache on error
+    cachedIntent = null;
     
     if (error.message?.includes('Failed to fetch') || 
         error.message?.includes('Network Error') ||
