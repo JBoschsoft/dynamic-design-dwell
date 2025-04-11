@@ -6,7 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
   Button, Label, Loader2, Card, CardContent
 } from "@/components/ui";
-import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
 import { updateTokenBalance } from './PaymentService';
@@ -33,7 +33,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [sessionId] = useState(`checkout-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardElementReady, setCardElementReady] = useState(false);
+  const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState<{
     clientSecret: string;
     id: string;
@@ -55,8 +55,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const isIntentValid = useCallback(() => {
     if (!intentFetchTime) return false;
     
-    // Consider intents older than 5 minutes as potentially invalid
-    const MAX_INTENT_AGE_MS = 5 * 60 * 1000;
+    // Consider intents older than 2 minutes as potentially invalid
+    const MAX_INTENT_AGE_MS = 2 * 60 * 1000;
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
     
@@ -67,43 +67,20 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     return isValid;
   }, [intentFetchTime, log]);
   
-  useEffect(() => {
-    if (open && (!paymentIntent || !isIntentValid())) {
-      log('Checkout dialog opened');
-      setError(null);
-      setLoading(false);
-      createPaymentIntent();
-    }
-  }, [open, paymentIntent, isIntentValid]);
-
-  // Clean up when the dialog closes
-  useEffect(() => {
-    if (!open) {
-      log('Checkout dialog closed, cleaning up');
-      // Don't immediately clear payment intent to avoid multiple creations
-      // when the component re-renders but stays mounted
-      setTimeout(() => {
-        setPaymentIntent(null);
-        setIntentFetchTime(null);
-      }, 500);
-      setCardElementReady(false);
-      setError(null);
-    }
-  }, [open, log]);
-
+  // Create a new payment intent when the dialog is opened
   const createPaymentIntent = async () => {
     if (loading) return;
     
     setLoading(true);
     try {
       log('Creating payment intent');
-      const timestamp = Date.now(); // Current timestamp to prevent caching
+      
       const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           paymentType,
           tokenAmount: tokenAmount[0],
           sessionId,
-          timestamp
+          timestamp: Date.now()
         }
       });
       
@@ -147,6 +124,34 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
   };
   
+  useEffect(() => {
+    if (open && stripe && elements && !paymentIntent) {
+      log('Checkout dialog opened, creating new payment intent');
+      setError(null);
+      createPaymentIntent();
+    }
+  }, [open, stripe, elements, paymentIntent]);
+
+  // Set up PaymentElement when client secret is available
+  useEffect(() => {
+    if (paymentIntent?.clientSecret && stripe && elements) {
+      log('Setting up payment element with client secret');
+    }
+  }, [paymentIntent?.clientSecret, stripe, elements]);
+
+  // Clean up when the dialog closes
+  useEffect(() => {
+    if (!open) {
+      log('Checkout dialog closed, cleaning up');
+      setTimeout(() => {
+        setPaymentIntent(null);
+        setIntentFetchTime(null);
+      }, 500);
+      setPaymentElementReady(false);
+      setError(null);
+    }
+  }, [open, log]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -157,8 +162,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       return;
     }
     
-    if (!cardElementReady) {
-      setError('Element karty nie jest gotowy. Proszę poczekać lub odświeżyć stronę.');
+    if (!paymentElementReady) {
+      setError('Element płatności nie jest gotowy. Proszę poczekać lub odświeżyć stronę.');
       return;
     }
     
@@ -170,7 +175,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     if (!isIntentValid()) {
       log('Intent no longer valid, creating a new one before confirming');
       await createPaymentIntent();
-      // If creating a new intent fails, the error will be set by createPaymentIntent
       if (!paymentIntent?.clientSecret) return;
     }
     
@@ -178,33 +182,32 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     setError(null);
     
     try {
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        throw new Error("Element karty nie został znaleziony");
-      }
+      log(`Confirming payment for intent: ${paymentIntent.id.substring(0, 10)}...`);
       
-      log(`Confirming payment with card element for intent: ${paymentIntent.id.substring(0, 10)}...`);
-      
-      // Use the card element and the client secret to confirm the payment
-      const result = await stripe.confirmCardPayment(
-        paymentIntent.clientSecret,
-        {
-          payment_method: {
-            card: cardElement,
+      const result = await stripe.confirmPayment({
+        elements,
+        clientSecret: paymentIntent.clientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/onboarding?success=true&tokens=${tokenAmount[0]}`,
+          payment_method_data: {
             billing_details: {
               name: 'Lovable Customer',
             },
           },
-        }
-      );
+        },
+        redirect: 'if_required'
+      });
       
       if (result.error) {
         log('Payment confirmation error:', result.error);
         
+        if (result.error.type === 'validation_error') {
+          throw new Error(result.error.message || "Validation failed");
+        }
+        
         if (result.error.type === 'invalid_request_error' && 
-            result.error.message.includes('No such payment_intent')) {
-          // The payment intent doesn't exist anymore, create a new one
-          log('Payment intent not found, creating a new one');
+            result.error.message?.includes('No such payment_intent')) {
+          log('Payment intent not found, need to create a new one');
           setPaymentIntent(null);
           setError('Sesja płatności wygasła. Proszę spróbować ponownie.');
           return;
@@ -213,13 +216,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error(result.error.message || "Payment confirmation failed");
       }
       
-      if (!result.paymentIntent) {
-        throw new Error("No payment intent returned after confirmation");
-      }
-      
-      log('Payment intent confirmed:', result.paymentIntent);
-      
-      if (result.paymentIntent.status === 'succeeded') {
+      // Handle success without redirect
+      if (result.paymentIntent?.status === 'succeeded') {
         log('Payment successful! Updating token balance.');
         const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
         
@@ -241,45 +239,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           title: "Płatność zrealizowana",
           description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
         });
-      } else {
-        log('Payment requires further action:', result.paymentIntent.status);
-        
-        if (result.paymentIntent.status === 'requires_action' || 
-            result.paymentIntent.status === 'requires_confirmation') {
-          
-          log('Handling additional authentication steps');
-          
-          const { paymentIntent: updatedIntent, error } = await stripe.confirmCardPayment(paymentIntent.clientSecret);
-          
-          if (error) {
-            throw new Error(`Failed to complete payment: ${error.message}`);
-          }
-          
-          if (updatedIntent?.status === 'succeeded') {
-            log('Payment completed after additional confirmation');
-            
-            const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
-            if (!balanceUpdated) {
-              throw new Error("Nie udało się zaktualizować salda tokenów");
-            }
-            
-            if (onSuccess) {
-              onSuccess(paymentType, tokenAmount[0]);
-            }
-            
-            onOpenChange(false);
-            navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-            
-            toast({
-              title: "Płatność zrealizowana",
-              description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
-            });
-          } else {
-            throw new Error(`Payment not completed. Status: ${updatedIntent?.status || 'unknown'}`);
-          }
-        } else {
-          throw new Error(`Płatność wymaga dodatkowej weryfikacji. Status: ${result.paymentIntent.status || 'nieznany'}`);
-        }
+      } else if (result.paymentIntent?.status === 'processing') {
+        log('Payment processing, waiting for completion');
+        toast({
+          title: "Płatność w trakcie przetwarzania",
+          description: "Twoja płatność jest przetwarzana. Aktualizacja salda może zająć kilka chwil.",
+        });
       }
     } catch (error) {
       log('Payment error:', error);
@@ -294,6 +259,25 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       setLoading(false);
     }
   };
+  
+  // Return early if the PaymentElement can't be shown
+  if (!paymentIntent?.clientSecret || !stripe || !elements) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Płatność za tokeny</DialogTitle>
+            <DialogDescription>
+              {loading ? 'Przygotowywanie płatności...' : 'Inicjalizacja bramki płatności'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -329,37 +313,43 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           </Card>
           
           <div className="space-y-2">
-            <Label>Dane karty płatniczej</Label>
-            <div className="border rounded-md p-3">
-              <CardElement 
+            <Label>Dane płatności</Label>
+            <div className="border rounded-md">
+              <PaymentElement
+                id="payment-element"
                 options={{
-                  style: {
-                    base: {
-                      fontSize: '16px',
-                      color: '#424770',
-                      '::placeholder': {
-                        color: '#aab7c4',
-                      },
-                    },
-                    invalid: {
-                      color: '#9e2146',
-                    },
+                  layout: 'tabs',
+                  paymentMethodTypes: ['card', 'apple_pay', 'google_pay'],
+                  fields: {
+                    billingDetails: {
+                      name: 'auto',
+                      email: 'never',
+                      phone: 'never',
+                      address: {
+                        country: 'never',
+                        postalCode: 'auto',
+                        line1: 'never',
+                        line2: 'never',
+                        city: 'never',
+                        state: 'never',
+                      }
+                    }
                   }
                 }}
-                onChange={(e) => {
-                  if (e.error) {
-                    log('Card element error:', e.error);
-                    setError(e.error.message || null);
+                onChange={(event) => {
+                  setPaymentElementReady(event.complete);
+                  if (event.error) {
+                    log('Payment element error:', event.error);
+                    setError(event.error.message || null);
                   } else {
                     setError(null);
                   }
-                  setCardElementReady(e.complete);
-                  if (e.complete) {
-                    log('Card element complete');
+                  if (event.complete) {
+                    log('Payment element complete');
                   }
                 }}
                 onReady={() => {
-                  log('Card element ready');
+                  log('Payment element ready');
                 }}
               />
             </div>
@@ -395,7 +385,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !stripe || !elements || !cardElementReady || !paymentIntent}
+              disabled={loading || !stripe || !elements || !paymentElementReady}
             >
               {loading ? (
                 <>

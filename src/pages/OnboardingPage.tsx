@@ -49,8 +49,13 @@ const OnboardingPage = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [autoRechargeAmount, setAutoRechargeAmount] = useState([50]);
   
-  // Stripe configuration
+  // Enhanced Stripe configuration for PaymentElement
   const stripeOptions = {
+    mode: 'payment',
+    amount: paymentType === 'one-time' 
+      ? parseInt(calculateTotalPrice(tokenAmount[0]).replace(/\D/g, '')) * 100
+      : parseInt(calculateTotalPrice(autoRechargeAmount[0]).replace(/\D/g, '')) * 100,
+    currency: 'pln',
     appearance: {
       theme: 'stripe' as const,
       variables: {
@@ -66,6 +71,12 @@ const OnboardingPage = () => {
     loader: 'auto' as const,
   };
   
+  // Helper function to calculate total price
+  const calculateTotalPrice = (tokens: number): string => {
+    const pricePerToken = tokens >= 150 ? 5 : tokens >= 100 ? 6 : tokens >= 50 ? 7 : 8;
+    return `${tokens * pricePerToken}`;
+  };
+
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
@@ -89,7 +100,7 @@ const OnboardingPage = () => {
       const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : autoRechargeAmount[0]);
       toast({
         title: "Płatność zakończona sukcesem",
-        description: `Twoje konto zostało pomy��lnie doładowane o ${tokens} tokenów.`
+        description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
       });
       setPaymentSuccess(true);
       setTimeout(() => {
