@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -16,6 +17,14 @@ interface StripeCheckoutFormProps {
   paymentType: 'one-time' | 'auto-recharge';
   tokenAmount: number[];
   onSuccess?: (paymentType: string, amount: number) => void;
+}
+
+interface WorkspaceData {
+  id: string;
+  name: string;
+  admin_email?: string;
+  admin_phone?: string;
+  stripe_customer_id?: string;
 }
 
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
@@ -41,8 +50,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   } | null>(null);
   const [intentFetchTime, setIntentFetchTime] = useState<Date | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
   
   const log = useCallback((message: string, data?: any) => {
     if (data) {
@@ -67,21 +78,50 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   }, [intentFetchTime, log]);
   
   useEffect(() => {
-    const fetchUserEmail = async () => {
+    const fetchWorkspaceData = async () => {
       try {
+        // First get current user
         const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          setUserEmail(user.email);
-          log('User email fetched:', user.email);
-        } else {
-          log('No authenticated user email found');
+        if (!user?.id) {
+          log('No authenticated user found');
+          return;
         }
+        
+        // Get user's workspace
+        const { data: memberData, error: memberError } = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (memberError || !memberData?.workspace_id) {
+          log('Error fetching workspace membership:', memberError);
+          return;
+        }
+        
+        // Get workspace details including admin email and phone
+        const { data: workspace, error: workspaceError } = await supabase
+          .from('workspaces')
+          .select('*')
+          .eq('id', memberData.workspace_id)
+          .single();
+          
+        if (workspaceError) {
+          log('Error fetching workspace:', workspaceError);
+          return;
+        }
+        
+        log('Workspace data fetched:', workspace);
+        setWorkspaceData(workspace);
+        setUserEmail(workspace.admin_email || user.email);
+        setUserPhone(workspace.admin_phone || null);
+        
       } catch (error) {
-        log('Error fetching user:', error);
+        log('Error fetching workspace data:', error);
       }
     };
     
-    fetchUserEmail();
+    fetchWorkspaceData();
   }, [log]);
   
   const createPaymentIntent = async () => {
@@ -96,7 +136,10 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           paymentType,
           tokenAmount: tokenAmount[0],
           sessionId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          email: userEmail,
+          phone: userPhone,
+          customerId: workspaceData?.stripe_customer_id
         }
       });
       
@@ -215,7 +258,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       }
       
       const fullName = `${firstName} ${lastName}`;
-      log('Using billing details:', { name: fullName, email: userEmail });
+      log('Using billing details:', { name: fullName, email: userEmail, phone: userPhone });
       
       const result = await stripe.confirmPayment({
         elements,
@@ -226,6 +269,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             billing_details: {
               name: fullName,
               email: userEmail,
+              phone: userPhone || undefined,
             },
           },
         },
@@ -260,6 +304,17 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         }
         
         log('Token balance updated successfully');
+        
+        // If workspaceData exists and there is a customerId from Stripe, update it in the workspace
+        if (workspaceData?.id && result.paymentIntent.customer) {
+          log('Updating Stripe customer ID in workspace');
+          await supabase
+            .from('workspaces')
+            .update({ 
+              stripe_customer_id: result.paymentIntent.customer 
+            })
+            .eq('id', workspaceData.id);
+        }
         
         if (onSuccess) {
           onSuccess(paymentType, tokenAmount[0]);
@@ -370,6 +425,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </div>
             <div className="text-xs text-gray-500">
               Email: {userEmail || 'Brak - zaloguj się aby kontynuować'}
+              {userPhone && <div>Telefon: {userPhone}</div>}
             </div>
           </div>
           
@@ -380,24 +436,26 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 id="payment-element"
                 options={{
                   layout: 'tabs',
+                  mode: 'payment',
                   defaultValues: {
                     billingDetails: {
                       name: `${firstName} ${lastName}`.trim() || undefined,
                       email: userEmail || undefined,
+                      phone: userPhone || undefined,
                     }
                   },
                   fields: {
                     billingDetails: {
                       name: 'never',
                       email: 'never',
-                      phone: 'auto',
+                      phone: 'never',
                       address: {
-                        country: 'never',
+                        country: 'auto',
                         postalCode: 'auto',
-                        line1: 'never',
-                        line2: 'never',
-                        city: 'never',
-                        state: 'never',
+                        line1: 'auto',
+                        line2: 'auto',
+                        city: 'auto',
+                        state: 'auto',
                       }
                     }
                   },

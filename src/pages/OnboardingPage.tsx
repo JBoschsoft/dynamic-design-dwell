@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -49,6 +50,7 @@ const OnboardingPage = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [autoRechargeAmount, setAutoRechargeAmount] = useState([50]);
+  const [userEmail, setUserEmail] = useState('');
   
   // Enhanced Stripe configuration for PaymentElement
   const stripeOptions = {
@@ -71,6 +73,17 @@ const OnboardingPage = () => {
     },
     loader: 'auto' as const,
   };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    };
+    
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     const stepParam = searchParams.get('step');
@@ -225,6 +238,17 @@ const OnboardingPage = () => {
         if (error) throw error;
         
         console.log("Workspace created with ID:", data);
+        
+        // Update the workspace with admin email
+        if (data && userEmail) {
+          await supabase
+            .from('workspaces')
+            .update({
+              admin_email: userEmail,
+              admin_phone: phoneNumber
+            })
+            .eq('id', data);
+        }
         
         toast({
           title: "Dane firmy zapisane",
