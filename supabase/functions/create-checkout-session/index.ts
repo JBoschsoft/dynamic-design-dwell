@@ -341,7 +341,7 @@ serve(async (req) => {
           userId: userId || undefined
         },
         description: `One-time purchase of ${tokenAmount} tokens`,
-        // For one-time payments we don't want future usage
+        // For one-time payments we explicitly set to null to avoid passing empty string
         setup_future_usage: null,
       });
       

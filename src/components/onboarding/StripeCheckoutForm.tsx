@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -106,7 +107,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     
     const now = new Date();
     const timeDiff = now.getTime() - intentFetchTime.getTime();
-    const maxIntentAge = 60 * 1000;
+    // Reducing the max intent age to 30 seconds for faster refresh
+    const maxIntentAge = 30 * 1000;
     
     return timeDiff > maxIntentAge;
   };
@@ -359,7 +361,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             setPaymentIntent(null);
             await fetchPaymentIntent();
             
-            setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
+            if (paymentIntent?.clientSecret) {
+              setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
+            } else {
+              throw new Error("Nie udało się odnowić sesji płatności. Proszę odświeżyć stronę i spróbować ponownie.");
+            }
             return;
           }
           
@@ -414,7 +420,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             setPaymentIntent(null);
             await fetchPaymentIntent();
             
-            setError("Sesja konfiguracji płatności wygasła i została odświeżona. Proszę spróbować ponownie.");
+            if (paymentIntent?.clientSecret) {
+              setError("Sesja konfiguracji płatności wygasła i została odświeżona. Proszę spróbować ponownie.");
+            } else {
+              throw new Error("Nie udało się odnowić sesji płatności. Proszę odświeżyć stronę i spróbować ponownie.");
+            }
             return;
           }
           
@@ -508,7 +518,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setPaymentIntent(null);
         fetchPaymentIntent();
       }
-    }, 25000);
+    }, 10000); // Check more frequently - every 10 seconds
     
     return () => clearInterval(checkInterval);
   }, [open, intentFetchTime, loading, processingSetupConfirmation]);
