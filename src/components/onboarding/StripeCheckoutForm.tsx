@@ -37,7 +37,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0); // Track retry attempts
+  const [retryCount, setRetryCount] = useState(0);
   
   // Logger function for consistent logging
   const log = useCallback((message: string, data?: any) => {
@@ -145,31 +145,16 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error("Element karty nie został znaleziony");
       }
       
-      // Create a payment method explicitly instead of using confirmCardPayment directly
-      log('Creating payment method');
-      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-        billing_details: {
-          name: 'Lovable Customer'
-        }
-      });
+      log('Confirming payment directly with card element');
       
-      if (paymentMethodError) {
-        log('Payment method error:', paymentMethodError);
-        throw paymentMethodError;
-      }
-      
-      if (!paymentMethod) {
-        throw new Error("Nie udało się utworzyć metody płatności");
-      }
-      
-      log('Payment method created:', paymentMethod.id);
-      
-      // Confirm the payment with the created payment method
-      log('Confirming payment with payment method');
+      // Confirm the payment directly with the card element - this is the recommended approach
       const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: paymentMethod.id
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: 'Lovable Customer'
+          }
+        }
       });
       
       if (result.error) {
