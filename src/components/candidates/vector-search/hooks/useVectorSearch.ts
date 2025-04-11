@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { 
   validateSearchQuery, 
@@ -85,7 +84,6 @@ export const useVectorSearch = () => {
   const initialRenderRef = useRef(true);
   const searchSessionId = useRef(`search-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  // Enhanced logging function with session ID and timestamps
   const log = (message: string, data?: any) => {
     const timestamp = new Date().toISOString();
     if (data) {
@@ -233,6 +231,11 @@ export const useVectorSearch = () => {
       setCampaignName('');
       setCampaignDescription('');
       setSelectedCandidates([]);
+      
+      toast({
+        title: "Kampania utworzona",
+        description: `Kampania "${campaignName}" została pomyślnie utworzona z ${selectedCandidates.length} kandydatami.`
+      });
     } catch (error) {
       log('Error creating campaign', error);
       toast({
