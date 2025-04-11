@@ -1,4 +1,3 @@
-
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -238,7 +237,7 @@ export const fetchPaymentIntent = async (
   }
 };
 
-// New function to attach a payment method to a payment intent
+// Attach a payment method to a payment intent
 export const attachPaymentMethod = async (
   paymentIntentId: string,
   paymentMethodId: string,
@@ -247,30 +246,38 @@ export const attachPaymentMethod = async (
 ): Promise<{ updated: boolean, status: string }> => {
   logFn(`Attaching payment method ${paymentMethodId.substring(0, 5)}... to payment intent ${paymentIntentId.substring(0, 5)}...`);
   
-  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-    body: {
-      attachMethod: true,
-      paymentIntentId,
-      paymentMethodId,
-      sessionId
+  try {
+    // Add a small delay before calling the function
+    await waitFor(300, 'Before attaching payment method', logFn);
+    
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      body: {
+        attachMethod: true,
+        paymentIntentId,
+        paymentMethodId,
+        sessionId
+      }
+    });
+    
+    if (error) {
+      logFn('Error attaching payment method:', error);
+      throw new Error(`Failed to attach payment method: ${error.message}`);
     }
-  });
-  
-  if (error) {
+    
+    if (data?.error) {
+      logFn('Payment service error:', data.error);
+      throw new Error(data.error);
+    }
+    
+    logFn('Payment method attachment result:', data);
+    return data;
+  } catch (error) {
     logFn('Error attaching payment method:', error);
-    throw new Error(`Failed to attach payment method: ${error.message}`);
+    throw error;
   }
-  
-  if (data?.error) {
-    logFn('Payment service error:', data.error);
-    throw new Error(data.error);
-  }
-  
-  logFn('Payment method attachment result:', data);
-  return data;
 };
 
-// New function to confirm a payment intent
+// Confirm a payment intent
 export const confirmPaymentIntent = async (
   paymentIntentId: string,
   sessionId: string,
@@ -278,26 +285,34 @@ export const confirmPaymentIntent = async (
 ): Promise<{ status: string, clientSecret?: string, requiresAction: boolean }> => {
   logFn(`Confirming payment intent ${paymentIntentId.substring(0, 5)}...`);
   
-  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-    body: {
-      confirmIntent: true,
-      paymentIntentId,
-      sessionId
+  try {
+    // Add a small delay before calling the function
+    await waitFor(300, 'Before confirming payment intent', logFn);
+    
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      body: {
+        confirmIntent: true,
+        paymentIntentId,
+        sessionId
+      }
+    });
+    
+    if (error) {
+      logFn('Error confirming payment intent:', error);
+      throw new Error(`Failed to confirm payment intent: ${error.message}`);
     }
-  });
-  
-  if (error) {
+    
+    if (data?.error) {
+      logFn('Payment service error:', data.error);
+      throw new Error(data.error);
+    }
+    
+    logFn('Payment intent confirmation result:', data);
+    return data;
+  } catch (error) {
     logFn('Error confirming payment intent:', error);
-    throw new Error(`Failed to confirm payment intent: ${error.message}`);
+    throw error;
   }
-  
-  if (data?.error) {
-    logFn('Payment service error:', data.error);
-    throw new Error(data.error);
-  }
-  
-  logFn('Payment intent confirmation result:', data);
-  return data;
 };
 
 // Update token balance after payment

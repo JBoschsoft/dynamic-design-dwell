@@ -239,6 +239,14 @@ async function attachPaymentMethod(
   try {
     log(sessionId, `Attaching payment method ${paymentMethodId} directly to payment intent ${paymentIntentId}`);
     
+    const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+    if (!paymentMethod) {
+      log(sessionId, `Payment method ${paymentMethodId} not found`);
+      throw new Error(`Payment method not found`);
+    }
+    
+    log(sessionId, `Retrieved payment method: ${paymentMethodId}`);
+    
     const updatedIntent = await stripe.paymentIntents.update(paymentIntentId, {
       payment_method: paymentMethodId
     });
@@ -337,6 +345,8 @@ serve(async (req) => {
     
     if (shouldAttachMethod && paymentIntentId && paymentMethodId) {
       try {
+        log(sessionId, `Processing payment method attachment request for intent: ${paymentIntentId.substring(0, 10)}...`);
+        
         const attachResult = await attachPaymentMethod(
           stripe,
           paymentIntentId,
@@ -370,6 +380,8 @@ serve(async (req) => {
     
     if (shouldConfirmIntent && paymentIntentId) {
       try {
+        log(sessionId, `Processing payment intent confirmation request for intent: ${paymentIntentId.substring(0, 10)}...`);
+        
         const confirmResult = await confirmPaymentIntent(
           stripe,
           paymentIntentId,
