@@ -1,4 +1,3 @@
-
 // supabase/functions/create-checkout-session/index.ts
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
@@ -146,18 +145,15 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       customer: customerId,
       capture_method: 'automatic',
       payment_method_types: ['card'],
-      // For future off-session charges (optional)
-      // setup_future_usage: 'off_session', 
       metadata: {
         tokenAmount: tokenAmount.toString(),
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
       },
-      // Remove the expires_at field as it's causing the API error
-      // expires_at: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour from now
+      // Removed expires_at as it was causing issues
     });
     
-    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at: ${paymentIntent.expires_at ? new Date((paymentIntent.expires_at) * 1000).toISOString() : 'N/A'}`);
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
     
     return {
       id: paymentIntent.id,
@@ -165,7 +161,6 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       customerId,
       timestamp: new Date().toISOString(),
       amount: amount / 100, // Send back the calculated amount in currency units
-      expiresAt: paymentIntent.expires_at
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);

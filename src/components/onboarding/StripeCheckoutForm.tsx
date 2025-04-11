@@ -289,41 +289,40 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitFor(500, 'Before payment confirmation');
         
-        const { error: createPaymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        log('Creating payment method from card element');
+        const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
           billing_details: {
             name: 'Customer Name',
           },
         });
-
-        if (createPaymentMethodError) {
-          log('Error creating payment method:', createPaymentMethodError);
-          throw createPaymentMethodError;
+        
+        if (paymentMethodError) {
+          log('Error creating payment method:', paymentMethodError);
+          throw paymentMethodError;
         }
-
-        log('Payment method created:', paymentMethod.id);
-
-        const result = await stripe.confirmCardPayment(paymentIntent.clientSecret!, {
-          payment_method: paymentMethod.id
-        });
         
-        log('Payment confirmation result:', result);
+        log('Payment method created successfully:', paymentMethod.id);
         
-        if (result.error) {
-          log('Payment confirmation error:', result.error);
-          log('Error code:', result.error.code);
-          log('Error message:', result.error.message);
+        const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
+          paymentIntent.clientSecret!,
+          {
+            payment_method: paymentMethod.id,
+          }
+        );
+        
+        if (confirmError) {
+          log('Payment confirmation error:', confirmError);
           
-          if (result.error.message?.includes("No such payment_intent") || 
-              result.error.code === 'resource_missing') {
+          if (confirmError.message?.includes("No such payment_intent") || 
+              confirmError.code === 'resource_missing') {
             log('Payment intent no longer valid, fetching a new one...');
             setPaymentIntent(null);
             setForceNewIntent(true);
             
             if (!intentCreationLock.current) {
               await fetchInitialIntent();
-              
               await waitFor(1000, 'After fetching new payment intent');
               
               if (paymentIntent?.clientSecret) {
@@ -341,12 +340,12 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             return;
           }
           
-          throw result.error;
+          throw confirmError;
         }
         
-        log('Payment result:', result);
+        log('Payment confirmation result:', confirmedIntent);
         
-        if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+        if (confirmedIntent && confirmedIntent.status === 'succeeded') {
           log('Payment successful! Updating token balance.');
           const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
           
@@ -372,11 +371,11 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             title: "Płatność zrealizowana",
             description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
           });
-        } else if (result.paymentIntent && result.paymentIntent.status === 'requires_action') {
+        } else if (confirmedIntent && confirmedIntent.status === 'requires_action') {
           log('3D Secure authentication required...');
         } else {
-          log(`Unexpected payment status: ${result.paymentIntent?.status}`);
-          throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${result.paymentIntent?.status || 'nieznany'}`);
+          log(`Unexpected payment status: ${confirmedIntent?.status}`);
+          throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${confirmedIntent?.status || 'nieznany'}`);
         }
       } else {
         log('Using confirmCardSetup for auto-recharge setup');
