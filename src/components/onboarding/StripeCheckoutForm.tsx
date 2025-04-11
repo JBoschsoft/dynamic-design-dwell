@@ -286,90 +286,42 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitForDelay(500, 'Before payment confirmation');
         
-        log('Confirming card payment directly with card element');
-        const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
-          paymentIntent.clientSecret!,
-          {
-            payment_method: {
-              card: cardElement,
-              billing_details: { 
-                name: 'Lovable Customer' 
+        try {
+          log('Confirming card payment directly with card element');
+          const result = await stripe.confirmCardPayment(
+            paymentIntent.clientSecret!,
+            {
+              payment_method: {
+                card: cardElement,
+                billing_details: { 
+                  name: 'Lovable Customer' 
+                }
               }
             }
-          }
-        );
-        
-        if (confirmError) {
-          log('Payment confirmation error:', confirmError);
+          );
           
-          if (confirmError.message?.includes("No such payment_intent") || 
-              confirmError.code === 'resource_missing') {
-            log('Payment intent no longer valid, fetching a new one...');
-            setPaymentIntent(null);
-            setForceNewIntent(true);
+          if (result.error) {
+            log('Payment confirmation error:', result.error);
             
-            if (!intentCreationLock.current) {
+            if (result.error.message?.includes("No such payment_intent") || 
+                result.error.code === 'resource_missing') {
+              log('Payment intent no longer valid, fetching a new one...');
+              setPaymentIntent(null);
+              setForceNewIntent(true);
+              
               await fetchInitialIntent();
               await waitForDelay(1000, 'After fetching new payment intent');
               
-              if (paymentIntent?.clientSecret) {
-                log('New payment intent fetched successfully');
-                setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
-              } else {
-                log('Failed to refresh payment intent');
-                throw new Error("Nie udało się odnowić sesji płatności. Proszę odświeżyć stronę i spróbować ponownie.");
-              }
-            } else {
-              log('Intent creation already in progress, cannot refresh intent');
-              throw new Error("Sesja płatności wygasła. Poczekaj chwilę i spróbuj ponownie.");
+              setError("Sesja płatności wygasła i została odświeżona. Proszę spróbować płatność ponownie.");
+              endTracking();
+              return;
             }
-            endTracking();
-            return;
+            
+            throw result.error;
           }
           
-          throw confirmError;
-        }
-        
-        log('Payment confirmation result:', confirmedIntent);
-        
-        if (confirmedIntent && confirmedIntent.status === 'succeeded') {
-          log('Payment successful! Updating token balance.');
-          const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
-          
-          if (!balanceUpdated) {
-            log('Failed to update token balance');
-            throw new Error("Nie udało się zaktualizować salda tokenów");
-          }
-          
-          log('Token balance updated successfully');
-          
-          if (onSuccess) {
-            log('Calling onSuccess callback');
-            onSuccess(paymentType, tokenAmount[0]);
-          }
-          
-          log('Closing payment dialog');
-          onOpenChange(false);
-          
-          log('Navigating to success page');
-          navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-          
-          toast({
-            title: "Płatność zrealizowana",
-            description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
-          });
-        } else if (confirmedIntent && confirmedIntent.status === 'requires_action') {
-          log('3D Secure authentication required...');
-          
-          const { error, paymentIntent: authenticatedIntent } = await stripe.handleCardAction(confirmedIntent.client_secret!);
-          
-          if (error) {
-            log('3D Secure authentication error:', error);
-            throw new Error(`Błąd uwierzytelniania 3D Secure: ${error.message}`);
-          }
-          
-          if (authenticatedIntent && authenticatedIntent.status === 'succeeded') {
-            log('3D Secure authentication successful! Updating token balance.');
+          if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+            log('Payment successful! Updating token balance.');
             const balanceUpdated = await updateTokenBalance(tokenAmount[0], 'one-time', log);
             
             if (!balanceUpdated) {
@@ -394,13 +346,14 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
               title: "Płatność zrealizowana",
               description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
             });
+            return;
           } else {
-            log(`Unexpected payment status after 3D Secure: ${authenticatedIntent?.status}`);
-            throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${authenticatedIntent?.status || 'nieznany'}`);
+            log(`Unexpected payment status: ${result.paymentIntent?.status}`);
+            throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${result.paymentIntent?.status || 'nieznany'}`);
           }
-        } else {
-          log(`Unexpected payment status: ${confirmedIntent?.status}`);
-          throw new Error(`Płatność nie została zakończona pomyślnie. Status: ${confirmedIntent?.status || 'nieznany'}`);
+        } catch (confirmError) {
+          log('Error in confirmCardPayment:', confirmError);
+          throw confirmError;
         }
       } else {
         log('Using confirmCardSetup for auto-recharge setup');

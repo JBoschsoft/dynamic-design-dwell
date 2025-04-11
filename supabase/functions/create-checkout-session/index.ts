@@ -1,3 +1,4 @@
+
 // supabase/functions/create-checkout-session/index.ts
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
@@ -140,7 +141,9 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
         pricePerToken: pricePerToken.toString(),
         timestamp: new Date().toISOString()
       },
-      // No setup_future_usage to ensure it's truly a one-time payment
+      // For one-time payments, we don't need to set up future usage
+      // We'll set a longer expiration time (24 hours) to give more time for confirmation
+      expires_at: Math.floor(Date.now() / 1000) + 86400 // 24 hours from now
     });
     
     log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
@@ -150,7 +153,8 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       clientSecret: paymentIntent.client_secret,
       customerId,
       timestamp: new Date().toISOString(),
-      amount: amount / 100
+      amount: amount / 100,
+      expiresAt: paymentIntent.expires_at
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);

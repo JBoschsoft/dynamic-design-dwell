@@ -13,7 +13,7 @@ export const waitFor = async (ms: number, reason: string, logFn?: (message: stri
 };
 
 // Check if payment intent is stale
-export const isIntentStale = (intentFetchTime: Date | null, staleness = 20000, logFn?: (message: string, data?: any) => void): boolean => {
+export const isIntentStale = (intentFetchTime: Date | null, staleness = 10000, logFn?: (message: string, data?: any) => void): boolean => {
   if (!intentFetchTime) {
     if (logFn) logFn('No intent fetch time recorded, considering intent stale');
     return true;
@@ -35,6 +35,7 @@ let cachedIntent: {
   id: string;
   timestamp: number;
   customerId?: string;
+  expiresAt?: number;
 } | null = null;
 
 // Fetch a new payment intent - for both one-time and auto-recharge options
@@ -60,10 +61,13 @@ export const fetchPaymentIntent = async (
 ) => {
   
   // Check if we can use cached intent to avoid creating new ones unnecessarily
+  // For one-time payments, use a shorter cache validity (5 seconds) to reduce chances of expiration
+  const cacheValidityMs = paymentType === 'one-time' ? 5000 : 15000;
+  
   if (!forceNewIntent && cachedIntent && 
       cachedIntent.paymentType === paymentType && 
       cachedIntent.tokenAmount === tokenAmount &&
-      (Date.now() - cachedIntent.timestamp < 15000)) { // Use cache if less than 15 seconds old
+      (Date.now() - cachedIntent.timestamp < cacheValidityMs)) {
     
     logFn(`Using cached ${paymentType} payment intent from ${Date.now() - cachedIntent.timestamp}ms ago`);
     
@@ -72,7 +76,8 @@ export const fetchPaymentIntent = async (
       clientSecret: cachedIntent.clientSecret,
       timestamp: new Date(cachedIntent.timestamp).toISOString(),
       customerId: cachedIntent.customerId,
-      amount: cachedIntent.tokenAmount
+      amount: cachedIntent.tokenAmount,
+      expiresAt: cachedIntent.expiresAt
     });
     
     setIntentFetchTime(new Date(cachedIntent.timestamp));
@@ -81,7 +86,8 @@ export const fetchPaymentIntent = async (
       intentId: cachedIntent.id,
       customerId: cachedIntent.customerId,
       timestamp: new Date(cachedIntent.timestamp).toISOString(),
-      amount: cachedIntent.tokenAmount
+      amount: cachedIntent.tokenAmount,
+      expiresAt: cachedIntent.expiresAt
     };
   }
 
@@ -155,7 +161,8 @@ export const fetchPaymentIntent = async (
         clientSecret: data.clientSecret,
         id: data.id,
         timestamp: Date.now(),
-        customerId: data.customerId
+        customerId: data.customerId,
+        expiresAt: data.expiresAt
       };
       
       setPaymentIntent({
