@@ -142,17 +142,14 @@ async function createPaymentIntent(stripe: Stripe, customerId: string, tokenAmou
       }
     });
     
-    const expiresAtTimestamp = Math.floor(Date.now() / 1000) + 7200; // 2 hours from now
-    const expiryDate = new Date(expiresAtTimestamp * 1000).toISOString();
-    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}, expires at (not set in API): ${expiryDate}`);
+    log(sessionId, `Payment intent created: ${paymentIntent.id}, amount: ${amount}`);
     
     return {
       id: paymentIntent.id,
       clientSecret: paymentIntent.client_secret,
       customerId,
       timestamp: new Date().toISOString(),
-      amount: amount / 100,
-      expiresAt: expiresAtTimestamp
+      amount: amount / 100
     };
   } catch (error) {
     log(sessionId, `Error creating payment intent: ${error.message}`);

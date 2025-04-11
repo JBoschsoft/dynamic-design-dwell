@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -286,7 +287,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         await waitForDelay(500, 'Before payment confirmation');
         
-        // IMPORTANT CHANGE: First create a payment method
+        // Create payment method from card element
         log('Creating payment method from card element');
         const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
@@ -300,7 +301,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         log(`Payment method created successfully: ${paymentMethod.id}`);
         
-        // Now directly confirm the payment with the payment method ID
+        // Confirm the payment with the created payment method
         log(`Confirming payment with method: ${paymentMethod.id}`);
         const { error: confirmError, paymentIntent: confirmedIntent } = await stripe.confirmCardPayment(
           paymentIntent.clientSecret!,
