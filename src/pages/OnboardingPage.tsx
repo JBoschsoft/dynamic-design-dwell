@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -203,11 +202,8 @@ const OnboardingPage = () => {
         });
         
         setPaymentSuccess(true);
-        
-        setTimeout(() => {
-          setCurrentStep(3);
-          navigate(`/onboarding?step=3`, { replace: true });
-        }, 500);
+        setCurrentStep(3);
+        navigate(`/onboarding?step=3`, { replace: true });
       }
     } catch (error) {
       console.error("Error updating token balance:", error);
