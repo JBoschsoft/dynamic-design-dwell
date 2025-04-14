@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -201,9 +202,19 @@ const OnboardingPage = () => {
           description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
         });
         
+        // Set payment as successful
         setPaymentSuccess(true);
+        
+        // Navigate immediately to step 3
         setCurrentStep(3);
         navigate(`/onboarding?step=3`, { replace: true });
+      } else {
+        // Handle case where workspace_id is not found
+        toast({
+          variant: "destructive",
+          title: "Błąd",
+          description: "Nie można odnaleźć informacji o firmie. Spróbuj ponownie."
+        });
       }
     } catch (error) {
       console.error("Error updating token balance:", error);
