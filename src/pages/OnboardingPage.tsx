@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -182,14 +181,36 @@ const OnboardingPage = () => {
     try {
       setPaymentLoading(true);
       
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Błąd",
+          description: "Nie jesteś zalogowany. Zaloguj się, aby kontynuować."
+        });
+        setPaymentLoading(false);
+        return;
+      }
+      
       const { data: memberData, error: memberError } = await supabase
         .from('workspace_members')
         .select('workspace_id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
+        
+      if (memberError) {
+        console.error("Error fetching workspace:", memberError);
+        toast({
+          variant: "destructive",
+          title: "Błąd",
+          description: "Nie można odnaleźć informacji o firmie. Spróbuj ponownie."
+        });
+        setPaymentLoading(false);
+        return;
+      }
           
       if (memberData?.workspace_id) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('workspaces')
           .update({ 
             token_balance: 5,
@@ -197,19 +218,27 @@ const OnboardingPage = () => {
           })
           .eq('id', memberData.workspace_id);
           
+        if (updateError) {
+          console.error("Error updating token balance:", updateError);
+          toast({
+            variant: "destructive",
+            title: "Błąd",
+            description: "Nie udało się przyznać startowych tokenów. Spróbuj ponownie."
+          });
+          setPaymentLoading(false);
+          return;
+        }
+          
         toast({
           title: "Pominięto płatność",
           description: "Przyznano startowe 5 tokenów do konta. Możesz doładować więcej w każdej chwili."
         });
         
-        // Set payment as successful
         setPaymentSuccess(true);
         
-        // Navigate immediately to step 3
         setCurrentStep(3);
         navigate(`/onboarding?step=3`, { replace: true });
       } else {
-        // Handle case where workspace_id is not found
         toast({
           variant: "destructive",
           title: "Błąd",
@@ -248,11 +277,9 @@ const OnboardingPage = () => {
       setLoading(true);
       
       try {
-        // Get the current authenticated user to obtain email
         const { data: { user } } = await supabase.auth.getUser();
         const userEmail = user?.email || '';
         
-        // Create workspace with admin using RPC function
         const { data, error } = await supabase.rpc('create_workspace_with_admin', {
           workspace_name: companyName,
           workspace_industry: industry,
@@ -265,7 +292,6 @@ const OnboardingPage = () => {
         
         console.log("Workspace created with ID:", data);
         
-        // Now that we have proper RLS policies, update the workspace admin details
         if (data && userEmail) {
           const updateData: Partial<Workspace> = {
             admin_email: userEmail,
@@ -278,7 +304,6 @@ const OnboardingPage = () => {
           
           if (updateError) {
             console.error("Error updating workspace with admin details:", updateError);
-            // Continue with the flow even if this update fails
           }
         }
         
