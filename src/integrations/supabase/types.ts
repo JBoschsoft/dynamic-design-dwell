@@ -164,12 +164,20 @@ export type Database = {
         }
         Returns: string
       }
+      get_user_workspace_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_workspace_roles: {
         Args: Record<PropertyKey, never>
         Returns: {
           workspace_id: string
           role: string
         }[]
+      }
+      is_workspace_member: {
+        Args: { workspace_id: string }
+        Returns: boolean
       }
     }
     Enums: {

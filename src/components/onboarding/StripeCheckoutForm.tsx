@@ -1,15 +1,27 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from "@/hooks/use-toast";
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Button, Label, Loader2, Card, CardContent, Input
-} from "@/components/ui";
-import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { calculateTokenPrice, calculateTotalPrice } from './utils';
-import { supabase } from "@/integrations/supabase/client";
-import { updateTokenBalance, isIntentStale, waitFor } from './PaymentService';
+import React, { useState, useEffect } from 'react';
+import {
+  PaymentElement,
+  LinkAuthenticationElement,
+  useStripe,
+  useElements
+} from '@stripe/react-stripe-js';
+import { X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { calculateTokenPrice, calculateTotalPrice } from '@/components/onboarding/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import AdBlockerWarning from './AdBlockerWarning';
+
+// Simple logger
+const log = (...args: any[]) => {
+  console.log('[StripeCheckout]', ...args);
+};
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -19,21 +31,6 @@ interface StripeCheckoutFormProps {
   onSuccess?: (paymentType: string, amount: number) => void;
 }
 
-// Define the expected workspace data structure with optional fields for admin_email and admin_phone
-interface WorkspaceData {
-  id: string;
-  name: string;
-  stripe_customer_id?: string;
-  admin_email?: string; 
-  admin_phone?: string;
-  // Include other fields from the workspaces table
-  industry: string;
-  company_size: string;
-  token_balance?: number;
-  balance_auto_topup?: boolean;
-  created_at?: string;
-}
-
 const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   open,
   onOpenChange,
@@ -41,270 +38,183 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   tokenAmount,
   onSuccess
 }) => {
-  const navigate = useNavigate();
   const stripe = useStripe();
   const elements = useElements();
   
-  const [sessionId] = useState(`checkout-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [paymentElementReady, setPaymentElementReady] = useState(false);
-  const [paymentIntent, setPaymentIntent] = useState<{
-    clientSecret: string;
-    id: string;
-    timestamp: string;
-    customerId?: string;
-  } | null>(null);
-  const [intentFetchTime, setIntentFetchTime] = useState<Date | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userPhone, setUserPhone] = useState<string | null>(null);
+  // Component state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<'initial' | 'processing' | 'requires_action' | 'succeeded' | 'canceled'>('initial');
+  const [sessionId, setSessionId] = useState<string>('');
+  const [adBlockerDetected, setAdBlockerDetected] = useState(false);
   
-  const log = useCallback((message: string, data?: any) => {
-    if (data) {
-      console.log(`[CHECKOUT-${sessionId}] ${message}`, data);
-    } else {
-      console.log(`[CHECKOUT-${sessionId}] ${message}`);
-    }
-  }, [sessionId]);
+  // Amount to charge
+  const amount = tokenAmount[0];
   
-  const isIntentValid = useCallback(() => {
-    if (!intentFetchTime) return false;
-    return !isIntentStale(intentFetchTime, 2 * 60 * 1000, log);
-  }, [intentFetchTime, log]);
-  
+  // Create a unique session ID
   useEffect(() => {
-    const fetchWorkspaceData = async () => {
+    setSessionId(`checkout-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+  }, []);
+  
+  // Detect ad blockers
+  useEffect(() => {
+    const detectAdBlocker = async () => {
       try {
-        // First get current user
+        // Try to fetch a known Stripe resource
+        const testRequest = await fetch('https://js.stripe.com/v3/fingerprinted/js/checkout-f5e4e490f539c60f9b8d.js', { 
+          method: 'HEAD',
+          mode: 'no-cors'
+        });
+        
+        // If we get here, the request wasn't blocked
+        setAdBlockerDetected(false);
+      } catch (error) {
+        // If request failed, likely blocked by ad blocker
+        console.error('Possible ad blocker detected:', error);
+        setAdBlockerDetected(true);
+      }
+    };
+    
+    detectAdBlocker();
+  }, []);
+  
+  // Fetch user data and create payment intent
+  useEffect(() => {
+    const fetchUserDataAndCreateIntent = async () => {
+      try {
+        // Get current authenticated user
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.id) {
+        if (!user?.email) {
           log('No authenticated user found');
-          setUserEmail(user?.email || null); // Set email from auth user as fallback
           return;
         }
         
-        // Get user's workspace directly using a single query without accessing workspace_members
-        const { data: workspaces, error: workspacesError } = await supabase
+        // Get user's workspace using the security definer function
+        const { data: workspaceId, error: workspaceError } = await supabase.rpc('get_user_workspace_id');
+        
+        if (workspaceError || !workspaceId) {
+          log('Error getting workspace ID:', workspaceError);
+          return;
+        }
+        
+        // Get workspace data
+        const { data: workspace, error: workspaceDataError } = await supabase
           .from('workspaces')
-          .select('*')
-          .limit(1);
-          
-        if (workspacesError || !workspaces?.length) {
-          log('Error fetching workspace:', workspacesError);
-          // Set email from auth user as fallback
-          setUserEmail(user.email);
+          .select('admin_email, admin_phone, stripe_customer_id')
+          .eq('id', workspaceId)
+          .single();
+        
+        if (workspaceDataError) {
+          log('Error fetching workspace data:', workspaceDataError);
           return;
         }
         
-        const workspace = workspaces[0] as WorkspaceData;
-        
-        log('Workspace data fetched:', workspace);
-        setWorkspaceData(workspace);
+        const workspaceData = workspace;
         
         // Use admin_email if available, otherwise fall back to the authenticated user's email
         setUserEmail(workspace.admin_email || user.email);
         
-        // Don't set the phone number to avoid the Stripe error
-        setUserPhone(null);
-        
-      } catch (error) {
-        log('Error fetching workspace data:', error);
-        // Try to get user email directly from auth as fallback
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          setUserEmail(user.email);
-        }
-      }
-    };
-    
-    fetchWorkspaceData();
-  }, [log]);
-  
-  const createPaymentIntent = async () => {
-    if (loading) return;
-    
-    setLoading(true);
-    try {
-      log('Creating payment intent');
-      
-      const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          paymentType,
-          tokenAmount: tokenAmount[0],
-          sessionId,
-          timestamp: Date.now(),
-          email: userEmail,
-          // Don't send phone to avoid Stripe error
-          customerId: workspaceData?.stripe_customer_id
-        }
-      });
-      
-      if (functionError) {
-        log('Function error:', functionError);
-        throw new Error(`Error invoking payment function: ${functionError.message}`);
-      }
-      
-      if (!data || data.error) {
-        log('Payment service error:', data?.error || 'No data received');
-        throw new Error(data?.error || "Nie otrzymano odpowiedzi z serwera płatności");
-      }
-      
-      log('Payment intent received:', { 
-        id: data.id, 
-        clientSecret: data.clientSecret ? 'exists' : 'missing',
-        customerId: data.customerId
-      });
-      
-      if (!data.clientSecret) {
-        throw new Error("Brak klucza klienta dla płatności");
-      }
-      
-      setPaymentIntent({
-        clientSecret: data.clientSecret,
-        id: data.id,
-        timestamp: new Date().toISOString(),
-        customerId: data.customerId
-      });
-      setIntentFetchTime(new Date());
-    } catch (error) {
-      log('Error creating payment intent:', error);
-      setError(error.message || 'Wystąpił nieoczekiwany błąd podczas inicjalizacji płatności');
-      toast({
-        variant: "destructive",
-        title: "Błąd płatności",
-        description: error.message || "Wystąpił błąd podczas inicjalizacji płatności. Spróbuj ponownie.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    if (open && stripe && elements && !paymentIntent) {
-      log('Checkout dialog opened, creating new payment intent');
-      setError(null);
-      createPaymentIntent();
-    }
-  }, [open, stripe, elements, paymentIntent]);
-
-  useEffect(() => {
-    if (paymentIntent?.clientSecret && stripe && elements) {
-      log('Setting up payment element with client secret');
-    }
-  }, [paymentIntent?.clientSecret, stripe, elements]);
-
-  useEffect(() => {
-    if (!open) {
-      log('Checkout dialog closed, cleaning up');
-      setTimeout(() => {
-        setPaymentIntent(null);
-        setIntentFetchTime(null);
-      }, 500);
-      setPaymentElementReady(false);
-      setPaymentProcessing(false);
-      setError(null);
-    }
-  }, [open, log]);
-
-  const handleCheckPaymentStatus = async (paymentIntentId: string, retries = 3, delay = 2000) => {
-    log(`Checking payment status for intent: ${paymentIntentId}`);
-    
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        if (attempt > 0) {
-          log(`Retrying payment status check, attempt ${attempt + 1}/${retries}`);
-          await waitFor(delay, `Before retry ${attempt + 1}`, log);
-        }
-        
+        // Create a payment intent via our edge function
         const { data, error } = await supabase.functions.invoke('create-checkout-session', {
           body: {
-            checkStatus: true,
-            paymentIntentId,
-            sessionId
+            paymentType,
+            tokenAmount: amount,
+            sessionId,
+            timestamp: Date.now(),
+            email: userEmail,
+            customerId: workspaceData?.stripe_customer_id
           }
         });
         
-        if (error) {
-          log('Error checking payment status:', error);
-          continue;
+        if (error || !data?.clientSecret) {
+          log('Error creating payment intent:', error || 'No client secret returned');
+          setPaymentError(error?.message || 'Wystąpił błąd podczas tworzenia płatności. Spróbuj ponownie.');
+          return;
         }
         
-        log('Payment status check response:', data);
+        log('Payment intent created:', data);
+        setClientSecret(data.clientSecret);
         
-        if (data.status === 'succeeded') {
-          log('Payment confirmed as succeeded on server side');
-          return { success: true, status: data.status };
-        } else if (['processing', 'requires_confirmation', 'requires_action'].includes(data.status)) {
-          log(`Payment in intermediate state: ${data.status}, will retry`);
-          // Will continue and retry
-        } else {
-          log(`Payment status: ${data.status}, not successful`);
-          return { success: false, status: data.status };
-        }
-      } catch (error) {
-        log('Error in payment status check:', error);
-        // Will continue and retry
+      } catch (error: any) {
+        log('Error in initialization:', error);
+        setPaymentError(error?.message || 'Wystąpił błąd podczas inicjalizacji płatności.');
       }
+    };
+    
+    if (stripe && elements && open) {
+      fetchUserDataAndCreateIntent();
+    }
+  }, [stripe, elements, open, paymentType, amount, sessionId, userEmail]);
+  
+  // Check payment status
+  useEffect(() => {
+    let interval: number;
+    
+    if (paymentStatus === 'processing' && clientSecret) {
+      const paymentIntentId = clientSecret.split('_secret_')[0];
       
-      // Increase delay for exponential backoff
-      delay = Math.min(delay * 1.5, 10000);
+      interval = window.setInterval(async () => {
+        try {
+          log('Checking payment status for intent:', paymentIntentId);
+          
+          const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+            body: {
+              checkStatus: true,
+              paymentIntentId
+            }
+          });
+          
+          if (error) {
+            log('Error checking payment status:', error);
+            return;
+          }
+          
+          log('Payment status check result:', data);
+          
+          if (data.status === 'succeeded') {
+            setPaymentStatus('succeeded');
+            clearInterval(interval);
+            
+            // Call onSuccess callback with payment details
+            if (onSuccess) {
+              onSuccess(paymentType, amount);
+            }
+            
+            // Close modal after 1 second to show success state
+            setTimeout(() => onOpenChange(false), 1000);
+          }
+          
+        } catch (error) {
+          log('Error checking payment status:', error);
+        }
+      }, 2000);
     }
     
-    log('Max retries reached for payment status check');
-    return { success: false, status: 'unknown' };
-  };
-
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [paymentStatus, clientSecret, paymentType, amount, onSuccess, onOpenChange]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    log('Payment form submitted');
-    
-    if (!stripe || !elements) {
-      setError("Stripe nie został załadowany. Odśwież stronę i spróbuj ponownie.");
+    if (!stripe || !elements || !clientSecret) {
+      log('Stripe not initialized or missing client secret');
       return;
     }
-    
-    if (!paymentElementReady) {
-      setError('Element płatności nie jest gotowy. Proszę poczekać lub odświeżyć stronę.');
-      return;
-    }
-    
-    if (!paymentIntent?.clientSecret) {
-      setError('Brak klucza klienta. Proszę odświeżyć stronę i spróbować ponownie.');
-      return;
-    }
-    
-    if (!firstName.trim() || !lastName.trim()) {
-      setError('Proszę podać imię i nazwisko.');
-      return;
-    }
-    
-    if (!userEmail) {
-      setError('Brak adresu email. Proszę odświeżyć stronę lub zalogować się ponownie.');
-      return;
-    }
-    
-    if (!isIntentValid()) {
-      log('Intent no longer valid, creating a new one before confirming');
-      await createPaymentIntent();
-      if (!paymentIntent?.clientSecret) return;
-    }
-    
-    setLoading(true);
-    setPaymentProcessing(true);
-    setError(null);
     
     try {
-      log(`Confirming payment for intent: ${paymentIntent.id.substring(0, 10)}...`);
+      setIsProcessing(true);
+      setPaymentError(null);
       
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        log('Payment submission error:', submitError);
-        throw new Error(submitError.message || "Payment submission failed");
+      if (!firstName || !lastName) {
+        setPaymentError('Proszę podać imię i nazwisko');
+        setIsProcessing(false);
+        return;
       }
       
       const fullName = `${firstName} ${lastName}`;
@@ -312,9 +222,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       
       const result = await stripe.confirmPayment({
         elements,
-        clientSecret: paymentIntent.clientSecret,
         confirmParams: {
-          return_url: `${window.location.origin}/onboarding?success=true&tokens=${tokenAmount[0]}`,
+          return_url: `${window.location.origin}/onboarding?success=true&tokens=${amount}`,
           payment_method_data: {
             billing_details: {
               name: fullName,
@@ -326,304 +235,203 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         redirect: 'if_required'
       });
       
+      log('Payment confirmation result:', result);
+      
       if (result.error) {
-        log('Payment confirmation error:', result.error);
-        
-        if (result.error.type === 'validation_error') {
-          throw new Error(result.error.message || "Validation failed");
-        }
-        
-        if (result.error.type === 'invalid_request_error' && 
-            result.error.message?.includes('No such payment_intent')) {
-          log('Payment intent not found, need to create a new one');
-          setPaymentIntent(null);
-          setError('Sesja płatności wygasła. Proszę spróbować ponownie.');
-          return;
-        }
-        
-        throw new Error(result.error.message || "Payment confirmation failed");
-      }
-      
-      log('Confirmation result:', result);
-      
-      // Check if we have an immediate success or need to verify status
-      if (result.paymentIntent?.status === 'succeeded') {
-        log('Payment succeeded immediately');
-        handlePaymentSuccess();
+        // Show error message
+        setPaymentError(result.error.message || 'Wystąpił błąd podczas przetwarzania płatności');
+        setPaymentStatus('canceled');
       } else if (result.paymentIntent) {
-        log(`Payment not immediately succeeded. Status: ${result.paymentIntent.status}. Checking status...`);
-        // Check payment status after a short delay
-        await waitFor(1500, 'Before checking payment status', log);
-        const { success } = await handleCheckPaymentStatus(result.paymentIntent.id);
-        
-        if (success) {
-          log('Payment confirmed as successful via status check');
-          handlePaymentSuccess();
-        } else {
-          log('Payment not confirmed as successful after status check');
-          // Show processing message if it might still be processing
-          setPaymentProcessing(false);
-          toast({
-            title: "Płatność w trakcie przetwarzania",
-            description: "Twoja płatność jest przetwarzana. Aktualizacja salda może zająć kilka chwil. Możesz sprawdzić stan później w ustawieniach konta.",
-          });
-          onOpenChange(false);
+        // Check payment intent status
+        switch (result.paymentIntent.status) {
+          case 'succeeded':
+            setPaymentStatus('succeeded');
+            // Call onSuccess callback with payment details
+            if (onSuccess) {
+              onSuccess(paymentType, amount);
+            }
+            // Close modal after 1 second to show success state
+            setTimeout(() => onOpenChange(false), 1000);
+            break;
+            
+          case 'processing':
+            setPaymentStatus('processing');
+            break;
+            
+          case 'requires_action':
+            setPaymentStatus('requires_action');
+            // The payment requires additional actions
+            log('Payment requires additional actions');
+            break;
+            
+          default:
+            setPaymentStatus('canceled');
+            setPaymentError('Status płatności: ' + result.paymentIntent.status);
         }
-      } else {
-        log('No paymentIntent in result, payment may be processing');
-        setPaymentProcessing(false);
-        toast({
-          title: "Status płatności nieznany",
-          description: "Status Twojej płatności jest nieznany. Sprawdź stan konta w ustawieniach.",
-        });
-        onOpenChange(false);
       }
-    } catch (error) {
-      log('Payment error:', error);
-      setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
-      setPaymentProcessing(false);
-      
-      toast({
-        variant: "destructive",
-        title: "Błąd płatności",
-        description: error.message || "Wystąpił błąd podczas przetwarzania płatności. Spróbuj ponownie.",
-      });
+    } catch (error: any) {
+      log('Error in payment submission:', error);
+      setPaymentError(error?.message || 'Wystąpił nieoczekiwany błąd');
+      setPaymentStatus('canceled');
     } finally {
-      setLoading(false);
+      setIsProcessing(false);
     }
   };
   
-  const handlePaymentSuccess = async () => {
-    log('Payment successful! Updating token balance.');
-    let balanceUpdated = false;
-    
-    // Try updating token balance up to 3 times
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        if (attempt > 1) {
-          log(`Retry ${attempt} to update token balance`);
-          await waitFor(1000 * attempt, `Before token balance update retry ${attempt}`, log);
-        }
-        
-        balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
-        if (balanceUpdated) {
-          log('Token balance updated successfully');
-          break;
-        } else {
-          log(`Failed to update token balance, attempt ${attempt}`);
-        }
-      } catch (error) {
-        log(`Error updating token balance (attempt ${attempt}):`, error);
-      }
-    }
-    
-    if (!balanceUpdated) {
-      log('All attempts to update token balance failed');
-      toast({
-        variant: "destructive",
-        title: "Uwaga",
-        description: "Płatność zrealizowana, ale wystąpił problem z aktualizacją salda tokenów. Prosimy o kontakt z obsługą.",
-      });
-    }
-    
-    // If workspaceData exists and paymentIntent.customer exists from the response, update it in the workspace
-    if (workspaceData?.id && paymentIntent?.customerId) {
-      log('Updating Stripe customer ID in workspace');
-      try {
-        await supabase
-          .from('workspaces')
-          .update({ 
-            stripe_customer_id: paymentIntent.customerId
-          })
-          .eq('id', workspaceData.id);
-      } catch (error) {
-        log('Error updating customer ID in workspace:', error);
-      }
-    }
-    
-    if (onSuccess) {
-      onSuccess(paymentType, tokenAmount[0]);
-    }
-    
-    onOpenChange(false);
-    navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-    
-    toast({
-      title: "Płatność zrealizowana",
-      description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
-    });
-  };
-  
-  if (!paymentIntent?.clientSecret || !stripe || !elements) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Płatność za tokeny</DialogTitle>
-            <DialogDescription>
-              {loading ? 'Przygotowywanie płatności...' : 'Inicjalizacja bramki płatności'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  // Calculate price based on amount and tiers
+  const pricePerToken = calculateTokenPrice(amount);
+  const totalPrice = calculateTotalPrice(amount);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Płatność za tokeny</DialogTitle>
-          <DialogDescription>
-            {paymentType === 'one-time' 
-              ? 'Finalizacja jednorazowego zakupu tokenów'
-              : 'Ustawienie automatycznego doładowywania tokenów'
-            }
-          </DialogDescription>
+          <DialogTitle className="flex justify-between items-center">
+            <span>Płatność</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6" 
+              onClick={() => onOpenChange(false)}
+              disabled={isProcessing}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Card className="border-primary/20">
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Liczba tokenów:</span>
-                  <span className="font-medium">{tokenAmount[0]}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Cena za token:</span>
-                  <span className="font-medium">{calculateTokenPrice(tokenAmount[0])} PLN</span>
-                </div>
-                <div className="pt-2 border-t flex justify-between font-semibold">
-                  <span>Kwota płatności:</span>
-                  <span className="text-primary">{calculateTotalPrice(tokenAmount[0])} PLN</span>
-                </div>
+        {paymentStatus === 'succeeded' ? (
+          <div className="p-4 text-center">
+            <div className="text-green-500 text-2xl font-bold mb-2">Płatność zakończona sukcesem!</div>
+            <div className="text-gray-600">
+              Twoje konto zostało doładowane o {amount} tokenów.
+            </div>
+            <Button 
+              className="mt-4" 
+              onClick={() => onOpenChange(false)}
+            >
+              Zamknij
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <AdBlockerWarning isVisible={adBlockerDetected} />
+            
+            {paymentError && (
+              <div className="p-3 bg-red-50 text-red-500 rounded-md border border-red-200 text-sm">
+                {paymentError}
               </div>
-            </CardContent>
-          </Card>
-          
-          <div className="space-y-2">
-            <Label>Dane do faktury</Label>
+            )}
+            
+            <div className="bg-gray-50 p-4 rounded-md">
+              <div className="flex justify-between mb-2">
+                <span className="font-medium">{amount} tokenów</span>
+                <span className="font-medium">{pricePerToken} PLN / token</span>
+              </div>
+              <div className="border-t pt-2 flex justify-between font-bold">
+                <span>Łączna kwota:</span>
+                <span>{totalPrice} PLN</span>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="firstName" className="text-xs mb-1 block">Imię</Label>
-                <Input 
-                  id="firstName"
+                <label className="block text-sm font-medium mb-1">Imię</label>
+                <input
+                  type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Podaj imię"
+                  className="w-full border rounded-md p-2"
+                  disabled={isProcessing}
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="lastName" className="text-xs mb-1 block">Nazwisko</Label>
-                <Input
-                  id="lastName"
+                <label className="block text-sm font-medium mb-1">Nazwisko</label>
+                <input
+                  type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Podaj nazwisko"
+                  className="w-full border rounded-md p-2"
+                  disabled={isProcessing}
                   required
                 />
               </div>
             </div>
-            <div className="text-xs text-gray-500">
-              Email: {userEmail || 'Brak - zaloguj się aby kontynuować'}
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Dane kontaktowe</label>
+              <div className="border rounded-md p-3 bg-gray-50">
+                <div className="text-xs text-gray-500">
+                  Email: {userEmail || 'Brak - zaloguj się aby kontynuować'}
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Dane płatności</Label>
-            <div className="border rounded-md">
-              <PaymentElement
-                id="payment-element"
-                options={{
-                  layout: 'tabs',
-                  defaultValues: {
-                    billingDetails: {
-                      name: `${firstName} ${lastName}`.trim() || undefined,
-                      email: userEmail || undefined,
-                    }
-                  },
-                  fields: {
-                    billingDetails: {
-                      name: 'never',
-                      email: 'never',
-                      phone: 'never',
-                      address: {
-                        country: 'auto',
-                        postalCode: 'auto',
-                        line1: 'auto',
-                        line2: 'auto',
-                        city: 'auto',
-                        state: 'auto',
+            
+            {clientSecret && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Metoda płatności</label>
+                <div className="border rounded-md p-3">
+                  <PaymentElement
+                    options={{
+                      defaultValues: {
+                        billingDetails: {
+                          name: `${firstName} ${lastName}`.trim() || undefined,
+                          email: userEmail || undefined,
+                        }
+                      },
+                      fields: {
+                        billingDetails: {
+                          name: 'auto',
+                          email: 'auto',
+                          phone: 'never'
+                        }
+                      },
+                      layout: {
+                        type: 'tabs',
+                        defaultCollapsed: false,
+                        radios: true,
+                        spacedAccordionItems: true
+                      },
+                      terms: {
+                        card: 'never',
+                        ideal: 'never',
+                      },
+                      wallets: {
+                        applePay: 'never',
+                        googlePay: 'never'
                       }
-                    }
-                  },
-                  wallets: {
-                    applePay: 'never',
-                    googlePay: 'never'
-                  }
-                }}
-                onChange={(event) => {
-                  setPaymentElementReady(event.complete);
-                  setError(null);
-                  if (event.complete) {
-                    log('Payment element complete');
-                  }
-                }}
-                onReady={() => {
-                  log('Payment element ready');
-                }}
-              />
+                    }}
+                    onChange={(event) => {
+                      log('Payment element change:', event);
+                      setPaymentError(null);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="pt-3">
+              <Button
+                type="submit"
+                className="w-full bg-primary"
+                disabled={!stripe || !elements || isProcessing || paymentStatus === 'processing'}
+              >
+                {isProcessing || paymentStatus === 'processing' ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Przetwarzanie...
+                  </span>
+                ) : (
+                  <>Zapłać {totalPrice} PLN</>
+                )}
+              </Button>
             </div>
-            <div className="text-xs text-gray-500">
-              Do testów użyj numeru karty: 4242 4242 4242 4242, dowolnej przyszłej daty ważności (MM/RR) i dowolnego CVC (3 cyfry)
-            </div>
-          </div>
-          
-          {error && (
-            <div className="text-sm text-red-500">
-              {error}
-            </div>
-          )}
-          
-          <div className="text-xs text-gray-500 mt-2">
-            {paymentType === 'one-time' 
-              ? 'Realizacja jednorazowej płatności'
-              : 'Zapisujemy dane Twojej karty, aby móc automatycznie doładowywać konto gdy liczba tokenów spadnie poniżej 10'
-            }
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => {
-                log('Payment cancelled by user');
-                onOpenChange(false);
-              }}
-              disabled={loading || paymentProcessing}
-            >
-              Anuluj
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || paymentProcessing || !stripe || !elements || !paymentElementReady || !firstName.trim() || !lastName.trim() || !userEmail}
-            >
-              {loading || paymentProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {paymentProcessing ? 'Przetwarzanie płatności...' : 'Przygotowanie płatności...'}
-                </>
-              ) : (
-                `Zapłać ${calculateTotalPrice(tokenAmount[0])} PLN`
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

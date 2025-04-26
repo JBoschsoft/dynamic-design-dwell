@@ -11,7 +11,6 @@ interface CheckoutRequest {
   paymentType: "one-time" | "auto-recharge";
   tokenAmount: number;
   email?: string;
-  phone?: string;
   customerId?: string;
   sessionId?: string;
   timestamp?: number;
@@ -139,6 +138,7 @@ serve(async (req) => {
           currency: "pln",
           customer: requestData.customerId,
           payment_method: requestData.paymentMethodId,
+          payment_method_types: ['card', 'p24'], // Limit to only card and p24
           off_session: true,
           confirm: true,
           metadata: {
