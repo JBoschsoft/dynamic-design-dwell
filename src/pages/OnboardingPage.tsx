@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
@@ -176,8 +175,12 @@ const OnboardingPage = () => {
       if (data.status === 'succeeded') {
         console.log('Payment succeeded, updating token balance');
         
-        const { error: tokenError } = await supabase.rpc('increment_token_balance', {
-          amount: tokens
+        // Use the increment-token-balance edge function instead of RPC
+        const { data: tokenData, error: tokenError } = await supabase.functions.invoke('increment-token-balance', {
+          body: {
+            amount: tokens,
+            paymentType: 'one-time'
+          }
         });
         
         if (tokenError) {
@@ -187,6 +190,8 @@ const OnboardingPage = () => {
             title: "Uwaga",
             description: "Płatność zrealizowana, ale wystąpił problem z aktualizacją salda tokenów. Prosimy o kontakt z obsługą."
           });
+        } else {
+          console.log('Token balance updated successfully:', tokenData);
         }
       } else if (data.status === 'processing') {
         toast({
