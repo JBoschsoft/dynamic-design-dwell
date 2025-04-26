@@ -18,8 +18,8 @@ import ATSIntegrationStep from '@/components/onboarding/ATSIntegrationStep';
 import BrandingStep from '@/components/onboarding/BrandingStep';
 import TeamInvitationStep from '@/components/onboarding/TeamInvitationStep';
 
-// Load Stripe with the correct publishable key
-const stripePromise = loadStripe('pk_test_51OuxVSFQGItE1Xix9WW2qZUVsj7VwnuN2kFkP3Mj5Q1LPJaqXeaO0b2wLYIheCDLr0TiJXVBf3lxAZFQqPtlJZxz00YZQcJ6D2');
+// Load Stripe with the publishable key from environment variables
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // Define a workspace type with the new fields
 interface Workspace {
