@@ -107,7 +107,9 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         
         // Use admin_email if available, otherwise fall back to the authenticated user's email
         setUserEmail(workspace.admin_email || user.email);
-        setUserPhone(workspace.admin_phone || null);
+        
+        // Don't set the phone number to avoid the Stripe error
+        setUserPhone(null);
         
       } catch (error) {
         log('Error fetching workspace data:', error);
@@ -136,7 +138,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
           sessionId,
           timestamp: Date.now(),
           email: userEmail,
-          phone: userPhone,
+          // Don't send phone to avoid Stripe error
           customerId: workspaceData?.stripe_customer_id
         }
       });
@@ -306,7 +308,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
       }
       
       const fullName = `${firstName} ${lastName}`;
-      log('Using billing details:', { name: fullName, email: userEmail, phone: userPhone });
+      log('Using billing details:', { name: fullName, email: userEmail });
       
       const result = await stripe.confirmPayment({
         elements,
@@ -317,7 +319,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             billing_details: {
               name: fullName,
               email: userEmail,
-              phone: userPhone || undefined,
+              // Phone is omitted to avoid Stripe error
             },
           },
         },
@@ -529,7 +531,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
             </div>
             <div className="text-xs text-gray-500">
               Email: {userEmail || 'Brak - zaloguj się aby kontynuować'}
-              {userPhone && <div>Telefon: {userPhone}</div>}
             </div>
           </div>
           
@@ -544,7 +545,6 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                     billingDetails: {
                       name: `${firstName} ${lastName}`.trim() || undefined,
                       email: userEmail || undefined,
-                      phone: userPhone || undefined,
                     }
                   },
                   fields: {
@@ -563,8 +563,8 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                     }
                   },
                   wallets: {
-                    applePay: 'auto',
-                    googlePay: 'auto'
+                    applePay: 'never',
+                    googlePay: 'never'
                   }
                 }}
                 onChange={(event) => {

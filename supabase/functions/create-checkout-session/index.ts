@@ -168,23 +168,22 @@ serve(async (req) => {
     }
 
     // Standard payment intent creation flow
-    const { paymentType, tokenAmount, email, phone, customerId, sessionId } = requestData;
+    const { paymentType, tokenAmount, email, sessionId } = requestData;
     
     console.log("Processing request:", { 
       paymentType, 
       tokenAmount, 
-      email: email ? "provided" : "not provided", 
-      phone: phone ? "provided" : "not provided",
-      customerId: customerId ? `${customerId.slice(0, 5)}...` : "not provided", 
+      email: email ? "provided" : "not provided",
+      customerId: requestData.customerId ? `${requestData.customerId.slice(0, 5)}...` : "not provided", 
       sessionId 
     });
 
     // Create or retrieve a customer
     let customerData = null;
     
-    if (customerId) {
+    if (requestData.customerId) {
       try {
-        customerData = await stripe.customers.retrieve(customerId);
+        customerData = await stripe.customers.retrieve(requestData.customerId);
         console.log("Retrieved existing customer:", customerData.id);
       } catch (error) {
         console.error("Error retrieving customer:", error);
@@ -201,10 +200,7 @@ serve(async (req) => {
         console.log("Found customer by email:", customerData.id);
       } else if (email) {
         // Create a new customer if email is provided
-        const customerParams = { email };
-        if (phone) customerParams.phone = phone;
-        
-        customerData = await stripe.customers.create(customerParams);
+        customerData = await stripe.customers.create({ email });
         console.log("Created new customer:", customerData.id);
       }
     }
@@ -222,19 +218,18 @@ serve(async (req) => {
     
     const totalAmount = tokenAmount * unitPrice * 100; // Convert to cents
     
-    // Create payment intent
+    // Create payment intent with limited payment method types
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount,
       currency: "pln",
       customer: customerData?.id,
+      payment_method_types: ['card', 'p24'], // Limit to only card and p24
       metadata: {
         paymentType,
         tokenAmount: tokenAmount.toString(),
         sessionId: sessionId || "unknown"
       },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      automatic_payment_methods: null, // Disable automatic payment methods
     });
     
     console.log("Created payment intent:", { 
