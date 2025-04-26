@@ -1,1 +1,11 @@
+
 project_id = "njjqwcgoxuxlgaihrwux"
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.verify-subscription]
+verify_jwt = true
+
+[functions.increment-token-balance]
+verify_jwt = true

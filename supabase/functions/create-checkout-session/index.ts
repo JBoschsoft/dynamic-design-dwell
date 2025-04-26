@@ -15,6 +15,12 @@ interface CheckoutRequest {
   customerId?: string;
   sessionId?: string;
   timestamp?: number;
+  checkStatus?: boolean;
+  paymentIntentId?: string;
+  attachMethod?: boolean;
+  confirmIntent?: boolean;
+  createCharge?: boolean;
+  paymentMethodId?: string;
 }
 
 serve(async (req) => {
@@ -32,7 +38,137 @@ serve(async (req) => {
     });
 
     // Parse request body
-    const { paymentType, tokenAmount, email, phone, customerId, sessionId } = await req.json() as CheckoutRequest;
+    const requestData = await req.json() as CheckoutRequest;
+    
+    // Handle payment status check if requested
+    if (requestData.checkStatus && requestData.paymentIntentId) {
+      console.log(`Checking payment status for intent: ${requestData.paymentIntentId.substring(0, 10)}...`);
+      
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(requestData.paymentIntentId);
+        
+        console.log(`Payment status: ${paymentIntent.status} for intent: ${paymentIntent.id.substring(0, 10)}...`);
+        
+        return new Response(JSON.stringify({
+          status: paymentIntent.status,
+          amount: paymentIntent.amount,
+          customerId: paymentIntent.customer,
+          timestamp: new Date().toISOString()
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      } catch (error) {
+        console.error("Error retrieving payment intent:", error);
+        return new Response(JSON.stringify({ error: error.message || "Error retrieving payment intent" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+    }
+    
+    // Handle payment method attachment if requested
+    if (requestData.attachMethod && requestData.paymentMethodId && requestData.paymentIntentId) {
+      console.log(`Attaching payment method ${requestData.paymentMethodId.substring(0, 5)}... to payment intent ${requestData.paymentIntentId.substring(0, 5)}...`);
+      
+      try {
+        const paymentIntent = await stripe.paymentIntents.update(requestData.paymentIntentId, {
+          payment_method: requestData.paymentMethodId,
+        });
+        
+        return new Response(JSON.stringify({
+          updated: true,
+          status: paymentIntent.status,
+          paymentMethodId: requestData.paymentMethodId
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      } catch (error) {
+        console.error("Error attaching payment method:", error);
+        return new Response(JSON.stringify({ error: error.message || "Error attaching payment method" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+    }
+    
+    // Handle payment intent confirmation if requested
+    if (requestData.confirmIntent && requestData.paymentIntentId) {
+      console.log(`Confirming payment intent: ${requestData.paymentIntentId.substring(0, 10)}...`);
+      
+      try {
+        const paymentIntent = await stripe.paymentIntents.confirm(requestData.paymentIntentId);
+        
+        return new Response(JSON.stringify({
+          status: paymentIntent.status,
+          clientSecret: paymentIntent.client_secret,
+          requiresAction: paymentIntent.status === 'requires_action',
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      } catch (error) {
+        console.error("Error confirming payment intent:", error);
+        return new Response(JSON.stringify({ error: error.message || "Error confirming payment intent" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+    }
+    
+    // Handle creating a charge for auto-recharge if requested
+    if (requestData.createCharge && requestData.paymentMethodId && requestData.tokenAmount) {
+      console.log(`Creating charge for ${requestData.tokenAmount} tokens with payment method: ${requestData.paymentMethodId.substring(0, 5)}...`);
+      
+      // Calculate amount
+      let unitPrice = 8; // Default price per token in PLN
+      if (requestData.tokenAmount >= 50 && requestData.tokenAmount < 100) {
+        unitPrice = 7;
+      } else if (requestData.tokenAmount >= 100 && requestData.tokenAmount < 150) {
+        unitPrice = 6;
+      } else if (requestData.tokenAmount >= 150) {
+        unitPrice = 5;
+      }
+      const totalAmount = requestData.tokenAmount * unitPrice * 100; // Convert to cents
+      
+      try {
+        // Create a PaymentIntent that will be charged immediately
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: totalAmount,
+          currency: "pln",
+          customer: requestData.customerId,
+          payment_method: requestData.paymentMethodId,
+          off_session: true,
+          confirm: true,
+          metadata: {
+            tokenAmount: requestData.tokenAmount.toString(),
+            paymentType: "auto-recharge",
+            sessionId: requestData.sessionId || "unknown"
+          }
+        });
+        
+        console.log(`Created and confirmed payment intent: ${paymentIntent.id}, status: ${paymentIntent.status}`);
+        
+        return new Response(JSON.stringify({
+          status: paymentIntent.status,
+          id: paymentIntent.id,
+          amount: requestData.tokenAmount
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      } catch (error) {
+        console.error("Error creating charge:", error);
+        return new Response(JSON.stringify({ error: error.message || "Error creating charge" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        });
+      }
+    }
+
+    // Standard payment intent creation flow
+    const { paymentType, tokenAmount, email, phone, customerId, sessionId } = requestData;
     
     console.log("Processing request:", { 
       paymentType, 

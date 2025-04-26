@@ -9,7 +9,7 @@ import {
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { calculateTokenPrice, calculateTotalPrice } from './utils';
 import { supabase } from "@/integrations/supabase/client";
-import { updateTokenBalance } from './PaymentService';
+import { updateTokenBalance, isIntentStale, waitFor } from './PaymentService';
 
 interface StripeCheckoutFormProps {
   open: boolean;
@@ -61,6 +61,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [workspaceData, setWorkspaceData] = useState<WorkspaceData | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
   
   const log = useCallback((message: string, data?: any) => {
     if (data) {
@@ -72,16 +73,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
   
   const isIntentValid = useCallback(() => {
     if (!intentFetchTime) return false;
-    
-    const MAX_INTENT_AGE_MS = 2 * 60 * 1000;
-    const now = new Date();
-    const timeDiff = now.getTime() - intentFetchTime.getTime();
-    
-    const isValid = timeDiff <= MAX_INTENT_AGE_MS;
-    if (!isValid) {
-      log(`Payment intent is too old (${timeDiff}ms), refreshing`);
-    }
-    return isValid;
+    return !isIntentStale(intentFetchTime, 2 * 60 * 1000, log);
   }, [intentFetchTime, log]);
   
   useEffect(() => {
@@ -211,9 +203,58 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         setIntentFetchTime(null);
       }, 500);
       setPaymentElementReady(false);
+      setPaymentProcessing(false);
       setError(null);
     }
   }, [open, log]);
+
+  const handleCheckPaymentStatus = async (paymentIntentId: string, retries = 3, delay = 2000) => {
+    log(`Checking payment status for intent: ${paymentIntentId}`);
+    
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        if (attempt > 0) {
+          log(`Retrying payment status check, attempt ${attempt + 1}/${retries}`);
+          await waitFor(delay, `Before retry ${attempt + 1}`, log);
+        }
+        
+        const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+          body: {
+            checkStatus: true,
+            paymentIntentId,
+            sessionId
+          }
+        });
+        
+        if (error) {
+          log('Error checking payment status:', error);
+          continue;
+        }
+        
+        log('Payment status check response:', data);
+        
+        if (data.status === 'succeeded') {
+          log('Payment confirmed as succeeded on server side');
+          return { success: true, status: data.status };
+        } else if (['processing', 'requires_confirmation', 'requires_action'].includes(data.status)) {
+          log(`Payment in intermediate state: ${data.status}, will retry`);
+          // Will continue and retry
+        } else {
+          log(`Payment status: ${data.status}, not successful`);
+          return { success: false, status: data.status };
+        }
+      } catch (error) {
+        log('Error in payment status check:', error);
+        // Will continue and retry
+      }
+      
+      // Increase delay for exponential backoff
+      delay = Math.min(delay * 1.5, 10000);
+    }
+    
+    log('Max retries reached for payment status check');
+    return { success: false, status: 'unknown' };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,6 +293,7 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     }
     
     setLoading(true);
+    setPaymentProcessing(true);
     setError(null);
     
     try {
@@ -300,49 +342,44 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
         throw new Error(result.error.message || "Payment confirmation failed");
       }
       
+      log('Confirmation result:', result);
+      
+      // Check if we have an immediate success or need to verify status
       if (result.paymentIntent?.status === 'succeeded') {
-        log('Payment successful! Updating token balance.');
-        const balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
+        log('Payment succeeded immediately');
+        handlePaymentSuccess();
+      } else if (result.paymentIntent) {
+        log(`Payment not immediately succeeded. Status: ${result.paymentIntent.status}. Checking status...`);
+        // Check payment status after a short delay
+        await waitFor(1500, 'Before checking payment status', log);
+        const { success } = await handleCheckPaymentStatus(result.paymentIntent.id);
         
-        if (!balanceUpdated) {
-          log('Failed to update token balance');
-          throw new Error("Nie udało się zaktualizować salda tokenów");
+        if (success) {
+          log('Payment confirmed as successful via status check');
+          handlePaymentSuccess();
+        } else {
+          log('Payment not confirmed as successful after status check');
+          // Show processing message if it might still be processing
+          setPaymentProcessing(false);
+          toast({
+            title: "Płatność w trakcie przetwarzania",
+            description: "Twoja płatność jest przetwarzana. Aktualizacja salda może zająć kilka chwil. Możesz sprawdzić stan później w ustawieniach konta.",
+          });
+          onOpenChange(false);
         }
-        
-        log('Token balance updated successfully');
-        
-        // If workspaceData exists and paymentIntent.customer exists from the response, update it in the workspace
-        if (workspaceData?.id && paymentIntent.customerId) {
-          log('Updating Stripe customer ID in workspace');
-          await supabase
-            .from('workspaces')
-            .update({ 
-              stripe_customer_id: paymentIntent.customerId
-            })
-            .eq('id', workspaceData.id);
-        }
-        
-        if (onSuccess) {
-          onSuccess(paymentType, tokenAmount[0]);
-        }
-        
+      } else {
+        log('No paymentIntent in result, payment may be processing');
+        setPaymentProcessing(false);
+        toast({
+          title: "Status płatności nieznany",
+          description: "Status Twojej płatności jest nieznany. Sprawdź stan konta w ustawieniach.",
+        });
         onOpenChange(false);
-        navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
-        
-        toast({
-          title: "Płatność zrealizowana",
-          description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
-        });
-      } else if (result.paymentIntent?.status === 'processing') {
-        log('Payment processing, waiting for completion');
-        toast({
-          title: "Płatność w trakcie przetwarzania",
-          description: "Twoja płatność jest przetwarzana. Aktualizacja salda może zająć kilka chwil.",
-        });
       }
     } catch (error) {
       log('Payment error:', error);
       setError(error.message || 'Wystąpił nieoczekiwany błąd podczas przetwarzania płatności');
+      setPaymentProcessing(false);
       
       toast({
         variant: "destructive",
@@ -352,6 +389,67 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handlePaymentSuccess = async () => {
+    log('Payment successful! Updating token balance.');
+    let balanceUpdated = false;
+    
+    // Try updating token balance up to 3 times
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        if (attempt > 1) {
+          log(`Retry ${attempt} to update token balance`);
+          await waitFor(1000 * attempt, `Before token balance update retry ${attempt}`, log);
+        }
+        
+        balanceUpdated = await updateTokenBalance(tokenAmount[0], paymentType, log);
+        if (balanceUpdated) {
+          log('Token balance updated successfully');
+          break;
+        } else {
+          log(`Failed to update token balance, attempt ${attempt}`);
+        }
+      } catch (error) {
+        log(`Error updating token balance (attempt ${attempt}):`, error);
+      }
+    }
+    
+    if (!balanceUpdated) {
+      log('All attempts to update token balance failed');
+      toast({
+        variant: "destructive",
+        title: "Uwaga",
+        description: "Płatność zrealizowana, ale wystąpił problem z aktualizacją salda tokenów. Prosimy o kontakt z obsługą.",
+      });
+    }
+    
+    // If workspaceData exists and paymentIntent.customer exists from the response, update it in the workspace
+    if (workspaceData?.id && paymentIntent?.customerId) {
+      log('Updating Stripe customer ID in workspace');
+      try {
+        await supabase
+          .from('workspaces')
+          .update({ 
+            stripe_customer_id: paymentIntent.customerId
+          })
+          .eq('id', workspaceData.id);
+      } catch (error) {
+        log('Error updating customer ID in workspace:', error);
+      }
+    }
+    
+    if (onSuccess) {
+      onSuccess(paymentType, tokenAmount[0]);
+    }
+    
+    onOpenChange(false);
+    navigate(`/onboarding?success=true&tokens=${tokenAmount[0]}`);
+    
+    toast({
+      title: "Płatność zrealizowana",
+      description: `Twoje konto zostało pomyślnie doładowane o ${tokenAmount[0]} tokenów`,
+    });
   };
   
   if (!paymentIntent?.clientSecret || !stripe || !elements) {
@@ -507,18 +605,18 @@ const StripeCheckoutForm: React.FC<StripeCheckoutFormProps> = ({
                 log('Payment cancelled by user');
                 onOpenChange(false);
               }}
-              disabled={loading}
+              disabled={loading || paymentProcessing}
             >
               Anuluj
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !stripe || !elements || !paymentElementReady || !firstName.trim() || !lastName.trim() || !userEmail}
+              disabled={loading || paymentProcessing || !stripe || !elements || !paymentElementReady || !firstName.trim() || !lastName.trim() || !userEmail}
             >
-              {loading ? (
+              {loading || paymentProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Przetwarzanie płatności...
+                  {paymentProcessing ? 'Przetwarzanie płatności...' : 'Przygotowanie płatności...'}
                 </>
               ) : (
                 `Zapłać ${calculateTotalPrice(tokenAmount[0])} PLN`

@@ -65,6 +65,7 @@ const OnboardingPage = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [autoRechargeAmount, setAutoRechargeAmount] = useState([50]);
   const [userEmail, setUserEmail] = useState('');
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   
   // Enhanced Stripe configuration for PaymentElement
   const stripeOptions = {
@@ -117,20 +118,102 @@ const OnboardingPage = () => {
       });
     }
     
+    const paymentIntentParam = searchParams.get('payment_intent');
+    if (paymentIntentParam) {
+      setPaymentIntentId(paymentIntentParam);
+      console.log('Payment intent detected in URL:', paymentIntentParam);
+    }
+    
     const success = searchParams.get('success');
     if (success === 'true') {
-      const tokens = searchParams.get('tokens') || (paymentType === 'one-time' ? tokenAmount[0] : autoRechargeAmount[0]);
-      toast({
-        title: "Płatność zakończona sukcesem",
-        description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
+      const tokens = parseInt(searchParams.get('tokens') || '0');
+      if (tokens > 0) {
+        toast({
+          title: "Płatność zakończona sukcesem",
+          description: `Twoje konto zostało pomyślnie doładowane o ${tokens} tokenów.`
+        });
+        setPaymentSuccess(true);
+        
+        // Verify the payment intent if available
+        if (paymentIntentParam) {
+          verifyPaymentIntent(paymentIntentParam, tokens);
+        } else {
+          setTimeout(() => {
+            setCurrentStep(3);
+            navigate(`/onboarding?step=3`, { replace: true });
+          }, 1000);
+        }
+      } else {
+        // Use the token amount from state if not provided in URL
+        const tokenValue = paymentType === 'one-time' ? tokenAmount[0] : autoRechargeAmount[0];
+        setPaymentSuccess(true);
+        setTimeout(() => {
+          setCurrentStep(3);
+          navigate(`/onboarding?step=3`, { replace: true });
+        }, 1000);
+      }
+    }
+  }, [searchParams, navigate, paymentType, tokenAmount, autoRechargeAmount]);
+  
+  const verifyPaymentIntent = async (paymentIntentId: string, tokens: number) => {
+    try {
+      console.log(`Verifying payment intent: ${paymentIntentId}`);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          checkStatus: true,
+          paymentIntentId
+        }
       });
-      setPaymentSuccess(true);
+      
+      if (error) {
+        console.error('Error verifying payment:', error);
+        throw new Error(`Error verifying payment: ${error.message}`);
+      }
+      
+      console.log('Payment verification response:', data);
+      
+      if (data.status === 'succeeded') {
+        console.log('Payment succeeded, updating token balance');
+        
+        const { error: tokenError } = await supabase.rpc('increment_token_balance', {
+          amount: tokens
+        });
+        
+        if (tokenError) {
+          console.error('Error updating token balance:', tokenError);
+          toast({
+            variant: "destructive",
+            title: "Uwaga",
+            description: "Płatność zrealizowana, ale wystąpił problem z aktualizacją salda tokenów. Prosimy o kontakt z obsługą."
+          });
+        }
+      } else if (data.status === 'processing') {
+        toast({
+          title: "Płatność w trakcie przetwarzania",
+          description: "Twoja płatność jest przetwarzana. Aktualizacja salda może zająć kilka chwil."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Problem z płatnością",
+          description: `Status płatności: ${data.status}. Sprawdź stan konta w ustawieniach.`
+        });
+      }
+      
+      setTimeout(() => {
+        setCurrentStep(3);
+        navigate(`/onboarding?step=3`, { replace: true });
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error in payment verification:', error);
       setTimeout(() => {
         setCurrentStep(3);
         navigate(`/onboarding?step=3`, { replace: true });
       }, 1000);
     }
-  }, [searchParams, navigate, paymentType, tokenAmount, autoRechargeAmount]);
+  };
   
   const handleAgreeToCurrentAgreement = () => {
     if (currentAgreement === 'tos') {
