@@ -9,3 +9,7 @@ verify_jwt = true
 
 [functions.increment-token-balance]
 verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
+
